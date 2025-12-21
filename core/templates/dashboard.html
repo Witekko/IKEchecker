@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Mój Dashboard IKE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .gain-pos { color: green; font-weight: bold; }
+        .gain-neg { color: red; font-weight: bold; }
+        .chart-container { position: relative; height: 300px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+    <div class="container mt-4 mb-5">
+        <h1 class="mb-4">Centrum Dowodzenia IKE</h1>
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary mb-3">
+                    <div class="card-header">Wpłacony Kapitał</div>
+                    <div class="card-body">
+                        <h3 class="card-title">{{ invested }} PLN</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-header">Wartość Konta (Razem)</div>
+                    <div class="card-body">
+                        <h3 class="card-title">{{ total_value }} PLN</h3>
+                        <small>Akcje: {{ stock_value }} | Gotówka: {{ cash }}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white {% if profit >= 0 %}bg-success{% else %}bg-danger{% endif %} mb-3">
+                    <div class="card-header">Zysk / Strata Netto</div>
+                    <div class="card-body">
+                        <h3 class="card-title">{% if profit > 0 %}+{% endif %}{{ profit }} PLN</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning mb-3">
+                    <div class="card-header">Kursy Walut</div>
+                    <div class="card-body">
+                        <p class="mb-0">EUR: <strong>{{ eur_rate }}</strong> PLN</p>
+                        <p class="mb-0">USD: <strong>{{ usd_rate }}</strong> PLN</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-md-6">
+                <div class="card shadow h-100">
+                    <div class="card-header font-weight-bold">Struktura Portfela (Alokacja)</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="allocationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow h-100">
+                    <div class="card-header font-weight-bold">Zysk/Strata wg Spółki (PLN)</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="profitChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="mt-4">🇵🇱 Giełda Polska (GPW)</h3>
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Ilość</th>
+                            <th>Śr. Cena Zakupu</th>
+                            <th>Kurs Aktualny</th>
+                            <th>Wartość (PLN)</th>
+                            <th>Wynik</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in pln_holdings %}
+                        <tr>
+                            <td><strong>{{ item.symbol }}</strong><br><small class="text-muted">{{ item.name }}</small></td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.avg_price_pln }} PLN</td>
+                            <td>{{ item.current_price_orig }} PLN</td>
+                            <td><strong>{{ item.value_pln }}</strong></td>
+                            <td class="{% if item.gain_pln >= 0 %}gain-pos{% else %}gain-neg{% endif %}">
+                                {{ item.gain_pln }} PLN<br>
+                                <small>({{ item.gain_percent }}%)</small>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center">Brak polskich akcji.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <h3 class="mt-4">🌍 Rynki Zagraniczne</h3>
+        <div class="card shadow">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Ilość</th>
+                            <th>Śr. Cena Zakupu (PLN)</th>
+                            <th>Kurs (Oryg.)</th>
+                            <th>Wartość (PLN)</th>
+                            <th>Wynik (PLN)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in foreign_holdings %}
+                        <tr>
+                            <td><strong>{{ item.symbol }}</strong><br><small class="text-muted">{{ item.name }}</small></td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.avg_price_pln }} PLN</td>
+                            <td>{{ item.current_price_orig }} {{ item.currency }}</td>
+                            <td><strong>{{ item.value_pln }}</strong></td>
+                            <td class="{% if item.gain_pln >= 0 %}gain-pos{% else %}gain-neg{% endif %}">
+                                {{ item.gain_pln }} PLN<br>
+                                <small>({{ item.gain_percent }}%)</small>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center">Brak zagranicznych aktywów.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-5 text-center">
+            <a href="/upload/" class="btn btn-outline-secondary">Wgraj zaktualizowany Excel</a>
+            <a href="/admin/" class="btn btn-outline-dark">Panel Admina</a>
+        </div>
+    </div>
+
+    <script>
+        // Dane z Django
+        const labelsAlloc = {{ chart_labels|safe }};
+        const dataAlloc = {{ chart_allocation|safe }};
+
+        const labelsProfit = {{ chart_profit_labels|safe }};
+        const dataProfit = {{ chart_profit_values|safe }};
+
+        // 1. Wykres Kołowy (Alokacja)
+        const ctxAlloc = document.getElementById('allocationChart');
+        new Chart(ctxAlloc, {
+            type: 'doughnut',
+            data: {
+                labels: labelsAlloc,
+                datasets: [{
+                    data: dataAlloc,
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#537bc4'
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+
+        // 2. Wykres Słupkowy (Zyski)
+        // Dynamiczne kolory (Zielony dla zysku, Czerwony dla straty)
+        const profitColors = dataProfit.map(val => val >= 0 ? '#198754' : '#DC3545');
+
+        const ctxProfit = document.getElementById('profitChart');
+        new Chart(ctxProfit, {
+            type: 'bar',
+            data: {
+                labels: labelsProfit,
+                datasets: [{
+                    label: 'Zysk/Strata (PLN)',
+                    data: dataProfit,
+                    backgroundColor: profitColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
