@@ -1,0 +1,22 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Django ---
+db.sqlite3
+local_settings.py
+media/
+
+# --- Środowiska wirtualne (Ważne!) ---
+venv/
+.venv/
+env/
+
+# --- PyCharm (IDE) ---
+.idea/
+
+# --- Systemowe ---
+.DS_Store
+Thumbs.db
