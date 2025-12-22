@@ -35,7 +35,9 @@ class Transaction(models.Model):
         ('BUY', 'Buy'),
         ('SELL', 'Sell'),
         ('DEPOSIT', 'Deposit'),
+        ('WITHDRAWAL', 'Withdrawal'),
         ('DIVIDEND', 'Dividend'),
+        ('TAX', 'Tax'),
         ('OTHER', 'Other'),
     ]
 
