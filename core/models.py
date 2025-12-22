@@ -1,19 +1,20 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class Asset(models.Model):
-    """
-    Asset catalog. Once added 'PKN.PL' serves all users.
-    """
-    symbol = models.CharField(max_length=20, unique=True, help_text="XTB Symbol, e.g., PKN.PL")
-    yahoo_ticker = models.CharField(max_length=20, help_text="Yahoo Symbol, e.g., PKN.WA")
-    currency = models.CharField(max_length=3, default='PLN', help_text="Currency, e.g., PLN, EUR")
-    name = models.CharField(max_length=100, blank=True, help_text="Full name, e.g., Orlen S.A.")
+    symbol = models.CharField(max_length=20, unique=True)  # np. PKN.PL
+    yahoo_ticker = models.CharField(max_length=20)  # np. PKN.WA
+    currency = models.CharField(max_length=10, default='PLN')
+    name = models.CharField(max_length=100, blank=True)
+
+    # --- NOWE POLA DO CACHE ---
+    last_price = models.DecimalField(max_digits=10, decimal_places=4, default=0.0)
+    last_updated = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.symbol} ({self.yahoo_ticker})"
-
+        return self.symbol
 
 class Portfolio(models.Model):
     """
