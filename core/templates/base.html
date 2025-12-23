@@ -1,38 +1,132 @@
 <!DOCTYPE html>
-<html lang="pl">
-<head>
+<html lang="pl" data-bs-theme="dark"> <head>
     <meta charset="UTF-8">
-    <title>IKE Tracker</title>
+    <title>IKE Bloomberg Edition</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        .gain-pos { color: #198754; font-weight: bold; }
-        .gain-neg { color: #dc3545; font-weight: bold; }
+        /* --- BLOOMBERG STYLE OVERRIDES --- */
+        :root {
+            --bg-body: #121212;       /* Tło strony */
+            --bg-card: #1e1e1e;       /* Tło kart */
+            --text-main: #e0e0e0;     /* Główny tekst */
+            --text-muted: #a0a0a0;    /* Tekst poboczny */
+            --accent-blue: #0dcaf0;   /* Cyjanowy akcent */
+            --accent-green: #00ff7f;  /* Neonowa zieleń (Zysk) */
+            --accent-red: #ff4d4d;    /* Neonowa czerwień (Strata) */
+            --border-color: #333333;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* Bardziej techniczna czcionka */
+            padding-top: 70px;
+        }
+
+        /* Navbar */
+        .navbar {
+            background-color: #000000 !important; /* Czysta czerń dla paska */
+            border-bottom: 1px solid var(--accent-blue); /* Cienka niebieska linia */
+        }
+        .navbar-brand {
+            color: var(--accent-blue) !important;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .nav-link { color: var(--text-muted) !important; }
+        .nav-link.active { color: #fff !important; font-weight: bold; }
+
+        /* Karty (Cards) */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px; /* Ostre rogi są bardziej "pro" */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        /* Tabele */
+        .table {
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+        .table thead th {
+            background-color: #2c2c2c;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        .table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        /* Linki w tabelach */
+        td a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        td a:hover { color: #fff; text-decoration: underline; }
+
+        /* Kolory zysków/strat */
+        .gain-pos { color: var(--accent-green) !important; font-weight: bold; }
+        .gain-neg { color: var(--accent-red) !important; font-weight: bold; }
+        .text-success { color: var(--accent-green) !important; }
+        .text-danger { color: var(--accent-red) !important; }
+
+        /* Wykresy - kontenery */
         .chart-container { position: relative; height: 300px; }
         .chart-container-wide { position: relative; height: 400px; }
-        a { text-decoration: none; color: inherit; }
-        a:hover { text-decoration: underline; }
-        body { padding-top: 70px; } /* Miejsce na navbar */
+
+        /* Przyciski (Buttons) - styl 'outline' jest teraz bardziej neonowy */
+        .btn-outline-primary {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+        .btn-outline-primary:hover, .btn-outline-primary.active {
+            background-color: var(--accent-blue);
+            color: #000;
+            border-color: var(--accent-blue);
+        }
+
+        /* Modyfikacja alertów */
+        .alert-success { background-color: #0f5132; color: #fff; border: 1px solid #146c43; }
+        .alert-danger { background-color: #842029; color: #fff; border: 1px solid #b02a37; }
+
     </style>
 </head>
-<body class="bg-light">
+<body>
 
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top shadow">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="/">🛡️ IKE Tracker</a>
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top shadow-sm">
+        <div class="container-fluid"> <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line"></i> IKE TERMINAL
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="/">Dashboard</a>
+                        <a class="nav-link" href="/">DASHBOARD</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/upload/">Wgraj Excel</a>
+                        <a class="nav-link" href="/upload/">IMPORT DANYCH</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/admin/">Admin</a>
+                        <a class="nav-link" href="/admin/">ADMIN</a>
                     </li>
                 </ul>
             </div>
@@ -44,7 +138,7 @@
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
         {% endif %}
@@ -54,5 +148,11 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Ustawienia domyślne dla wykresów, żeby pasowały do ciemnego tła
+        Chart.defaults.color = '#a0a0a0'; // Kolor czcionki na wykresach
+        Chart.defaults.borderColor = '#333333'; // Kolor linii siatki
+    </script>
 </body>
 </html>

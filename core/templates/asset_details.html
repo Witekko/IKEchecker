@@ -1,112 +1,109 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ asset.symbol }} - Szczegóły</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .pos-val { color: green; font-weight: bold; }
-        .neg-val { color: red; font-weight: bold; }
-        .chart-container { position: relative; height: 400px; }
-        a { text-decoration: none; }
-    </style>
-</head>
-<body class="bg-light">
-    <div class="container mt-4 mb-5">
+{% extends 'base.html' %}
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>
-                <span class="badge bg-dark">{{ asset.symbol }}</span>
-                {{ asset.name }}
-            </h1>
-            <a href="/" class="btn btn-outline-primary">← Wróć do Dashboardu</a>
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0 text-white" style="letter-spacing: 1px;">{{ asset.symbol }}</h2>
+            <span class="text-muted text-uppercase small">{{ asset.name }} | {{ asset.currency }}</span>
         </div>
+        <a href="/" class="btn btn-outline-secondary btn-sm text-uppercase" style="letter-spacing: 1px;">
+            <i class="fas fa-arrow-left me-1"></i> Wróć
+        </a>
+    </div>
 
-        <div class="card shadow mb-4">
-            <div class="card-header">
-                Historia Kursu (Yahoo) + Twoje Transakcje
-            </div>
-            <div class="card-body">
-                <div class="chart-container">
-                    <canvas id="priceChart"></canvas>
-                </div>
-                <div class="mt-2 text-center">
-                    <span class="badge bg-success">Zielona kropka = KUPNO</span>
-                    <span class="badge bg-danger">Czerwona kropka = SPRZEDAŻ</span>
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card h-100 border-start border-4 border-info">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small fw-bold mb-1">Current Price</div>
+                    <h3 class="card-title text-info mb-0">{{ current_price }} <small class="fs-6 text-muted">{{ asset.currency }}</small></h3>
                 </div>
             </div>
         </div>
-
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card bg-white shadow-sm">
-                    <div class="card-body text-center">
-                        <small class="text-muted">Posiadana Ilość</small>
-                        <h3>{{ qty }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-white shadow-sm">
-                    <div class="card-body text-center">
-                        <small class="text-muted">Średnia Cena Zakupu (PLN)</small>
-                        <h3>{{ avg_price }} PLN</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-white shadow-sm">
-                    <div class="card-body text-center">
-                        <small class="text-muted">Obecna Wartość (PLN)</small>
-                        <h3>{{ value_pln }} PLN</h3>
-                        {% if currency_rate %}
-                        <small class="text-muted">Kurs: {{ currency_rate }}</small>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card {% if profit_pln >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white shadow-sm">
-                    <div class="card-body text-center">
-                        <small>Wynik Netto</small>
-                        <h3>{% if profit_pln > 0 %}+{% endif %}{{ profit_pln }} PLN</h3>
-                        <small>{{ profit_percent }}%</small>
-                    </div>
+        <div class="col-md-3">
+            <div class="card h-100 border-start border-4 border-secondary">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small fw-bold mb-1">Quantity</div>
+                    <h3 class="card-title text-white mb-0">{{ qty }} <small class="fs-6 text-muted">szt.</small></h3>
                 </div>
             </div>
         </div>
-
-        <div class="card shadow">
-            <div class="card-header">Historia Operacji na tym Walorze</div>
-            <div class="card-body">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Typ</th>
-                            <th>Ilość</th>
-                            <th>Kwota</th>
-                            <th>Komentarz</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for t in history %}
-                        <tr>
-                            <td>{{ t.date|date:"Y-m-d" }}</td>
-                            <td>
-                                {% if t.type == 'BUY' %}<span class="badge bg-success">KUPNO</span>
-                                {% elif t.type == 'SELL' %}<span class="badge bg-danger">SPRZEDAŻ</span>
-                                {% else %}{{ t.type }}{% endif %}
-                            </td>
-                            <td>{{ t.quantity }}</td>
-                            <td>{{ t.amount }}</td>
-                            <td><small class="text-muted">{{ t.comment }}</small></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="col-md-3">
+            <div class="card h-100 border-start border-4 border-primary">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small fw-bold mb-1">Market Value</div>
+                    <h3 class="card-title text-primary mb-0">{{ value_pln }} <small class="fs-6 text-muted">PLN</small></h3>
+                    {% if currency_rate %}
+                        <small class="text-muted" style="font-size: 0.7rem;">Kurs: {{ currency_rate }} PLN</small>
+                    {% endif %}
+                </div>
             </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100 border-start border-4 {% if profit_pln >= 0 %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small fw-bold mb-1">Total P&L</div>
+                    <h3 class="card-title {% if profit_pln >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                        {% if profit_pln > 0 %}+{% endif %}{{ profit_pln }} <small class="fs-6 text-muted">PLN</small>
+                    </h3>
+                    <small class="{% if profit_percent >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                        {% if profit_percent > 0 %}+{% endif %}{{ profit_percent }}%
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-5">
+        <div class="card-header text-uppercase text-muted fw-bold">
+            <i class="fas fa-chart-line me-2"></i> Price History & Transactions
+        </div>
+        <div class="card-body">
+            <div class="chart-container-wide">
+                <canvas id="assetChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="text-muted text-uppercase mb-3" style="font-size: 0.9rem; letter-spacing: 1px;">Transaction Log</h4>
+    <div class="card shadow mb-5">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Qty</th>
+                        <th>Amount</th>
+                        <th>Comment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in history %}
+                    <tr>
+                        <td class="text-muted">{{ t.date|date:"Y-m-d" }}</td>
+                        <td>
+                            {% if t.type == 'Buy' %}
+                                <span class="badge bg-success bg-opacity-25 text-success border border-success">BUY</span>
+                            {% elif t.type == 'Sell' %}
+                                <span class="badge bg-danger bg-opacity-25 text-danger border border-danger">SELL</span>
+                            {% elif t.type == 'Dividend' %}
+                                <span class="badge bg-warning bg-opacity-25 text-warning border border-warning">DIVIDEND</span>
+                            {% elif t.type == 'Tax' %}
+                                <span class="badge bg-secondary bg-opacity-25 text-muted border border-secondary">TAX</span>
+                            {% else %}
+                                <span class="badge bg-dark border border-secondary">{{ t.type }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-white">{{ t.quantity }}</td>
+                        <td class="fw-bold text-white">{{ t.amount }}</td>
+                        <td class="text-muted small fst-italic">{{ t.comment }}</td>
+                    </tr>
+                    {% empty %}
+                        <tr><td colspan="5" class="text-center py-3">Brak historii.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -116,54 +113,47 @@
     {{ chart_radius|json_script:"c-radius" }}
 
     <script>
-        // Funkcja pomocnicza
-        function getData(id) {
-            try { return JSON.parse(document.getElementById(id).textContent); }
-            catch(e) { return []; }
-        }
+        function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
 
-        const dates = getData('c-dates');
-        const prices = getData('c-prices');
-        const colors = getData('c-colors');
-        const radius = getData('c-radius');
-
-        if (dates.length > 0) {
-            const ctx = document.getElementById('priceChart');
+        const ctx = document.getElementById('assetChart');
+        if (ctx) {
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: dates,
+                    labels: gd('c-dates'),
                     datasets: [{
-                        label: 'Kurs {{ asset.symbol }} ({{ asset.currency }})',
-                        data: prices,
-                        borderColor: '#0d6efd',
+                        label: 'Price',
+                        data: gd('c-prices'),
+                        borderColor: '#0dcaf0', // Cyan
+                        backgroundColor: 'rgba(13, 202, 240, 0.05)',
                         borderWidth: 2,
-                        pointBackgroundColor: colors,
+                        fill: true,
+                        pointRadius: gd('c-radius'), // Kropki tylko tam gdzie transakcja
+                        pointBackgroundColor: gd('c-colors'), // Zielony/Czerwony
                         pointBorderColor: '#fff',
-                        pointRadius: radius,
-                        pointHoverRadius: 8,
-                        fill: false,
                         tension: 0.1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     scales: {
-                        y: { beginAtZero: false }
+                        x: { grid: { display: false }, ticks: { color: '#a0a0a0' } },
+                        y: { grid: { color: '#333' }, ticks: { color: '#a0a0a0' } }
                     },
                     plugins: {
+                        legend: { display: false },
                         tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.parsed.y + ' {{ asset.currency }}';
-                                }
-                            }
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#e0e0e0',
+                            borderColor: '#555',
+                            borderWidth: 1
                         }
                     }
                 }
             });
         }
     </script>
-</body>
-</html>
+{% endblock %}

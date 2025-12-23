@@ -1,45 +1,64 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1 class="mb-4">Centrum Dowodzenia</h1>
-    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-uppercase" style="letter-spacing: 1px; color: var(--text-main);">
+            <i class="fas fa-tachometer-alt me-2 text-muted"></i>Market Overview
+        </h2>
+        <span class="badge bg-dark border border-secondary text-muted">LIVE DATA</span>
+    </div>
+
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card text-white bg-primary mb-3">
-                <div class="card-header">Wpłacony Kapitał</div>
-                <div class="card-body"><h3 class="card-title">{{ invested }} PLN</h3></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-success mb-3">
-                <div class="card-header">Wartość Konta</div>
+            <div class="card h-100 border-start border-4 border-primary">
                 <div class="card-body">
-                    <h3 class="card-title">{{ total_value }} PLN</h3>
-                    <small>Gotówka: {{ cash }}</small>
+                    <div class="text-muted text-uppercase small fw-bold mb-1">Invested Capital</div>
+                    <h3 class="card-title text-white mb-0">{{ invested }} <small class="fs-6 text-muted">PLN</small></h3>
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
-            <div class="card text-white {% if profit >= 0 %}bg-success{% else %}bg-danger{% endif %} mb-3">
-                <div class="card-header">Zysk / Strata</div>
-                <div class="card-body"><h3 class="card-title">{% if profit > 0 %}+{% endif %}{{ profit }} PLN</h3></div>
+            <div class="card h-100 border-start border-4 border-info">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small fw-bold mb-1">Total Equity</div>
+                    <h3 class="card-title text-info mb-0">{{ total_value }} <small class="fs-6 text-muted">PLN</small></h3>
+                    <small class="text-muted" style="font-size: 0.75rem;">Cash: {{ cash }} PLN</small>
+                </div>
             </div>
         </div>
+
         <div class="col-md-3">
-            <div class="card bg-warning mb-3">
-                <div class="card-header">Waluty</div>
-                <div class="card-body"><p class="mb-0">EUR: {{ eur_rate }} | USD: {{ usd_rate }}</p></div>
+            <div class="card h-100 border-start border-4 {% if profit >= 0 %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small fw-bold mb-1">Net P&L</div>
+                    <h3 class="card-title {% if profit >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                        {% if profit > 0 %}+{% endif %}{{ profit }} <small class="fs-6 text-muted">PLN</small>
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 border-start border-4 border-warning">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small fw-bold mb-1">FX Rates</div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <div><span class="text-muted">EUR:</span> <strong class="text-warning">{{ eur_rate }}</strong></div>
+                        <div><span class="text-muted">USD:</span> <strong class="text-warning">{{ usd_rate }}</strong></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="card shadow mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-bold">📈 Wykres Portfela</span>
+            <span><i class="fas fa-chart-area me-2"></i>PERFORMANCE CHART</span>
 
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-primary active" id="btn-val" onclick="switchChart('value')">Wartość (PLN)</button>
-                <button type="button" class="btn btn-outline-primary" id="btn-pct" onclick="switchChart('percent')">Stopa Zwrotu (%)</button>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-primary active" id="btn-val" onclick="switchChart('value')">PLN</button>
+                <button type="button" class="btn btn-outline-primary" id="btn-pct" onclick="switchChart('percent')">%</button>
             </div>
         </div>
         <div class="card-body">
@@ -52,58 +71,64 @@
     <div class="row mb-5">
         <div class="col-md-6">
             <div class="card shadow h-100">
-                <div class="card-header fw-bold">Struktura</div>
+                <div class="card-header"><i class="fas fa-pie-chart me-2"></i>ALLOCATION</div>
                 <div class="card-body"><div class="chart-container"><canvas id="allocationChart"></canvas></div></div>
             </div>
         </div>
         <div class="col-md-6">
             <div class="card shadow h-100">
-                <div class="card-header fw-bold">Zysk/Strata</div>
+                <div class="card-header"><i class="fas fa-chart-bar me-2"></i>GAIN/LOSS BY ASSET</div>
                 <div class="card-body"><div class="chart-container"><canvas id="profitChart"></canvas></div></div>
             </div>
         </div>
     </div>
 
-    <h3 class="mt-4">🇵🇱 Giełda Polska</h3>
-    <div class="card shadow mb-4"><div class="card-body">
-        <table class="table table-hover">
-            <thead class="table-light"><tr><th>Symbol</th><th>Ilość</th><th>Śr. Zakup</th><th>Kurs</th><th>Wartość</th><th>Wynik</th></tr></thead>
+    <div class="d-flex align-items-center mb-3 mt-4">
+        <span class="fs-4 me-2">🇵🇱</span> <h4 class="mb-0 text-uppercase fw-bold text-muted">GPW (Warsaw)</h4>
+    </div>
+    <div class="card shadow mb-4"><div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg Price</th><th>Price</th><th>Value (PLN)</th><th>P&L</th></tr></thead>
             <tbody>
                 {% for item in pln_holdings %}
                 <tr>
-                    <td><strong><a href="/asset/{{ item.symbol }}/">{{ item.symbol }}</a></strong><br><small>{{ item.name }}</small></td>
+                    <td><strong><a href="/asset/{{ item.symbol }}/">{{ item.symbol }}</a></strong><br><small class="text-muted" style="font-size:0.7em">{{ item.name }}</small></td>
                     <td>{{ item.quantity }}</td><td>{{ item.avg_price_pln }}</td><td>{{ item.current_price_orig }}</td>
                     <td><strong>{{ item.value_pln }}</strong></td>
                     <td class="{% if item.gain_pln >= 0 %}gain-pos{% else %}gain-neg{% endif %}">{{ item.gain_pln }}<br><small>({{ item.gain_percent }}%)</small></td>
                 </tr>
-                {% empty %}<tr><td colspan="6" class="text-center">Brak</td></tr>{% endfor %}
+                {% empty %}<tr><td colspan="6" class="text-center py-3 text-muted">No positions</td></tr>{% endfor %}
             </tbody>
         </table>
     </div></div>
 
-    <h3 class="mt-4">🌍 Rynki Zagraniczne</h3>
-    <div class="card shadow mb-5"><div class="card-body">
-        <table class="table table-hover">
-            <thead class="table-light"><tr><th>Symbol</th><th>Ilość</th><th>Śr. Zakup</th><th>Kurs</th><th>Wartość</th><th>Wynik</th></tr></thead>
+    <div class="d-flex align-items-center mb-3 mt-5">
+        <span class="fs-4 me-2">🌍</span> <h4 class="mb-0 text-uppercase fw-bold text-muted">International Markets</h4>
+    </div>
+    <div class="card shadow mb-5"><div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg (PLN)</th><th>Price (Orig)</th><th>Value (PLN)</th><th>P&L</th></tr></thead>
             <tbody>
                 {% for item in foreign_holdings %}
                 <tr>
-                    <td><strong><a href="/asset/{{ item.symbol }}/">{{ item.symbol }}</a></strong><br><small>{{ item.name }}</small></td>
+                    <td><strong><a href="/asset/{{ item.symbol }}/">{{ item.symbol }}</a></strong><br><small class="text-muted" style="font-size:0.7em">{{ item.name }}</small></td>
                     <td>{{ item.quantity }}</td><td>{{ item.avg_price_pln }}</td><td>{{ item.current_price_orig }} {{ item.currency }}</td>
                     <td><strong>{{ item.value_pln }}</strong></td>
                     <td class="{% if item.gain_pln >= 0 %}gain-pos{% else %}gain-neg{% endif %}">{{ item.gain_pln }}<br><small>({{ item.gain_percent }}%)</small></td>
                 </tr>
-                {% empty %}<tr><td colspan="6" class="text-center">Brak</td></tr>{% endfor %}
+                {% empty %}<tr><td colspan="6" class="text-center py-3 text-muted">No positions</td></tr>{% endfor %}
             </tbody>
         </table>
     </div></div>
 
     {% if closed_holdings %}
-    <h3 class="mt-4 text-muted">👻 Pozycje Zamknięte</h3>
+    <h4 class="mt-5 mb-3 text-muted text-uppercase" style="font-size: 0.9rem; letter-spacing: 1px;">History (Closed Positions)</h4>
     <div class="row mb-5">
-        <div class="col-md-6"><div class="card shadow h-100 opacity-75"><div class="card-body">
-            <table class="table table-sm text-muted"><thead><tr><th>Symbol</th><th>Zrealizowany Wynik</th></tr></thead>
-            <tbody>{% for item in closed_holdings %}<tr><td>{{ item.symbol }}</td><td class="{% if item.gain_pln >= 0 %}text-success{% else %}text-danger{% endif %}">{{ item.gain_pln }} PLN</td></tr>{% endfor %}</tbody></table>
+        <div class="col-md-6"><div class="card shadow h-100 opacity-75"><div class="card-body p-0">
+            <table class="table table-sm text-muted mb-0">
+                <thead><tr><th>Symbol</th><th>Realized P&L</th></tr></thead>
+                <tbody>{% for item in closed_holdings %}<tr><td class="ps-3">{{ item.symbol }}</td><td class="{% if item.gain_pln >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{{ item.gain_pln }} PLN</td></tr>{% endfor %}</tbody>
+            </table>
         </div></div></div>
         <div class="col-md-6"><div class="card shadow h-100 opacity-75"><div class="card-body"><div class="chart-container"><canvas id="closedChart"></canvas></div></div></div></div>
     </div>
@@ -116,7 +141,9 @@
     {{ timeline_dates|json_script:"t-dates" }}
     {{ timeline_total_value|json_script:"t-user" }}
     {{ timeline_invested|json_script:"t-inv" }}
-    {{ timeline_deposit_points|json_script:"t-points" }} {{ timeline_pct_user|json_script:"p-user" }}
+    {{ timeline_deposit_points|json_script:"t-points" }}
+
+    {{ timeline_pct_user|json_script:"p-user" }}
     {{ timeline_pct_wig|json_script:"p-wig" }}
     {{ timeline_pct_sp500|json_script:"p-sp500" }}
     {{ timeline_pct_inflation|json_script:"p-inf" }}
@@ -132,7 +159,7 @@
                 label: 'PLN',
                 user: gd('t-user'),
                 inv: gd('t-inv'),
-                points: gd('t-points') // Pobieramy tablicę kropek (0,0,0,6,0,0...)
+                points: gd('t-points')
             },
             percent: {
                 label: '%',
@@ -150,21 +177,42 @@
             let datasets = [];
             const d = chartData[mode];
 
+            // KOLORY NEONOWE (Dla Dark Mode)
+            const colorUser = '#0dcaf0'; // Cyan
+            const colorUserFill = 'rgba(13, 202, 240, 0.1)';
+            const colorInv = '#6c757d';
+            const colorWig = '#ffc107'; // Gold
+            const colorSp = '#d63384';  // Pink/Purple
+            const colorInf = '#00ff7f'; // Neon Green
+
             if (mode === 'value') {
-                // TRYB PLN: Pokazujemy kropki wpłat (d.points)
                 datasets = [
-                    { label: 'Twój Portfel', data: d.user, borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.1)', borderWidth:3, fill:true, order: 1,
-                      pointRadius: d.points, pointBackgroundColor: '#0d6efd' }, // TU KROPKI
-                    { label: 'Wpłaty', data: d.inv, borderColor: '#6c757d', borderWidth:2, borderDash:[5,5], pointRadius:0, order: 5 }
+                    {
+                        label: 'Portfolio Value',
+                        data: d.user,
+                        borderColor: colorUser,
+                        backgroundColor: colorUserFill,
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: d.points,
+                        pointBackgroundColor: colorUser
+                    },
+                    {
+                        label: 'Invested',
+                        data: d.inv,
+                        borderColor: colorInv,
+                        borderWidth: 1,
+                        borderDash:[4,4],
+                        pointRadius:0
+                    }
                 ];
             } else {
-                // TRYB %: Bez kropek (pointRadius: 0)
                 datasets = [
-                    { label: 'Twój Zwrot (%)', data: d.user, borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.1)', borderWidth:3, fill:true, order: 1, pointRadius: 0 },
-                    { label: 'WIG (%)', data: d.wig, borderColor: '#fd7e14', borderWidth:2, pointRadius:0, fill:false, tension:0.2, order: 2 },
-                    { label: 'S&P 500 (%)', data: d.sp500, borderColor: '#6f42c1', borderWidth:2, pointRadius:0, fill:false, tension:0.2, order: 3 },
-                    { label: 'Cel (6%)', data: d.inf, borderColor: '#198754', borderWidth:1, pointRadius:0, borderDash:[2,2], fill:false, order: 4 },
-                    { label: 'Baza (0%)', data: Array(d.user.length).fill(0), borderColor: '#6c757d', borderWidth:1, borderDash:[5,5], pointRadius:0, order: 5 }
+                    { label: 'My Return (%)', data: d.user, borderColor: colorUser, backgroundColor: colorUserFill, borderWidth: 2, fill: true, pointRadius: 0 },
+                    { label: 'WIG (%)', data: d.wig, borderColor: colorWig, borderWidth: 1, pointRadius:0, fill:false },
+                    { label: 'S&P 500 (%)', data: d.sp500, borderColor: colorSp, borderWidth: 1, pointRadius:0, fill:false },
+                    { label: 'Goal (6%)', data: d.inf, borderColor: colorInf, borderWidth: 1, borderDash:[2,2], pointRadius:0, fill:false },
+                    { label: 'Zero', data: Array(d.user.length).fill(0), borderColor: '#444', borderWidth:1, pointRadius:0 }
                 ];
             }
 
@@ -178,13 +226,20 @@
                     responsive:true, maintainAspectRatio:false,
                     interaction: { mode: 'index', intersect: false },
                     scales:{
-                        y:{
-                            beginAtZero: false,
+                        x: { grid: { display: false } }, // Usuwamy pionowe linie siatki dla czystości
+                        y: {
+                            grid: { color: '#333' },
                             ticks: { callback: function(value) { return value + (mode === 'percent' ? '%' : ' PLN'); } }
                         }
                     },
                     plugins:{
+                        legend: { labels: { color: '#e0e0e0' } },
                         tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#e0e0e0',
+                            borderColor: '#555',
+                            borderWidth: 1,
                             callbacks: {
                                 label: function(c){
                                     return c.dataset.label + ': ' + Math.round(c.parsed.y * 100) / 100 + (mode === 'percent' ? '%' : ' PLN');
@@ -206,15 +261,41 @@
             renderMainChart(mode);
         }
 
-        if(chartData.dates.length > 0) {
-            renderMainChart('value');
-        }
+        if(chartData.dates.length > 0) renderMainChart('value');
+
+        // PIE CHART COLORS
+        const pieColors = ['#0dcaf0','#6610f2','#d63384','#fd7e14','#ffc107','#00ff7f','#20c997','#e0e0e0'];
 
         const lAl = gd('l-alloc');
-        if(lAl.length>0) new Chart(document.getElementById('allocationChart'), {type:'doughnut',data:{labels:lAl,datasets:[{data:gd('d-alloc'),backgroundColor:['#0d6efd','#6610f2','#6f42c1','#d63384','#dc3545','#fd7e14','#ffc107','#198754']}]},options:{maintainAspectRatio:false}});
+        if(lAl.length>0) new Chart(document.getElementById('allocationChart'), {
+            type:'doughnut',
+            data:{labels:lAl,datasets:[{data:gd('d-alloc'),backgroundColor:pieColors, borderWidth: 0}]},
+            options:{
+                maintainAspectRatio:false,
+                plugins: { legend: { position: 'right', labels: { color: '#e0e0e0' } } }
+            }
+        });
+
         const lPr = gd('l-prof');
-        if(lPr.length>0) new Chart(document.getElementById('profitChart'), {type:'bar',data:{labels:lPr,datasets:[{label:'Wynik',data:gd('d-prof'),backgroundColor:gd('d-prof').map(v=>v>=0?'#198754':'#DC3545')}]},options:{maintainAspectRatio:false}});
+        if(lPr.length>0) new Chart(document.getElementById('profitChart'), {
+            type:'bar',
+            data:{labels:lPr,datasets:[{label:'Gain/Loss',data:gd('d-prof'),backgroundColor:gd('d-prof').map(v=>v>=0?'#00ff7f':'#ff4d4d')}]},
+            options:{
+                maintainAspectRatio:false,
+                scales: { x: { grid: { display: false } }, y: { grid: { color: '#333' } } },
+                plugins: { legend: { display: false } }
+            }
+        });
+
         const lCl = gd('l-closed');
-        if(lCl.length>0) new Chart(document.getElementById('closedChart'), {type:'bar',data:{labels:lCl,datasets:[{label:'Wynik',data:gd('d-closed'),backgroundColor:gd('d-closed').map(v=>v>=0?'#198754':'#DC3545')}]},options:{maintainAspectRatio:false}});
+        if(lCl.length>0) new Chart(document.getElementById('closedChart'), {
+            type:'bar',
+            data:{labels:lCl,datasets:[{label:'Realized',data:gd('d-closed'),backgroundColor:gd('d-closed').map(v=>v>=0?'#00ff7f':'#ff4d4d')}]},
+            options:{
+                maintainAspectRatio:false,
+                scales: { x: { grid: { display: false } }, y: { grid: { color: '#333' } } },
+                plugins: { legend: { display: false } }
+            }
+        });
     </script>
 {% endblock %}
