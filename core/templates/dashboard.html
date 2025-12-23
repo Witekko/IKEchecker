@@ -1,340 +1,329 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-uppercase" style="letter-spacing: 1px; color: var(--text-main);">
-            <i class="fas fa-tachometer-alt me-2 text-muted"></i>Market Overview
-        </h2>
-        <span class="badge bg-dark border border-secondary text-muted">LIVE DATA</span>
+        <div>
+            <h2 class="fw-bold mb-1 text-white">Market Dashboard</h2>
+            <p class="text-muted mb-0">Command Center. All values in PLN.</p>
+        </div>
+        <div>
+            <span class="badge bg-dark border border-success text-success px-3 py-2 rounded-pill"
+                  style="color: var(--accent-green) !important; border-color: var(--accent-green) !important;">
+                <i class="fas fa-circle me-2 animate-pulse" style="font-size: 0.6rem;"></i>LIVE
+            </span>
+        </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card h-100 border-start border-4 border-primary">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Invested Capital</div>
-                    <h3 class="card-title text-white mb-0">{{ invested }} <small class="fs-6 text-muted">PLN</small></h3>
+    <div class="row g-3 mb-3">
+
+        <div class="col-md-4 col-xl-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Total Value</div>
+                        <h3 class="mb-0 fw-bold text-white">{{ tile_value_str }} <small class="fs-6 text-muted">PLN</small></h3>
+                    </div>
+                    <i class="fas fa-wallet fa-2x text-muted opacity-10"></i>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-3 mb-3">
-            <div class="card h-100 border-start border-4 border-info">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Total Equity</div>
-                    <h3 class="card-title text-info mb-0">{{ total_value }} <small class="fs-6 text-muted">PLN</small></h3>
-                    <small class="text-muted" style="font-size: 0.75rem;">Cash: {{ cash }} PLN</small>
+        <div class="col-md-4 col-xl-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Total Profit</div>
+                    <div class="d-flex align-items-baseline">
+                        <h4 class="mb-0 me-2 fw-bold {% if tile_total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if tile_total_profit_raw > 0 %}<i class="fas fa-arrow-up me-1"></i>+{% else %}<i class="fas fa-arrow-down me-1"></i>{% endif %}
+                            {{ tile_total_profit_str }}
+                        </h4>
+                        <span class="small text-muted">PLN</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-3 mb-3">
-            <div class="card h-100 border-start border-4 {% if profit >= 0 %}border-success{% else %}border-danger{% endif %}">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Net P&L</div>
-                    <h3 class="card-title {% if profit >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
-                        {% if profit > 0 %}+{% endif %}{{ profit }} <small class="fs-6 text-muted">PLN</small>
-                    </h3>
+         <div class="col-md-2 col-xl-2">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3 text-center">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Total Return</div>
+                    <h4 class="mb-0 fw-bold {% if tile_return_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                         {% if tile_return_pct_raw > 0 %}+{% endif %}{{ tile_return_pct_str }}%
+                    </h4>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-3 mb-3">
-            <div class="card h-100 border-start border-4 border-warning">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">FX Rates</div>
-                    <div class="d-flex justify-content-between mt-2">
-                        <div><span class="text-muted">EUR:</span> <strong class="text-warning">{{ eur_rate }}</strong></div>
-                        <div><span class="text-muted">USD:</span> <strong class="text-warning">{{ usd_rate }}</strong></div>
+        <div class="col-md-2 col-xl-2">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3 text-center">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Avg. Annual</div>
+                    <h4 class="mb-0 fw-bold {% if tile_annual_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ tile_annual_pct_str }}%
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+         <div class="col-md-12 col-xl-2">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
+                <div class="card-body py-3 text-end">
+                    <div class="text-muted small fw-bold text-uppercase">Unrealized</div>
+                    <div class="fw-bold fs-5 {% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                         {{ tile_current_profit_str }} PLN
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card shadow mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-chart-area me-2"></i>PERFORMANCE CHART</span>
+    <div class="row g-3 mb-5">
 
-            <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-primary active" id="btn-val" onclick="switchChart('value')">PLN</button>
-                <button type="button" class="btn btn-outline-primary" id="btn-pct" onclick="switchChart('percent')">%</button>
+        <div class="col-md-3">
+            <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
+                <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                    <span class="text-muted small text-uppercase">1D Change</span>
+                    <span class="fw-bold fs-5 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {% if tile_day_pct_raw > 0 %}<i class="fas fa-caret-up me-1"></i>{% else %}<i class="fas fa-caret-down me-1"></i>{% endif %}
+                        {{ tile_day_pct_str }}%
+                    </span>
+                </div>
             </div>
         </div>
-        <div class="card-body">
+
+        <div class="col-md-3">
+             <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
+                <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                    <span class="text-muted small text-uppercase">1D Gain</span>
+                    <span class="fw-bold fs-5 {% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ tile_day_pln_str }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+             <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
+                <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                    <span class="text-muted small text-uppercase"><i class="fas fa-arrow-up text-success me-1"></i>Gainers</span>
+                    <span class="fw-bold fs-5 text-white">{{ tile_gainers }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+             <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
+                <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                    <span class="text-muted small text-uppercase"><i class="fas fa-arrow-down text-danger me-1"></i>Losers</span>
+                    <span class="fw-bold fs-5 text-white">{{ tile_losers }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-5">
+        <div class="card-header d-flex justify-content-between align-items-center border-0 pb-0 pt-4 px-4">
+            <span class="text-muted text-uppercase fw-bold ls-1">Portfolio History</span>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-dark text-muted active rounded-start-pill px-3" id="btn-val" onclick="switchChart('value')">PLN</button>
+                <button type="button" class="btn btn-sm btn-dark text-muted rounded-end-pill px-3" id="btn-pct" onclick="switchChart('percent')">%</button>
+            </div>
+        </div>
+        <div class="card-body pt-2 px-3">
             <div class="chart-container-wide">
                 <canvas id="timelineChart"></canvas>
             </div>
         </div>
     </div>
 
-    <div class="row mb-5">
-        <div class="col-md-6 mb-3">
-            <div class="card shadow h-100">
-                <div class="card-header"><i class="fas fa-pie-chart me-2"></i>ALLOCATION</div>
+    <div class="row mb-5 g-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header border-0 pt-4 px-4 text-muted text-uppercase fw-bold ls-1">Asset Allocation</div>
                 <div class="card-body"><div class="chart-container"><canvas id="allocationChart"></canvas></div></div>
             </div>
         </div>
-        <div class="col-md-6 mb-3">
-            <div class="card shadow h-100">
-                <div class="card-header"><i class="fas fa-chart-bar me-2"></i>GAIN/LOSS BY ASSET</div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header border-0 pt-4 px-4 text-muted text-uppercase fw-bold ls-1">Profit by Asset</div>
                 <div class="card-body"><div class="chart-container"><canvas id="profitChart"></canvas></div></div>
             </div>
         </div>
     </div>
 
-    <div class="d-flex align-items-center mb-3 mt-4">
-        <span class="fs-4 me-2">🇵🇱</span> <h4 class="mb-0 text-uppercase fw-bold text-muted">GPW (Warsaw)</h4>
+    <div class="d-flex align-items-center mb-3 mt-5">
+        <span class="fs-4 me-2">🇵🇱</span> <h4 class="mb-0 fw-bold">Poland (GPW)</h4>
     </div>
-    <div class="card shadow mb-4"><div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg Price</th><th>Price</th><th>Value (PLN)</th><th>P&L</th><th>1D %</th></tr></thead>
+    <div class="card mb-4 border-0 shadow-sm"><div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-dark"><tr><th class="ps-4 py-3">Symbol</th><th>Qty</th><th>Avg Price</th><th>Price</th><th>1D %</th><th>Value</th><th>Profit/Loss</th></tr></thead>
             <tbody>
                 {% for item in pln_holdings %}
                 <tr>
-                    <td><strong><a href="/asset/{{ item.symbol }}/">{{ item.symbol }}</a></strong><br><small class="text-muted" style="font-size:0.7em">{{ item.name }}</small></td>
-                    <td>{{ item.quantity }}</td><td>{{ item.avg_price_pln }}</td><td>{{ item.current_price_orig }}</td>
-                    <td><strong>{{ item.value_pln }}</strong></td>
-                    <td class="{% if item.gain_pln >= 0 %}gain-pos{% else %}gain-neg{% endif %}">{{ item.gain_pln }}<br><small>({{ item.gain_percent }}%)</small></td>
-                    <td class="fw-bold {% if item.day_change_pct >= 0 %}text-success{% else %}text-danger{% endif %}">{% if item.day_change_pct > 0 %}+{% endif %}{{ item.day_change_pct }}%</td>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-dark d-flex align-items-center justify-content-center me-3 border border-secondary" style="width: 40px; height: 40px; color: #fff;">{{ item.symbol|slice:":1" }}</div>
+                            <div><a href="/asset/{{ item.symbol }}/" class="text-white fw-bold">{{ item.symbol }}</a><br><small class="text-muted">{{ item.name }}</small></div>
+                        </div>
+                    </td>
+                    <td class="fw-bold">{{ item.quantity }}</td><td>{{ item.avg_price_pln }}</td><td>{{ item.current_price_orig }}</td>
+                    <td class="fw-bold {% if item.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {% if item.day_change_pct_raw > 0 %}+{% endif %}{{ item.day_change_pct }}%
+                    </td>
+                    <td class="fw-bold fs-5">{{ item.value_pln }}</td>
+                    <td class="{% if item.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                        {{ item.gain_pln }}<br><small class="opacity-50">({{ item.gain_percent }}%)</small>
+                    </td>
                 </tr>
-                {% empty %}<tr><td colspan="6" class="text-center py-3 text-muted">No positions</td></tr>{% endfor %}
+                {% empty %}<tr><td colspan="7" class="text-center py-4 text-muted">No positions</td></tr>{% endfor %}
             </tbody>
         </table>
     </div></div>
 
     <div class="d-flex align-items-center mb-3 mt-5">
-        <span class="fs-4 me-2">🌍</span> <h4 class="mb-0 text-uppercase fw-bold text-muted">International Markets</h4>
+        <span class="fs-4 me-2">🌍</span> <h4 class="mb-0 fw-bold">Global (ETF/Stocks)</h4>
     </div>
-    <div class="card shadow mb-5"><div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg (PLN)</th><th>Price (Orig)</th><th>Value (PLN)</th><th>P&L</th><th>1D %</th></tr></thead>
+    <div class="card mb-5 border-0 shadow-sm"><div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-dark"><tr><th class="ps-4 py-3">Symbol</th><th>Qty</th><th>Avg Price (PLN)</th><th>Price (Orig)</th><th>1D %</th><th>Value (PLN)</th><th>Profit/Loss</th></tr></thead>
             <tbody>
                 {% for item in foreign_holdings %}
                 <tr>
-                    <td><strong><a href="/asset/{{ item.symbol }}/">{{ item.symbol }}</a></strong><br><small class="text-muted" style="font-size:0.7em">{{ item.name }}</small></td>
-                    <td>{{ item.quantity }}</td><td>{{ item.avg_price_pln }}</td><td>{{ item.current_price_orig }} {{ item.currency }}</td>
-                    <td><strong>{{ item.value_pln }}</strong></td>
-                    <td class="{% if item.gain_pln >= 0 %}gain-pos{% else %}gain-neg{% endif %}">{{ item.gain_pln }}<br><small>({{ item.gain_percent }}%)</small></td>
-                    <td class="fw-bold {% if item.day_change_pct >= 0 %}text-success{% else %}text-danger{% endif %}">{% if item.day_change_pct > 0 %}+{% endif %}{{ item.day_change_pct }}%</td>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-dark d-flex align-items-center justify-content-center me-3 border border-secondary" style="width: 40px; height: 40px; color: #fff;">{{ item.symbol|slice:":1" }}</div>
+                            <div><a href="/asset/{{ item.symbol }}/" class="text-white fw-bold">{{ item.symbol }}</a><br><small class="text-muted">{{ item.name }}</small></div>
+                        </div>
+                    </td>
+                    <td class="fw-bold">{{ item.quantity }}</td><td>{{ item.avg_price_pln }}</td><td>{{ item.current_price_orig }} {{ item.currency }}</td>
+                    <td class="fw-bold {% if item.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {% if item.day_change_pct_raw > 0 %}+{% endif %}{{ item.day_change_pct }}%
+                    </td>
+                    <td class="fw-bold fs-5">{{ item.value_pln }}</td>
+                    <td class="{% if item.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                        {{ item.gain_pln }}<br><small class="opacity-50">({{ item.gain_percent }}%)</small>
+                    </td>
                 </tr>
-                {% empty %}<tr><td colspan="6" class="text-center py-3 text-muted">No positions</td></tr>{% endfor %}
+                {% empty %}<tr><td colspan="7" class="text-center py-4 text-muted">No positions</td></tr>{% endfor %}
             </tbody>
         </table>
     </div></div>
 
     {% if closed_holdings %}
-    <h4 class="mt-5 mb-3 text-muted text-uppercase" style="font-size: 0.9rem; letter-spacing: 1px;">History (Closed Positions)</h4>
+    <h4 class="mt-5 mb-3 text-muted text-uppercase fw-bold ls-1">History (Closed Positions)</h4>
     <div class="row mb-5">
-        <div class="col-md-6"><div class="card shadow h-100 opacity-75"><div class="card-body p-0">
-            <table class="table table-sm text-muted mb-0">
-                <thead><tr><th>Symbol</th><th>Realized P&L</th></tr></thead>
-                <tbody>{% for item in closed_holdings %}<tr><td class="ps-3">{{ item.symbol }}</td><td class="{% if item.gain_pln >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{{ item.gain_pln }} PLN</td></tr>{% endfor %}</tbody>
-            </table>
-        </div></div></div>
-        <div class="col-md-6"><div class="card shadow h-100 opacity-75"><div class="card-body"><div class="chart-container"><canvas id="closedChart"></canvas></div></div></div></div>
+        <div class="col-md-6">
+            <div class="card shadow h-100 border-secondary border-opacity-25">
+                <div class="card-body p-0">
+                    <table class="table table-sm text-muted mb-0">
+                        <thead><tr><th class="ps-4 py-2">Symbol</th><th>Realized P&L</th></tr></thead>
+                        <tbody>
+                            {% for item in closed_holdings %}
+                            <tr>
+                                <td class="ps-4">{{ item.symbol }}</td>
+                                <td class="{% if item.gain_pln >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{{ item.gain_pln }} PLN</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow h-100 border-secondary border-opacity-25">
+                <div class="card-body"><div class="chart-container"><canvas id="closedChart"></canvas></div></div>
+            </div>
+        </div>
     </div>
     {% endif %}
 
     {{ chart_labels|json_script:"l-alloc" }} {{ chart_allocation|json_script:"d-alloc" }}
     {{ chart_profit_labels|json_script:"l-prof" }} {{ chart_profit_values|json_script:"d-prof" }}
     {{ closed_labels|json_script:"l-closed" }} {{ closed_values|json_script:"d-closed" }}
-
     {{ timeline_dates|json_script:"t-dates" }}
     {{ timeline_total_value|json_script:"t-user" }}
     {{ timeline_invested|json_script:"t-inv" }}
     {{ timeline_deposit_points|json_script:"t-points" }}
-
     {{ timeline_pct_user|json_script:"p-user" }}
     {{ timeline_pct_wig|json_script:"p-wig" }}
     {{ timeline_pct_sp500|json_script:"p-sp500" }}
     {{ timeline_pct_inflation|json_script:"p-inf" }}
 
+    <style>.ls-1 { letter-spacing: 1px; }</style>
+
     <script>
         function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
-
+        const NEW_GREEN = '#98FB98';
+        const SOFT_RED = '#ef5350';
+        const SOFT_BLUE = '#42a5f5';
         let mainChartInstance = null;
-
         const chartData = {
             dates: gd('t-dates'),
-            value: {
-                label: 'PLN',
-                user: gd('t-user'),
-                inv: gd('t-inv'),
-                points: gd('t-points')
-            },
-            percent: {
-                label: '%',
-                user: gd('p-user'),
-                wig: gd('p-wig'),
-                sp500: gd('p-sp500'),
-                inf: gd('p-inf')
-            }
+            value: { label: 'PLN', user: gd('t-user'), inv: gd('t-inv'), points: gd('t-points') },
+            percent: { label: '%', user: gd('p-user'), wig: gd('p-wig'), sp500: gd('p-sp500'), inf: gd('p-inf') }
         };
 
         function renderMainChart(mode) {
             const ctx = document.getElementById('timelineChart');
             if (mainChartInstance) mainChartInstance.destroy();
-
             let datasets = [];
             const d = chartData[mode];
-
-            const colorUser = '#0dcaf0';
-            const colorUserFill = 'rgba(13, 202, 240, 0.1)';
+            const colorUser = SOFT_BLUE;
+            const colorUserFill = 'rgba(66, 165, 245, 0.1)';
             const colorInv = '#6c757d';
-            const colorWig = '#ffc107';
-            const colorSp = '#d63384';
-            const colorInf = '#00ff7f';
+            const colorWig = '#ffca28';
+            const colorSp = '#ab47bc';
+            const colorInf = NEW_GREEN;
 
             if (mode === 'value') {
                 datasets = [
-                    {
-                        label: 'Portfolio Value',
-                        data: d.user,
-                        borderColor: colorUser,
-                        backgroundColor: colorUserFill,
-                        borderWidth: 2,
-                        fill: true,
-                        pointRadius: d.points,
-                        pointBackgroundColor: colorUser
-                    },
-                    {
-                        label: 'Invested',
-                        data: d.inv,
-                        borderColor: colorInv,
-                        borderWidth: 1,
-                        borderDash:[4,4],
-                        pointRadius:0
-                    }
+                    { label: 'Portfolio Value', data: d.user, borderColor: colorUser, backgroundColor: colorUserFill, borderWidth: 3, fill: true, pointRadius: d.points, pointBackgroundColor: colorUser, tension: 0.3 },
+                    { label: 'Invested', data: d.inv, borderColor: colorInv, borderWidth: 2, borderDash:[4,4], pointRadius:0, tension: 0.3 }
                 ];
             } else {
                 datasets = [
-                    { label: 'My Return (%)', data: d.user, borderColor: colorUser, backgroundColor: colorUserFill, borderWidth: 2, fill: true, pointRadius: 0 },
-                    { label: 'WIG (%)', data: d.wig, borderColor: colorWig, borderWidth: 1, pointRadius:0, fill:false },
-                    { label: 'S&P 500 (%)', data: d.sp500, borderColor: colorSp, borderWidth: 1, pointRadius:0, fill:false },
-                    { label: 'Goal (6%)', data: d.inf, borderColor: colorInf, borderWidth: 1, borderDash:[2,2], pointRadius:0, fill:false },
+                    { label: 'My Return (%)', data: d.user, borderColor: colorUser, backgroundColor: colorUserFill, borderWidth: 3, fill: true, pointRadius: 0, tension: 0.3 },
+                    { label: 'WIG (%)', data: d.wig, borderColor: colorWig, borderWidth: 2, pointRadius:0, fill:false, tension: 0.3 },
+                    { label: 'S&P 500 (%)', data: d.sp500, borderColor: colorSp, borderWidth: 2, pointRadius:0, fill:false, tension: 0.3 },
+                    { label: 'Goal (6%)', data: d.inf, borderColor: colorInf, borderWidth: 2, borderDash:[2,2], pointRadius:0, fill:false, tension: 0.3 },
                     { label: 'Zero', data: Array(d.user.length).fill(0), borderColor: '#444', borderWidth:1, pointRadius:0 }
                 ];
             }
 
             mainChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartData.dates,
-                    datasets: datasets
-                },
+                type: 'line', data: { labels: chartData.dates, datasets: datasets },
                 options: {
-                    responsive:true, maintainAspectRatio:false,
-                    interaction: { mode: 'index', intersect: false },
-                    scales:{
-                        x: { grid: { display: false } },
-                        y: {
-                            grid: { color: '#333' },
-                            ticks: { callback: function(value) { return value + (mode === 'percent' ? '%' : ' PLN'); } }
-                        }
-                    },
-                    plugins:{
-                        legend: { labels: { color: '#e0e0e0' } },
-                        tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#e0e0e0',
-                            borderColor: '#555',
-                            borderWidth: 1,
-                            callbacks: {
-                                label: function(c){
-                                    return c.dataset.label + ': ' + Math.round(c.parsed.y * 100) / 100 + (mode === 'percent' ? '%' : ' PLN');
-                                }
-                            }
-                        }
-                    }
+                    responsive:true, maintainAspectRatio:false, interaction: { mode: 'index', intersect: false },
+                    scales:{ x: { grid: { display: false }, ticks: { color: '#a0a0a0' } }, y: { grid: { color: '#333', borderDash: [4, 4] }, ticks: { color: '#a0a0a0', callback: function(value) { return value + (mode === 'percent' ? '%' : ' PLN'); } } } },
+                    plugins:{ legend: { labels: { color: '#e0e0e0', usePointStyle: true, boxWidth: 10 } }, tooltip: { backgroundColor: 'rgba(30,30,30,0.95)', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#444', borderWidth: 1, cornerRadius: 8, padding: 10 } }
                 }
             });
         }
 
         function switchChart(mode) {
-            document.getElementById('btn-val').classList.remove('active');
-            document.getElementById('btn-pct').classList.remove('active');
-
-            if (mode === 'value') document.getElementById('btn-val').classList.add('active');
-            else document.getElementById('btn-pct').classList.add('active');
-
+            const btnVal = document.getElementById('btn-val'); const btnPct = document.getElementById('btn-pct');
+            btnVal.className = 'btn btn-sm btn-dark text-muted rounded-start-pill px-3';
+            btnPct.className = 'btn btn-sm btn-dark text-muted rounded-end-pill px-3';
+            if (mode === 'value') { btnVal.classList.add('active', 'bg-primary', 'text-white'); btnVal.classList.remove('text-muted'); }
+            else { btnPct.classList.add('active', 'bg-primary', 'text-white'); btnPct.classList.remove('text-muted'); }
             renderMainChart(mode);
         }
-
         if(chartData.dates.length > 0) renderMainChart('value');
 
-        // PIE CHART - LOGIKA Z PROCENTAMI
-        const pieColors = ['#0dcaf0','#6610f2','#d63384','#fd7e14','#ffc107','#00ff7f','#20c997','#e0e0e0'];
-        const lAl = gd('l-alloc');
-        const dAl = gd('d-alloc');
-
+        const pieColors = [SOFT_BLUE, '#ab47bc', SOFT_RED, '#ffa726', '#ffca28', NEW_GREEN, '#5c6bc0', '#bdbdbd'];
+        const lAl = gd('l-alloc'); const dAl = gd('d-alloc');
         if(lAl.length > 0) {
-            // 1. Obliczamy sumę portfela dla wykresu
             const totalPortfolio = dAl.reduce((a, b) => a + b, 0);
-
-            // 2. Modyfikujemy etykiety, żeby zawierały % w Legendzie
             const labelsWithPercent = lAl.map((label, index) => {
-                const value = dAl[index];
-                const percent = totalPortfolio > 0 ? ((value / totalPortfolio) * 100).toFixed(1) : 0;
+                const value = dAl[index]; const percent = totalPortfolio > 0 ? ((value / totalPortfolio) * 100).toFixed(1) : 0;
                 return `${label} (${percent}%)`;
             });
-
-            new Chart(document.getElementById('allocationChart'), {
-                type:'doughnut',
-                data:{
-                    labels: labelsWithPercent, // Używamy nowych etykiet
-                    datasets:[{
-                        data: dAl,
-                        backgroundColor: pieColors,
-                        borderWidth: 0
-                    }]
-                },
-                options:{
-                    maintainAspectRatio:false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: { color: '#e0e0e0' }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                // 3. Customowy Tooltip: Nazwa + Wartość PLN + Procent
-                                label: function(context) {
-                                    const value = context.parsed;
-                                    const percent = totalPortfolio > 0 ? ((value / totalPortfolio) * 100).toFixed(1) : 0;
-                                    // Pobieramy oryginalną nazwę (bez procenta, bo jest w tooltipie) albo używamy labela z kontekstu
-                                    // Dla czytelności użyjmy labela z kontekstu, który już ma % w nawiasie,
-                                    // ale dodajmy też kwotę PLN.
-                                    return ` ${context.label}: ${value} PLN`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+            new Chart(document.getElementById('allocationChart'), { type:'doughnut', data:{ labels: labelsWithPercent, datasets:[{ data: dAl, backgroundColor: pieColors, borderWidth: 0, hoverOffset: 10 }] }, options:{ maintainAspectRatio:false, cutout: '70%', plugins: { legend: { position: 'right', labels: { color: '#e0e0e0', usePointStyle: true } } } } });
         }
 
-        const lPr = gd('l-prof');
-        if(lPr.length>0) new Chart(document.getElementById('profitChart'), {
-            type:'bar',
-            data:{labels:lPr,datasets:[{label:'Gain/Loss',data:gd('d-prof'),backgroundColor:gd('d-prof').map(v=>v>=0?'#00ff7f':'#ff4d4d')}]},
-            options:{
-                maintainAspectRatio:false,
-                scales: { x: { grid: { display: false } }, y: { grid: { color: '#333' } } },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        const lCl = gd('l-closed');
-        if(lCl.length>0) new Chart(document.getElementById('closedChart'), {
-            type:'bar',
-            data:{labels:lCl,datasets:[{label:'Realized',data:gd('d-closed'),backgroundColor:gd('d-closed').map(v=>v>=0?'#00ff7f':'#ff4d4d')}]},
-            options:{
-                maintainAspectRatio:false,
-                scales: { x: { grid: { display: false } }, y: { grid: { color: '#333' } } },
-                plugins: { legend: { display: false } }
-            }
-        });
+        const barOptions = { maintainAspectRatio:false, scales: { x: { grid: { display: false }, ticks: { color: '#a0a0a0' } }, y: { grid: { color: '#333' }, ticks: { color: '#a0a0a0' } } }, plugins: { legend: { display: false } } };
+        const lPr = gd('l-prof'); if(lPr.length>0) new Chart(document.getElementById('profitChart'), { type:'bar', data:{labels:lPr,datasets:[{label:'Gain/Loss',data:gd('d-prof'),backgroundColor:gd('d-prof').map(v=>v>=0? NEW_GREEN : SOFT_RED), borderRadius: 6}]}, options: barOptions });
+        const lCl = gd('l-closed'); if(lCl.length>0) new Chart(document.getElementById('closedChart'), { type:'bar', data:{labels:lCl,datasets:[{label:'Realized',data:gd('d-closed'),backgroundColor:gd('d-closed').map(v=>v>=0? NEW_GREEN : SOFT_RED), borderRadius: 6}]}, options: barOptions });
     </script>
 {% endblock %}

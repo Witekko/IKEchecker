@@ -7,104 +7,84 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* --- BLOOMBERG STYLE OVERRIDES --- */
+        /* --- MODERN SOFT DARK THEME --- */
         :root {
-            --bg-body: #121212;       /* Tło strony */
-            --bg-card: #1e1e1e;       /* Tło kart */
-            --text-main: #e0e0e0;     /* Główny tekst */
-            --text-muted: #a0a0a0;    /* Tekst poboczny */
-            --accent-blue: #0dcaf0;   /* Cyjanowy akcent */
-            --accent-green: #00ff7f;  /* Neonowa zieleń (Zysk) */
-            --accent-red: #ff4d4d;    /* Neonowa czerwień (Strata) */
-            --border-color: #333333;
+            --bg-body: #121212;       /* Bardzo ciemne tło strony */
+            --bg-card: #252525;       /* Nieco jaśniejsze tło kart (dla kontrastu) */
+            --text-main: #ffffff;     /* Biały tekst */
+            --text-muted: #a0a0a0;    /* Szary tekst poboczny */
+
+            --accent-green: #98FB98	;  /* Bardziej morska/miękka zieleń */
+            --accent-red: #ef5350;    /* Miękka czerwień */
+            --accent-blue: #42a5f5;   /* Miękki niebieski */
+
+            --border-radius: 16px;    /* KLUCZOWE: Duże zaokrąglenie */
+            --card-shadow: 0 8px 24px rgba(0,0,0,0.25); /* Miękki cień */
+            --border-color: #333;
         }
 
         body {
             background-color: var(--bg-body);
             color: var(--text-main);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* Bardziej techniczna czcionka */
-            padding-top: 70px;
+            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding-top: 80px; /* Więcej oddechu od góry */
         }
 
-        /* Navbar */
+        /* Navbar - bardziej minimalistyczny */
         .navbar {
-            background-color: #000000 !important; /* Czysta czerń dla paska */
-            border-bottom: 1px solid var(--accent-blue); /* Cienka niebieska linia */
+            background-color: rgba(18, 18, 18, 0.95) !important; /* Półprzezroczysty */
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #333;
         }
-        .navbar-brand {
-            color: var(--accent-blue) !important;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-        .nav-link { color: var(--text-muted) !important; }
-        .nav-link.active { color: #fff !important; font-weight: bold; }
+        .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
 
-        /* Karty (Cards) */
+        /* Karty (Cards) - Miękkie i zaokrąglone */
         .card {
             background-color: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 4px; /* Ostre rogi są bardziej "pro" */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            margin-bottom: 20px;
+            border-radius: var(--border-radius) !important; /* Zaokrąglamy wszystko */
+            box-shadow: var(--card-shadow);
+            margin-bottom: 25px;
+            transition: transform 0.2s ease; /* Delikatny efekt przy najechaniu */
         }
+        /* Opcjonalnie: lekki ruch przy najechaniu na karty */
+        .card:hover { transform: translateY(-2px); }
+
         .card-header {
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: transparent;
             border-bottom: 1px solid var(--border-color);
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-        }
-
-        /* Tabele */
-        .table {
-            color: var(--text-main);
-            border-color: var(--border-color);
-        }
-        .table thead th {
-            background-color: #2c2c2c;
-            color: var(--text-muted);
-            border-bottom: 2px solid var(--border-color);
-            text-transform: uppercase;
             font-size: 0.8rem;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            padding-top: 1.2rem;
+            padding-bottom: 1rem;
         }
-        .table tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-        /* Linki w tabelach */
-        td a {
-            color: var(--accent-blue);
-            text-decoration: none;
-            font-weight: bold;
-        }
-        td a:hover { color: #fff; text-decoration: underline; }
+        .card-body { padding: 1.5rem; }
 
-        /* Kolory zysków/strat */
-        .gain-pos { color: var(--accent-green) !important; font-weight: bold; }
-        .gain-neg { color: var(--accent-red) !important; font-weight: bold; }
-        .text-success { color: var(--accent-green) !important; }
-        .text-danger { color: var(--accent-red) !important; }
+        /* Kolory zysków/strat - miękkie */
+        .text-success, .gain-pos { color: var(--accent-green) !important; }
+        .text-danger, .gain-neg { color: var(--accent-red) !important; }
+        .text-info { color: var(--accent-blue) !important; }
+        .text-warning { color: #ffca28 !important; }
 
-        /* Wykresy - kontenery */
-        .chart-container { position: relative; height: 300px; }
-        .chart-container-wide { position: relative; height: 400px; }
-
-        /* Przyciski (Buttons) - styl 'outline' jest teraz bardziej neonowy */
-        .btn-outline-primary {
-            color: var(--accent-blue);
-            border-color: var(--accent-blue);
+        /* Tabele - czystsze */
+        .table { color: var(--text-main); --bs-table-border-color: var(--border-color); }
+        .table thead th {
+            background-color: transparent;
+            color: var(--text-muted);
+            border-bottom-width: 1px;
+            font-weight: 600;
+            font-size: 0.85rem;
         }
-        .btn-outline-primary:hover, .btn-outline-primary.active {
-            background-color: var(--accent-blue);
-            color: #000;
-            border-color: var(--accent-blue);
-        }
+        td a { color: var(--text-main); text-decoration: none; font-weight: 600; }
+        td a:hover { color: var(--accent-blue); }
 
-        /* Modyfikacja alertów */
-        .alert-success { background-color: #0f5132; color: #fff; border: 1px solid #146c43; }
-        .alert-danger { background-color: #842029; color: #fff; border: 1px solid #b02a37; }
+        /* Wykresy */
+        .chart-container, .chart-container-wide { position: relative; }
+        .chart-container { height: 300px; }
+        .chart-container-wide { height: 450px; } /* Wyższy główny wykres */
 
     </style>
 </head>

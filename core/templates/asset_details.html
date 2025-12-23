@@ -53,7 +53,76 @@
             </div>
         </div>
     </div>
+<div class="d-flex align-items-center mb-3 mt-5">
+        <h4 class="text-muted text-uppercase mb-0" style="font-size: 0.9rem; letter-spacing: 1px;">
+            <i class="fas fa-satellite-dish me-2"></i> Market Intelligence
+        </h4>
+        <span class="badge bg-dark border border-secondary ms-2 text-muted">Google News RSS</span>
+    </div>
 
+    <div class="row mb-5">
+        {% for news in news_list %}
+        <div class="col-md-6 mb-3">
+
+            <div class="card h-100 shadow-sm news-card position-relative
+                {% if news.freshness == 0 %}
+                    border-light bg-dark
+                {% elif news.freshness == 1 %}
+                    border-secondary border-opacity-50 bg-dark
+                {% else %}
+                    border-0 bg-transparent opacity-50
+                {% endif %}"
+                style="transition: all 0.3s ease;">
+
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-uppercase fw-bold"
+                               style="font-size: 0.7rem; color: {% if news.freshness == 0 %}#fff{% else %}#888{% endif %};">
+                            {% if news.freshness == 0 %}<i class="fas fa-bolt text-warning me-1"></i>{% endif %}
+                            {{ news.date_label }} &nbsp;|&nbsp; {{ news.source }}
+                        </small>
+
+                        <div>
+                            {% if 'OFFICIAL' in news.tags %}
+                                <span class="badge bg-danger text-uppercase">ESPI</span>
+                            {% endif %}
+                            {% if 'MONEY' in news.tags %}
+                                <span class="badge bg-success text-dark text-uppercase">$$$</span>
+                            {% endif %}
+                            {% if 'RESULTS' in news.tags %}
+                                <span class="badge bg-info text-dark text-uppercase">WYNIKI</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <a href="{{ news.link }}" target="_blank" class="text-decoration-none stretched-link">
+                        <h6 class="card-title fw-bold mb-0"
+                            style="line-height: 1.4; color: {% if news.freshness == 0 %}#fff{% elif news.freshness == 1 %}#ccc{% else %}#666{% endif %};">
+                            {{ news.title|truncatechars:100 }}
+                        </h6>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-dark border-secondary text-muted text-center py-4">
+                <i class="fas fa-comment-slash fa-2x mb-3"></i><br>
+                Brak świeżych wiadomości. Cisza w eterze.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <style>
+        .news-card:hover {
+            opacity: 1 !important; /* Nawet stary news się rozjaśnia po najechaniu */
+            transform: translateY(-3px);
+            background-color: #1e1e1e !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5) !important;
+            border-color: #0dcaf0 !important;
+        }
+    </style>
     <div class="card shadow mb-5">
         <div class="card-header text-uppercase text-muted fw-bold">
             <i class="fas fa-chart-line me-2"></i> Price History & Transactions

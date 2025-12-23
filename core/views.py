@@ -2,11 +2,11 @@ import pandas as pd
 import yfinance as yf
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required  # <--- TEGO BRAKOWAŁO
+from django.contrib.auth.decorators import login_required
 from .forms import UploadFileForm
 from .models import Transaction, Asset, Portfolio
-# Importujemy wszystkie 3 główne funkcje z services
-from .services import process_xtb_file, get_dashboard_context, get_dividend_context
+# Importujemy wszystkie 4 główne funkcje z services
+from .services import process_xtb_file, get_dashboard_context, get_dividend_context, get_asset_news
 
 
 @login_required
@@ -137,6 +137,8 @@ def asset_details_view(request, symbol):
                 chart_colors.append('rgba(0,0,0,0)')
                 chart_radius.append(0)
 
+    news_data = get_asset_news(asset.symbol, asset.name)
+
     context = {
         'asset': asset,
         'current_price': round(current_price, 2),
@@ -147,11 +149,10 @@ def asset_details_view(request, symbol):
         'profit_percent': round(profit_percent, 2),
         'history': reversed(history_table),
         'currency_rate': round(multiplier, 2) if multiplier != 1.0 else None,
-
-        # Wykres
         'chart_dates': chart_dates,
         'chart_prices': chart_prices,
         'chart_colors': chart_colors,
         'chart_radius': chart_radius,
+        'news_list': news_data  # <--- PRZEKAZUJEMY DO HTML
     }
     return render(request, 'asset_details.html', context)
