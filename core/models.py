@@ -4,13 +4,14 @@ from django.utils import timezone
 
 
 class Asset(models.Model):
-    symbol = models.CharField(max_length=20, unique=True)  # np. PKN.PL
-    yahoo_ticker = models.CharField(max_length=20)  # np. PKN.WA
+    symbol = models.CharField(max_length=20, unique=True)
+    yahoo_ticker = models.CharField(max_length=20)
     currency = models.CharField(max_length=10, default='PLN')
     name = models.CharField(max_length=100, blank=True)
 
-    # --- NOWE POLA DO CACHE ---
+    # Cache
     last_price = models.DecimalField(max_digits=10, decimal_places=4, default=0.0)
+    previous_close = models.DecimalField(max_digits=10, decimal_places=4, default=0.0)  # <--- NOWOŚĆ
     last_updated = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):

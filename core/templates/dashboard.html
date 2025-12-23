@@ -9,7 +9,7 @@
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card h-100 border-start border-4 border-primary">
                 <div class="card-body">
                     <div class="text-muted text-uppercase small fw-bold mb-1">Invested Capital</div>
@@ -18,7 +18,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card h-100 border-start border-4 border-info">
                 <div class="card-body">
                     <div class="text-muted text-uppercase small fw-bold mb-1">Total Equity</div>
@@ -28,7 +28,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card h-100 border-start border-4 {% if profit >= 0 %}border-success{% else %}border-danger{% endif %}">
                 <div class="card-body">
                     <div class="text-muted text-uppercase small fw-bold mb-1">Net P&L</div>
@@ -39,7 +39,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card h-100 border-start border-4 border-warning">
                 <div class="card-body">
                     <div class="text-muted text-uppercase small fw-bold mb-1">FX Rates</div>
@@ -69,13 +69,13 @@
     </div>
 
     <div class="row mb-5">
-        <div class="col-md-6">
+        <div class="col-md-6 mb-3">
             <div class="card shadow h-100">
                 <div class="card-header"><i class="fas fa-pie-chart me-2"></i>ALLOCATION</div>
                 <div class="card-body"><div class="chart-container"><canvas id="allocationChart"></canvas></div></div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6 mb-3">
             <div class="card shadow h-100">
                 <div class="card-header"><i class="fas fa-chart-bar me-2"></i>GAIN/LOSS BY ASSET</div>
                 <div class="card-body"><div class="chart-container"><canvas id="profitChart"></canvas></div></div>
@@ -88,7 +88,7 @@
     </div>
     <div class="card shadow mb-4"><div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg Price</th><th>Price</th><th>Value (PLN)</th><th>P&L</th></tr></thead>
+            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg Price</th><th>Price</th><th>Value (PLN)</th><th>P&L</th><th>1D %</th></tr></thead>
             <tbody>
                 {% for item in pln_holdings %}
                 <tr>
@@ -96,6 +96,7 @@
                     <td>{{ item.quantity }}</td><td>{{ item.avg_price_pln }}</td><td>{{ item.current_price_orig }}</td>
                     <td><strong>{{ item.value_pln }}</strong></td>
                     <td class="{% if item.gain_pln >= 0 %}gain-pos{% else %}gain-neg{% endif %}">{{ item.gain_pln }}<br><small>({{ item.gain_percent }}%)</small></td>
+                    <td class="fw-bold {% if item.day_change_pct >= 0 %}text-success{% else %}text-danger{% endif %}">{% if item.day_change_pct > 0 %}+{% endif %}{{ item.day_change_pct }}%</td>
                 </tr>
                 {% empty %}<tr><td colspan="6" class="text-center py-3 text-muted">No positions</td></tr>{% endfor %}
             </tbody>
@@ -107,7 +108,7 @@
     </div>
     <div class="card shadow mb-5"><div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg (PLN)</th><th>Price (Orig)</th><th>Value (PLN)</th><th>P&L</th></tr></thead>
+            <thead><tr><th>Symbol</th><th>Qty</th><th>Avg (PLN)</th><th>Price (Orig)</th><th>Value (PLN)</th><th>P&L</th><th>1D %</th></tr></thead>
             <tbody>
                 {% for item in foreign_holdings %}
                 <tr>
@@ -115,6 +116,7 @@
                     <td>{{ item.quantity }}</td><td>{{ item.avg_price_pln }}</td><td>{{ item.current_price_orig }} {{ item.currency }}</td>
                     <td><strong>{{ item.value_pln }}</strong></td>
                     <td class="{% if item.gain_pln >= 0 %}gain-pos{% else %}gain-neg{% endif %}">{{ item.gain_pln }}<br><small>({{ item.gain_percent }}%)</small></td>
+                    <td class="fw-bold {% if item.day_change_pct >= 0 %}text-success{% else %}text-danger{% endif %}">{% if item.day_change_pct > 0 %}+{% endif %}{{ item.day_change_pct }}%</td>
                 </tr>
                 {% empty %}<tr><td colspan="6" class="text-center py-3 text-muted">No positions</td></tr>{% endfor %}
             </tbody>
@@ -177,13 +179,12 @@
             let datasets = [];
             const d = chartData[mode];
 
-            // KOLORY NEONOWE (Dla Dark Mode)
-            const colorUser = '#0dcaf0'; // Cyan
+            const colorUser = '#0dcaf0';
             const colorUserFill = 'rgba(13, 202, 240, 0.1)';
             const colorInv = '#6c757d';
-            const colorWig = '#ffc107'; // Gold
-            const colorSp = '#d63384';  // Pink/Purple
-            const colorInf = '#00ff7f'; // Neon Green
+            const colorWig = '#ffc107';
+            const colorSp = '#d63384';
+            const colorInf = '#00ff7f';
 
             if (mode === 'value') {
                 datasets = [
@@ -226,7 +227,7 @@
                     responsive:true, maintainAspectRatio:false,
                     interaction: { mode: 'index', intersect: false },
                     scales:{
-                        x: { grid: { display: false } }, // Usuwamy pionowe linie siatki dla czystości
+                        x: { grid: { display: false } },
                         y: {
                             grid: { color: '#333' },
                             ticks: { callback: function(value) { return value + (mode === 'percent' ? '%' : ' PLN'); } }
@@ -263,18 +264,56 @@
 
         if(chartData.dates.length > 0) renderMainChart('value');
 
-        // PIE CHART COLORS
+        // PIE CHART - LOGIKA Z PROCENTAMI
         const pieColors = ['#0dcaf0','#6610f2','#d63384','#fd7e14','#ffc107','#00ff7f','#20c997','#e0e0e0'];
-
         const lAl = gd('l-alloc');
-        if(lAl.length>0) new Chart(document.getElementById('allocationChart'), {
-            type:'doughnut',
-            data:{labels:lAl,datasets:[{data:gd('d-alloc'),backgroundColor:pieColors, borderWidth: 0}]},
-            options:{
-                maintainAspectRatio:false,
-                plugins: { legend: { position: 'right', labels: { color: '#e0e0e0' } } }
-            }
-        });
+        const dAl = gd('d-alloc');
+
+        if(lAl.length > 0) {
+            // 1. Obliczamy sumę portfela dla wykresu
+            const totalPortfolio = dAl.reduce((a, b) => a + b, 0);
+
+            // 2. Modyfikujemy etykiety, żeby zawierały % w Legendzie
+            const labelsWithPercent = lAl.map((label, index) => {
+                const value = dAl[index];
+                const percent = totalPortfolio > 0 ? ((value / totalPortfolio) * 100).toFixed(1) : 0;
+                return `${label} (${percent}%)`;
+            });
+
+            new Chart(document.getElementById('allocationChart'), {
+                type:'doughnut',
+                data:{
+                    labels: labelsWithPercent, // Używamy nowych etykiet
+                    datasets:[{
+                        data: dAl,
+                        backgroundColor: pieColors,
+                        borderWidth: 0
+                    }]
+                },
+                options:{
+                    maintainAspectRatio:false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: '#e0e0e0' }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                // 3. Customowy Tooltip: Nazwa + Wartość PLN + Procent
+                                label: function(context) {
+                                    const value = context.parsed;
+                                    const percent = totalPortfolio > 0 ? ((value / totalPortfolio) * 100).toFixed(1) : 0;
+                                    // Pobieramy oryginalną nazwę (bez procenta, bo jest w tooltipie) albo używamy labela z kontekstu
+                                    // Dla czytelności użyjmy labela z kontekstu, który już ma % w nawiasie,
+                                    // ale dodajmy też kwotę PLN.
+                                    return ` ${context.label}: ${value} PLN`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         const lPr = gd('l-prof');
         if(lPr.length>0) new Chart(document.getElementById('profitChart'), {
