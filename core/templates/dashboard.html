@@ -178,6 +178,15 @@
                 </tr>
                 {% empty %}<tr><td colspan="7" class="text-center py-4 text-muted">No positions</td></tr>{% endfor %}
             </tbody>
+            <tfoot class="bg-dark border-top border-secondary">
+                <tr class="fw-bold fs-5">
+                    <td colspan="5" class="text-end pe-4 text-uppercase text-muted small py-3">Total GPW:</td>
+                    <td class="py-3 text-white">{{ totals_pln.value }}</td>
+                    <td class="py-3 {% if totals_pln.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ totals_pln.gain }}
+                    </td>
+                </tr>
+            </tfoot>
         </table>
     </div></div>
 
@@ -207,6 +216,15 @@
                 </tr>
                 {% empty %}<tr><td colspan="7" class="text-center py-4 text-muted">No positions</td></tr>{% endfor %}
             </tbody>
+            <tfoot class="bg-dark border-top border-secondary">
+                <tr class="fw-bold fs-5">
+                    <td colspan="5" class="text-end pe-4 text-uppercase text-muted small py-3">Total Global:</td>
+                    <td class="py-3 text-white">{{ totals_foreign.value }}</td>
+                    <td class="py-3 {% if totals_foreign.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ totals_foreign.gain }}
+                    </td>
+                </tr>
+            </tfoot>
         </table>
     </div></div>
 
