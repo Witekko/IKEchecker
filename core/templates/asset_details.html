@@ -1,131 +1,91 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold mb-0 text-white" style="letter-spacing: 1px;">{{ asset.symbol }}</h2>
-            <span class="text-muted text-uppercase small">{{ asset.name }} | {{ asset.currency }}</span>
+            <div class="d-flex align-items-center">
+                <h2 class="fw-bold mb-0 text-white me-3">{{ asset.symbol }}</h2>
+                <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 rounded-pill px-3">
+                    {{ asset.currency }}
+                </span>
+            </div>
+            <p class="text-muted mb-0">{{ asset.name }}</p>
         </div>
-        <a href="/" class="btn btn-outline-secondary btn-sm text-uppercase" style="letter-spacing: 1px;">
-            <i class="fas fa-arrow-left me-1"></i> Wróć
-        </a>
-    </div>
 
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card h-100 border-start border-4 border-info">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Current Price</div>
-                    <h3 class="card-title text-info mb-0">{{ current_price }} <small class="fs-6 text-muted">{{ asset.currency }}</small></h3>
-                </div>
+        <div class="d-flex gap-5 text-end">
+            <div>
+                <div class="text-muted small text-uppercase mb-1">1D Change</div>
+                <h3 class="fw-bold mb-0 {% if day_change_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if day_change_raw > 0 %}+{% endif %}{{ day_change_pln }} <small class="fs-6 opacity-50">PLN</small>
+                </h3>
+                <small class="{% if day_change_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                     {% if day_change_raw > 0 %}+{% endif %}{{ day_change_pct }}%
+                </small>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-start border-4 border-secondary">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Quantity</div>
-                    <h3 class="card-title text-white mb-0">{{ qty }} <small class="fs-6 text-muted">szt.</small></h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-start border-4 border-primary">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Market Value</div>
-                    <h3 class="card-title text-primary mb-0">{{ value_pln }} <small class="fs-6 text-muted">PLN</small></h3>
-                    {% if currency_rate %}
-                        <small class="text-muted" style="font-size: 0.7rem;">Kurs: {{ currency_rate }} PLN</small>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-start border-4 {% if profit_pln >= 0 %}border-success{% else %}border-danger{% endif %}">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Total P&L</div>
-                    <h3 class="card-title {% if profit_pln >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
-                        {% if profit_pln > 0 %}+{% endif %}{{ profit_pln }} <small class="fs-6 text-muted">PLN</small>
-                    </h3>
-                    <small class="{% if profit_percent >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                        {% if profit_percent > 0 %}+{% endif %}{{ profit_percent }}%
-                    </small>
-                </div>
+
+            <div>
+                <div class="text-muted small text-uppercase mb-1">Total P&L</div>
+                <h3 class="fw-bold mb-0 {% if profit_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if profit_pln_raw > 0 %}+{% endif %}{{ profit_pln }} <small class="fs-6 opacity-50">PLN</small>
+                </h3>
+                <small class="{% if profit_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                    {% if profit_percent_raw > 0 %}<i class="fas fa-caret-up"></i>{% else %}<i class="fas fa-caret-down"></i>{% endif %}
+                    {{ profit_percent }}%
+                </small>
             </div>
         </div>
     </div>
-<div class="d-flex align-items-center mb-3 mt-5">
-        <h4 class="text-muted text-uppercase mb-0" style="font-size: 0.9rem; letter-spacing: 1px;">
-            <i class="fas fa-satellite-dish me-2"></i> Market Intelligence
-        </h4>
-        <span class="badge bg-dark border border-secondary ms-2 text-muted">Google News RSS</span>
-    </div>
 
-    <div class="row mb-5">
-        {% for news in news_list %}
-        <div class="col-md-6 mb-3">
-
-            <div class="card h-100 shadow-sm news-card position-relative
-                {% if news.freshness == 0 %}
-                    border-light bg-dark
-                {% elif news.freshness == 1 %}
-                    border-secondary border-opacity-50 bg-dark
-                {% else %}
-                    border-0 bg-transparent opacity-50
-                {% endif %}"
-                style="transition: all 0.3s ease;">
-
+    <div class="row g-3 mb-5">
+        <div class="col-6 col-md-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
                 <div class="card-body py-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-uppercase fw-bold"
-                               style="font-size: 0.7rem; color: {% if news.freshness == 0 %}#fff{% else %}#888{% endif %};">
-                            {% if news.freshness == 0 %}<i class="fas fa-bolt text-warning me-1"></i>{% endif %}
-                            {{ news.date_label }} &nbsp;|&nbsp; {{ news.source }}
-                        </small>
-
-                        <div>
-                            {% if 'OFFICIAL' in news.tags %}
-                                <span class="badge bg-danger text-uppercase">ESPI</span>
-                            {% endif %}
-                            {% if 'MONEY' in news.tags %}
-                                <span class="badge bg-success text-dark text-uppercase">$$$</span>
-                            {% endif %}
-                            {% if 'RESULTS' in news.tags %}
-                                <span class="badge bg-info text-dark text-uppercase">WYNIKI</span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <a href="{{ news.link }}" target="_blank" class="text-decoration-none stretched-link">
-                        <h6 class="card-title fw-bold mb-0"
-                            style="line-height: 1.4; color: {% if news.freshness == 0 %}#fff{% elif news.freshness == 1 %}#ccc{% else %}#666{% endif %};">
-                            {{ news.title|truncatechars:100 }}
-                        </h6>
-                    </a>
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Kurs (Live)</div>
+                    <h4 class="mb-0 fw-bold text-white">{{ current_price }}</h4>
+                    <small class="text-muted">{{ asset.currency }}</small>
                 </div>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="alert alert-dark border-secondary text-muted text-center py-4">
-                <i class="fas fa-comment-slash fa-2x mb-3"></i><br>
-                Brak świeżych wiadomości. Cisza w eterze.
+        <div class="col-6 col-md-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Posiadane</div>
+                    <h4 class="mb-0 fw-bold text-white">{{ qty }}</h4>
+                    <small class="text-muted">szt.</small>
+                </div>
             </div>
         </div>
-        {% endfor %}
+        <div class="col-6 col-md-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Śr. Cena Zakupu</div>
+                    <h4 class="mb-0 fw-bold text-white">{{ avg_price }}</h4>
+                    <small class="text-muted">PLN</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
+                <div class="card-body py-3 text-end">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Wartość</div>
+                    <h4 class="mb-0 fw-bold text-white">{{ value_pln }}</h4>
+                    <small class="text-muted">PLN</small>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <style>
-        .news-card:hover {
-            opacity: 1 !important; /* Nawet stary news się rozjaśnia po najechaniu */
-            transform: translateY(-3px);
-            background-color: #1e1e1e !important;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5) !important;
-            border-color: #0dcaf0 !important;
-        }
-    </style>
-    <div class="card shadow mb-5">
-        <div class="card-header text-uppercase text-muted fw-bold">
-            <i class="fas fa-chart-line me-2"></i> Price History & Transactions
+    <div class="card mb-5 border-secondary border-opacity-25">
+        <div class="card-header border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+            <span class="text-muted text-uppercase fw-bold ls-1">Analiza Techniczna</span>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-secondary active" onclick="updateChartRange('1M', this)">1M</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateChartRange('3M', this)">3M</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateChartRange('6M', this)">6M</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateChartRange('1Y', this)">1Y</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateChartRange('ALL', this)">MAX</button>
+            </div>
         </div>
         <div class="card-body">
             <div class="chart-container-wide">
@@ -134,45 +94,71 @@
         </div>
     </div>
 
-    <h4 class="text-muted text-uppercase mb-3" style="font-size: 0.9rem; letter-spacing: 1px;">Transaction Log</h4>
-    <div class="card shadow mb-5">
-        <div class="card-body p-0">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Qty</th>
-                        <th>Amount</th>
-                        <th>Comment</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in history %}
-                    <tr>
-                        <td class="text-muted">{{ t.date|date:"Y-m-d" }}</td>
-                        <td>
-                            {% if t.type == 'Buy' %}
-                                <span class="badge bg-success bg-opacity-25 text-success border border-success">BUY</span>
-                            {% elif t.type == 'Sell' %}
-                                <span class="badge bg-danger bg-opacity-25 text-danger border border-danger">SELL</span>
-                            {% elif t.type == 'Dividend' %}
-                                <span class="badge bg-warning bg-opacity-25 text-warning border border-warning">DIVIDEND</span>
-                            {% elif t.type == 'Tax' %}
-                                <span class="badge bg-secondary bg-opacity-25 text-muted border border-secondary">TAX</span>
-                            {% else %}
-                                <span class="badge bg-dark border border-secondary">{{ t.type }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-white">{{ t.quantity }}</td>
-                        <td class="fw-bold text-white">{{ t.amount }}</td>
-                        <td class="text-muted small fst-italic">{{ t.comment }}</td>
-                    </tr>
-                    {% empty %}
-                        <tr><td colspan="5" class="text-center py-3">Brak historii.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="row g-4">
+        <div class="col-lg-5 order-lg-2">
+            <div class="d-flex align-items-center mb-3">
+                <span class="fs-5 me-2">📰</span> <h5 class="mb-0 fw-bold text-muted text-uppercase ls-1">News Feed</h5>
+            </div>
+            <div class="d-flex flex-column gap-3">
+                {% for news in news_list %}
+                <a href="{{ news.link }}" target="_blank" class="text-decoration-none">
+                    <div class="card h-100 shadow-sm border-secondary border-opacity-10 bg-transparent hover-card">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <small class="text-muted" style="font-size: 0.7rem;">{{ news.source }} • {{ news.date_label }}</small>
+                                <div>
+                                    {% if news.freshness == 0 %}<span class="badge bg-danger text-white" style="font-size: 0.6rem;">HOT</span>{% endif %}
+                                    {% for tag in news.tags %}
+                                        {% if tag == 'OFFICIAL' %}<span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25" style="font-size: 0.6rem;">ESPI</span>{% endif %}
+                                        {% if tag == 'MONEY' %}<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" style="font-size: 0.6rem;">$$$</span>{% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <h6 class="mb-0 text-white fw-normal" style="font-size: 0.9rem; line-height: 1.4;">{{ news.title }}</h6>
+                        </div>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="text-muted text-center py-4 small">Brak newsów dla tej spółki.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-lg-7 order-lg-1">
+            <div class="d-flex align-items-center mb-3">
+                <span class="fs-5 me-2">📜</span> <h5 class="mb-0 fw-bold text-muted text-uppercase ls-1">Historia Transakcji</h5>
+            </div>
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-dark">
+                            <tr class="text-muted small text-uppercase">
+                                <th class="ps-4 py-3">Data</th><th>Typ</th><th>Ilość</th><th>Kwota</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in history %}
+                            <tr>
+                                <td class="ps-4 text-white font-monospace small">{{ t.date|date:"Y-m-d" }}</td>
+                                <td>
+                                    {% if t.type == 'Kupno' or t.type == 'BUY' %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">KUPNO</span>
+                                    {% elif t.type == 'Sprzedaż' or t.type == 'SELL' %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">SPRZEDAŻ</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary text-dark">{{ t.type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-bold text-white">{{ t.quantity }}</td>
+                                <td class="text-muted">{{ t.amount }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4 text-muted">Brak transakcji</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -181,48 +167,142 @@
     {{ chart_colors|json_script:"c-colors" }}
     {{ chart_radius|json_script:"c-radius" }}
 
+    <style>
+        .ls-1 { letter-spacing: 1px; }
+        .hover-card { transition: transform 0.2s, background-color 0.2s; }
+        .hover-card:hover { transform: translateY(-2px); background-color: rgba(255,255,255,0.05) !important; }
+    </style>
+
     <script>
-        function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
+        function gd(id) { return JSON.parse(document.getElementById(id).textContent); }
 
         const ctx = document.getElementById('assetChart');
-        if (ctx) {
-            new Chart(ctx, {
+        const allPrices = gd('c-prices');
+        const allDates = gd('c-dates');
+        const allColors = gd('c-colors');
+        const allRadius = gd('c-radius');
+
+        let myChart = null;
+
+        function initChart(dates, prices, colors, radius) {
+            // 1. Obliczamy ATH i ATL dla wybranego okresu
+            const maxVal = Math.max(...prices);
+            const minVal = Math.min(...prices);
+            const startVal = prices[0];
+            const endVal = prices[prices.length - 1];
+
+            // 2. Kolory głównej linii
+            const isGreen = endVal >= startVal;
+            const lineColor = isGreen ? '#98FB98' : '#ef5350';
+            const areaColor = isGreen ? 'rgba(152, 251, 152, 0.1)' : 'rgba(239, 83, 80, 0.1)';
+
+            // 3. Tworzymy serie danych dla linii poziomych (muszą mieć tyle samo punktów co wykres)
+            const athData = Array(dates.length).fill(maxVal);
+            const atlData = Array(dates.length).fill(minVal);
+            const startLineData = Array(dates.length).fill(startVal);
+
+            if (myChart) myChart.destroy();
+
+            myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: gd('c-dates'),
-                    datasets: [{
-                        label: 'Price',
-                        data: gd('c-prices'),
-                        borderColor: '#0dcaf0', // Cyan
-                        backgroundColor: 'rgba(13, 202, 240, 0.05)',
-                        borderWidth: 2,
-                        fill: true,
-                        pointRadius: gd('c-radius'), // Kropki tylko tam gdzie transakcja
-                        pointBackgroundColor: gd('c-colors'), // Zielony/Czerwony
-                        pointBorderColor: '#fff',
-                        tension: 0.1
-                    }]
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Cena',
+                            data: prices,
+                            borderColor: lineColor,
+                            backgroundColor: areaColor,
+                            borderWidth: 2,
+                            fill: true,
+                            pointBackgroundColor: colors,
+                            pointBorderColor: '#fff',
+                            pointRadius: radius,
+                            pointHoverRadius: 8,
+                            tension: 0.2,
+                            order: 1
+                        },
+                        {
+                            label: 'ATH (Szczyt)',
+                            data: athData,
+                            borderColor: 'rgba(152, 251, 152, 0.6)', // Półprzezroczysty zielony
+                            borderWidth: 1,
+                            borderDash: [5, 5], // Linia przerywana
+                            pointRadius: 0,
+                            fill: false,
+                            order: 2
+                        },
+                        {
+                            label: 'ATL (Dołek)',
+                            data: atlData,
+                            borderColor: 'rgba(239, 83, 80, 0.6)', // Półprzezroczysty czerwony
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 3
+                        },
+                        {
+                            label: 'Start',
+                            data: startLineData,
+                            borderColor: 'rgba(255, 255, 255, 0.3)', // Szary
+                            borderWidth: 1,
+                            borderDash: [2, 4],
+                            pointRadius: 0,
+                            fill: false,
+                            order: 4
+                        }
+                    ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
+                    responsive: true, maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: '#a0a0a0' } },
-                        y: { grid: { color: '#333' }, ticks: { color: '#a0a0a0' } }
+                        x: { grid: { display: false }, ticks: { color: '#888', maxTicksLimit: 8 } },
+                        y: { grid: { color: '#333', borderDash: [4, 4] }, ticks: { color: '#888' } }
                     },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#e0e0e0',
-                            borderColor: '#555',
-                            borderWidth: 1
+                            mode: 'index', intersect: false,
+                            callbacks: { label: function(c) { return c.dataset.label + ': ' + c.parsed.y + ' {{ asset.currency }}'; } }
                         }
                     }
                 }
             });
         }
+
+        function updateChartRange(range, btnElement) {
+            document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            if (range === 'ALL') {
+                initChart(allDates, allPrices, allColors, allRadius);
+                return;
+            }
+
+            const now = new Date();
+            let cutoffDate = new Date();
+
+            if (range === '1M') cutoffDate.setMonth(now.getMonth() - 1);
+            if (range === '3M') cutoffDate.setMonth(now.getMonth() - 3);
+            if (range === '6M') cutoffDate.setMonth(now.getMonth() - 6);
+            if (range === '1Y') cutoffDate.setFullYear(now.getFullYear() - 1);
+
+            let filteredDates = [], filteredPrices = [], filteredColors = [], filteredRadius = [];
+
+            for (let i = 0; i < allDates.length; i++) {
+                let d = new Date(allDates[i]);
+                if (d >= cutoffDate) {
+                    filteredDates.push(allDates[i]);
+                    filteredPrices.push(allPrices[i]);
+                    filteredColors.push(allColors[i]);
+                    filteredRadius.push(allRadius[i]);
+                }
+            }
+            initChart(filteredDates, filteredPrices, filteredColors, filteredRadius);
+        }
+
+        updateChartRange('1M', document.querySelector('.btn-group .btn'));
     </script>
+
 {% endblock %}

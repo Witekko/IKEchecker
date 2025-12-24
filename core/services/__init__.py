@@ -14,22 +14,25 @@ from ..models import Portfolio, Transaction
 
 
 def get_dashboard_context(user):
-    """
-    Fasada: Agreguje dane z modułów market, portfolio i timeline.
-    """
     portfolio = Portfolio.objects.filter(user=user).first()
     if not portfolio: return {'error': 'No portfolio found.'}
 
-    eur_rate, usd_rate = get_current_currency_rates()
+    # 1. Pobieramy słownik wszystkich walut
+    rates = get_current_currency_rates()
+    eur = rates['EUR']
+    usd = rates['USD']
+
     transactions = Transaction.objects.filter(portfolio=portfolio).order_by('date')
 
-    current_state = calculate_current_holdings(transactions, eur_rate, usd_rate)
-    timeline_data = calculate_historical_timeline(transactions, eur_rate, usd_rate)
+    # Przekazujemy EUR i USD do obliczeń (tak jak było wcześniej)
+    current_state = calculate_current_holdings(transactions, eur, usd)
+    timeline_data = calculate_historical_timeline(transactions, eur, usd)
 
     context = current_state.copy()
     context.update({
-        'eur_rate': fmt_2(eur_rate),
-        'usd_rate': fmt_2(usd_rate),
+        # 2. Przekazujemy pełną listę walut do szablonu HTML
+        'rates': rates,
+
         'timeline_dates': timeline_data.get('dates', []),
         'timeline_deposit_points': timeline_data.get('points', []),
         'timeline_total_value': timeline_data.get('val_user', []),
@@ -47,8 +50,6 @@ def get_dashboard_context(user):
         'chart_profit_values': current_state['charts']['profit_values'],
         'closed_labels': current_state['charts']['closed_labels'],
         'closed_values': current_state['charts']['closed_values'],
-
-        # Nowe sumy tabel
         'totals_pln': current_state.get('totals_pln'),
         'totals_foreign': current_state.get('totals_foreign'),
     })

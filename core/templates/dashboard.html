@@ -7,11 +7,38 @@
             <h2 class="fw-bold mb-1 text-white">Market Dashboard</h2>
             <p class="text-muted mb-0">Command Center. All values in PLN.</p>
         </div>
-        <div>
-            <span class="badge bg-dark border border-success text-success px-3 py-2 rounded-pill"
-                  style="color: var(--accent-green) !important; border-color: var(--accent-green) !important;">
-                <i class="fas fa-circle me-2 animate-pulse" style="font-size: 0.6rem;"></i>LIVE
-            </span>
+
+        <div class="d-flex align-items-center gap-4">
+
+            <div class="d-none d-md-flex align-items-center gap-3 text-muted small border-end border-secondary border-opacity-25 pe-4">
+                <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
+                    <span class="fw-bold text-white">USD</span>
+                    <span>{{ rates.USD }}</span>
+                </div>
+                <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
+                    <span class="fw-bold text-white">EUR</span>
+                    <span>{{ rates.EUR }}</span>
+                </div>
+                <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
+                    <span class="fw-bold text-white">GBP</span>
+                    <span>{{ rates.GBP }}</span>
+                </div>
+                <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
+                    <span class="fw-bold text-white">AUD</span>
+                    <span>{{ rates.AUD }}</span>
+                </div>
+                <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
+                    <span class="fw-bold text-white">JPY</span>
+                    <span style="font-size: 0.75rem;">(100) {{ rates.JPY }}</span>
+                </div>
+            </div>
+
+            <div>
+                <span class="badge bg-dark border border-success text-success px-3 py-2 rounded-pill"
+                      style="color: var(--accent-green) !important; border-color: var(--accent-green) !important;">
+                    <i class="fas fa-circle me-2 animate-pulse" style="font-size: 0.6rem;"></i>LIVE
+                </span>
+            </div>
         </div>
     </div>
 
@@ -240,7 +267,9 @@
                             {% for item in closed_holdings %}
                             <tr>
                                 <td class="ps-4">{{ item.symbol }}</td>
-                                <td class="{% if item.gain_pln >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{{ item.gain_pln }} PLN</td>
+                                <td class="{% if item.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                    {{ item.gain_pln }} PLN
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

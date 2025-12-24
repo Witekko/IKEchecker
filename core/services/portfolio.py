@@ -73,7 +73,11 @@ def calculate_current_holdings(transactions: QuerySet, eur_rate: float, usd_rate
 
         if qty <= 0.0001:
             if abs(data['realized']) > 0.01:
-                closed_holdings.append({'symbol': s, 'gain_pln': fmt_2(data['realized'])})
+                closed_holdings.append({
+                    'symbol': s,
+                    'gain_pln': fmt_2(data['realized']),
+                    'gain_pln_raw': data['realized']  # <--- DODANE (do kolorów na dashboardzie)
+                })
                 charts['closed_labels'].append(s)
                 charts['closed_values'].append(round(data['realized'], 2))
             continue
@@ -322,11 +326,8 @@ def calculate_historical_timeline(transactions: QuerySet, eur_rate, usd_rate):
 
     return timeline
 
+
 def get_asset_details_context(user, symbol):
-    """
-    Przygotowuje pełne dane dla widoku szczegółów aktywa:
-    historia transakcji, wykresy, newsy i zyski.
-    """
     portfolio = Portfolio.objects.filter(user=user).first()
     try:
         asset = Asset.objects.get(symbol=symbol)
@@ -334,7 +335,6 @@ def get_asset_details_context(user, symbol):
         return {'error': f'Nie znaleziono aktywa: {symbol}'}
 
     transactions = Transaction.objects.filter(portfolio=portfolio, asset=asset).order_by('date')
-
     total_qty = 0.0
     total_cost_pln = 0.0
     history_table = []
@@ -343,7 +343,6 @@ def get_asset_details_context(user, symbol):
     for t in transactions:
         qty = float(t.quantity)
         amt = float(t.amount)
-
         if t.type == 'BUY':
             total_qty += qty
             total_cost_pln += abs(amt)
@@ -355,42 +354,42 @@ def get_asset_details_context(user, symbol):
                 total_cost_pln -= (total_cost_pln * ratio)
                 total_qty -= qty
             trade_events[t.date.date().strftime("%Y-%m-%d")] = 'SELL'
-
         history_table.append({
             'date': t.date, 'type': t.get_type_display(), 'quantity': fmt_4(qty),
             'amount': fmt_2(amt), 'comment': t.comment
         })
 
-    # Pobieranie ceny i historii (Yahoo)
     current_price = 0.0
+    prev_close_price = 0.0
     hist = pd.DataFrame()
     try:
         ticker = yf.Ticker(asset.yahoo_ticker)
-        start_date = transactions.first().date.date() if transactions.exists() else None
-        if start_date:
-            hist = ticker.history(start=start_date)
-        else:
-            hist = ticker.history(period="1mo")
-
+        hist = ticker.history(period="max")
         if not hist.empty:
             hist.index = hist.index.tz_localize(None)
             current_price = float(hist['Close'].iloc[-1])
+            if len(hist) >= 2:
+                prev_close_price = float(hist['Close'].iloc[-2])
+            else:
+                prev_close_price = current_price
     except Exception as e:
         print(f"Error fetching details ({symbol}): {e}")
 
-    # Waluty (Teraz używamy naszego serwisu market!)
     eur_rate, usd_rate = get_current_currency_rates()
     multiplier = 1.0
-    if asset.currency == 'EUR': multiplier = eur_rate
-    elif asset.currency == 'USD': multiplier = usd_rate
+    if asset.currency == 'EUR':
+        multiplier = eur_rate
+    elif asset.currency == 'USD':
+        multiplier = usd_rate
 
-    # Obliczenia
+    day_change_val = (current_price - prev_close_price) * multiplier * total_qty
+    day_change_pct = ((current_price - prev_close_price) / prev_close_price * 100) if prev_close_price > 0 else 0.0
+
     avg_price = (total_cost_pln / total_qty) if total_qty > 0 else 0
     current_value_pln = (total_qty * current_price) * multiplier
     profit_pln = current_value_pln - total_cost_pln
     profit_percent = (profit_pln / total_cost_pln * 100) if total_cost_pln > 0.01 else 0
 
-    # Wykres
     chart_dates = []
     chart_prices = []
     chart_colors = []
@@ -401,7 +400,6 @@ def get_asset_details_context(user, symbol):
             d_str = date_idx.strftime("%Y-%m-%d")
             chart_dates.append(d_str)
             chart_prices.append(float(row['Close']))
-
             if d_str in trade_events:
                 chart_colors.append('#00ff7f' if trade_events[d_str] == 'BUY' else '#ff4d4d')
                 chart_radius.append(6)
@@ -409,7 +407,6 @@ def get_asset_details_context(user, symbol):
                 chart_colors.append('rgba(0,0,0,0)')
                 chart_radius.append(0)
 
-    # Newsy (Używamy serwisu news!)
     news_data = get_asset_news(asset.symbol, asset.name)
 
     return {
@@ -418,8 +415,17 @@ def get_asset_details_context(user, symbol):
         'qty': fmt_4(total_qty),
         'avg_price': fmt_2(avg_price),
         'value_pln': fmt_2(current_value_pln),
+
+        # --- POPRAWIONE DANE (RAW DO KOLORÓW) ---
         'profit_pln': fmt_2(profit_pln),
+        'profit_pln_raw': profit_pln,  # <--- WAŻNE
         'profit_percent': fmt_2(profit_percent),
+        'profit_percent_raw': profit_percent,  # <--- WAŻNE
+
+        'day_change_pln': fmt_2(day_change_val),
+        'day_change_raw': day_change_pct,  # <--- WAŻNE
+        'day_change_pct': fmt_2(day_change_pct),
+
         'history': reversed(history_table),
         'currency_rate': fmt_2(multiplier) if multiplier != 1.0 else None,
         'chart_dates': chart_dates,
