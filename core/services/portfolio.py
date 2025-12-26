@@ -375,12 +375,14 @@ def get_asset_details_context(user, symbol):
     except Exception as e:
         print(f"Error fetching details ({symbol}): {e}")
 
-    eur_rate, usd_rate = get_current_currency_rates()
+    rates = get_current_currency_rates()
+
     multiplier = 1.0
-    if asset.currency == 'EUR':
-        multiplier = eur_rate
-    elif asset.currency == 'USD':
-        multiplier = usd_rate
+    # Bezpieczne pobieranie z fallbackiem do 1.0
+    if asset.currency in rates:
+        multiplier = rates[asset.currency]
+    elif asset.currency == 'JPY':  # Specjalny przypadek dla Jena (jeśli trzymasz przelicznik za 100)
+        multiplier = rates.get('JPY', 1.0) / 100
 
     day_change_val = (current_price - prev_close_price) * multiplier * total_qty
     day_change_pct = ((current_price - prev_close_price) / prev_close_price * 100) if prev_close_price > 0 else 0.0

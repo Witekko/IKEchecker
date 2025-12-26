@@ -1,184 +1,194 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-uppercase text-white" style="letter-spacing: 1px;">
-            <i class="fas fa-coins me-2 text-warning"></i> Dividend Income
-        </h2>
-        <a href="/" class="btn btn-outline-secondary btn-sm text-uppercase">Wróć do Dashboardu</a>
+        <div>
+            <h2 class="fw-bold mb-1 text-white">Dividend Center</h2>
+            <p class="text-muted mb-0">Twoje pasywne źródło dochodu. Wartości w PLN.</p>
+        </div>
+        <div>
+            <span class="badge bg-dark border border-success text-success px-3 py-2 rounded-pill"
+                  style="color: var(--accent-green) !important; border-color: var(--accent-green) !important;">
+                <i class="fas fa-coins me-2"></i>Passive Income
+            </span>
+        </div>
     </div>
 
-    <div class="row mb-5">
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 border-start border-4 border-warning">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Total Net Income</div>
-                    <h3 class="card-title text-warning mb-0">{{ total_net }} <small class="fs-6 text-muted">PLN</small></h3>
-                    <small class="text-muted" style="font-size: 0.75rem;">Gross: {{ total_gross }} | Tax: -{{ total_tax }}</small>
+    <div class="row g-3 mb-5">
+
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
+                <div class="card-body py-3">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Dywidendy Netto</div>
+                    <h3 class="mb-0 fw-bold text-success">{{ total_net }} <small class="fs-6 text-muted">PLN</small></h3>
+                    <small class="text-muted">Po odliczeniu podatku</small>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 border-start border-4 border-success">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Top Payer (All Time)</div>
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Łącznie Brutto</div>
+                    <h4 class="mb-0 fw-bold text-white">{{ total_gross }}</h4>
+                    <small class="text-muted">PLN</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Zapłacony Podatek</div>
+                    <h4 class="mb-0 fw-bold text-danger">{{ total_tax }}</h4>
+                    <small class="text-muted">PLN</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+                <div class="card-body py-3">
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Top Płatnik</div>
                     {% if top_payer %}
-                        <h3 class="card-title text-success mb-0">{{ top_payer.symbol }}</h3>
-                        <small class="text-muted">Paid: {{ top_payer.amount }} PLN</small>
+                        <h4 class="mb-0 fw-bold text-white">{{ top_payer.symbol }}</h4>
+                        <small class="text-success fw-bold">+{{ top_payer.amount }} PLN</small>
                     {% else %}
-                        <h3 class="card-title text-muted mb-0">-</h3>
+                        <h4 class="mb-0 fw-bold text-white">-</h4>
+                        <small class="text-muted">Brak danych</small>
                     {% endif %}
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 border-start border-4 border-primary">
+    <div class="row mb-5 g-4">
+        <div class="col-lg-7">
+            <div class="card h-100 border-secondary border-opacity-25">
+                <div class="card-header border-0 pt-4 px-4">
+                    <span class="text-muted text-uppercase fw-bold ls-1">Wypłaty Roczne (Yearly)</span>
+                </div>
                 <div class="card-body">
-                    <div class="text-muted text-uppercase small fw-bold mb-1">Passive Income Status</div>
-                    <h3 class="card-title text-primary mb-0">Active</h3>
-                    <small class="text-muted">Snowball effect in progress...</small>
+                    <div class="chart-container">
+                        <canvas id="yearlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card h-100 border-secondary border-opacity-25">
+                <div class="card-header border-0 pt-4 px-4">
+                    <span class="text-muted text-uppercase fw-bold ls-1">Sezonowość (Ostatni Rok)</span>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card shadow mb-5">
-        <div class="card-header bg-transparent text-uppercase fw-bold text-muted">
-            <i class="fas fa-chart-bar me-2"></i> Yearly Accumulation
-        </div>
-        <div class="card-body">
-            <div class="chart-container-wide">
-                <canvas id="yearlyChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="card shadow mb-5">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="text-uppercase fw-bold text-muted"><i class="fas fa-calendar-alt me-2"></i> Monthly Breakdown</span>
-
-            <div class="btn-group btn-group-sm" role="group" id="year-selector">
-                {% for year in years_labels %}
-                    <button type="button" class="btn btn-outline-warning year-btn"
-                            data-year="{{ year }}" onclick="switchYear('{{ year }}')">
-                        {{ year }}
-                    </button>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="chart-container-wide">
-                <canvas id="monthlyChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <h4 class="text-muted text-uppercase mb-3" style="font-size: 0.9rem; letter-spacing: 1px;">Top Dividend Contributors</h4>
-    <div class="card shadow mb-5">
+    <h4 class="mb-3 text-muted text-uppercase fw-bold ls-1">Ranking Spółek</h4>
+    <div class="card border-0 shadow-sm mb-5">
         <div class="card-body p-0">
-            <table class="table table-hover mb-0">
-                <thead><tr><th>Symbol</th><th>Total Gross (PLN)</th></tr></thead>
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-dark">
+                    <tr class="text-muted small text-uppercase">
+                        <th class="ps-4 py-3">#</th>
+                        <th>Symbol</th>
+                        <th>Łącznie wypłacono (Brutto)</th>
+                        <th>Udział</th>
+                    </tr>
+                </thead>
                 <tbody>
                     {% for payer in payers_list %}
                     <tr>
-                        <td class="text-white fw-bold ps-4"><a href="/asset/{{ payer.symbol }}/" class="text-decoration-none text-white">{{ payer.symbol }}</a></td>
-                        <td class="text-warning fw-bold">{{ payer.amount }}</td>
+                        <td class="ps-4 text-muted">{{ forloop.counter }}</td>
+                        <td>
+                            <a href="/asset/{{ payer.symbol }}/" class="text-white fw-bold text-decoration-none">
+                                {{ payer.symbol }}
+                            </a>
+                        </td>
+                        <td class="fw-bold text-success">+{{ payer.amount }} PLN</td>
+                        <td>
+                            <div class="progress" style="height: 4px; width: 100px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 100%; opacity: {{ forloop.revcounter0|add:2 }}0%"></div>
+                            </div>
+                        </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="2" class="text-center py-3">Brak danych.</td></tr>
+                    <tr><td colspan="4" class="text-center py-4 text-muted">Brak dywidend</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 
-    {{ years_labels|json_script:"js-years" }}
-    {{ years_data|json_script:"js-years-data" }}
-    {{ monthly_data|json_script:"js-monthly-data" }}
+    {{ years_labels|json_script:"d-years" }}
+    {{ years_data|json_script:"d-years-val" }}
+    {{ monthly_data|json_script:"d-months-val" }}
+
+    <style>.ls-1 { letter-spacing: 1px; }</style>
 
     <script>
-        function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
+        function gd(id) { return JSON.parse(document.getElementById(id).textContent); }
 
-        const years = gd('js-years');
-        const yearlyVals = gd('js-years-data');
-        const monthlyData = gd('js-monthly-data');
+        const NEW_GREEN = '#98FB98';
+        const SOFT_BLUE = '#42a5f5';
 
-        // 1. WYKRES ROCZNY (Yearly)
+        // 1. WYKRES ROCZNY
         new Chart(document.getElementById('yearlyChart'), {
             type: 'bar',
             data: {
-                labels: years,
+                labels: gd('d-years'),
                 datasets: [{
-                    label: 'Net Dividends (PLN)',
-                    data: yearlyVals,
-                    backgroundColor: 'rgba(255, 193, 7, 0.2)', // Żółty warning przezroczysty
-                    borderColor: '#ffc107', // Żółty warning
-                    borderWidth: 2,
-                    borderRadius: 4
+                    label: 'Net Dividend (PLN)',
+                    data: gd('d-years-val'),
+                    backgroundColor: NEW_GREEN,
+                    borderRadius: 6,
+                    barPercentage: 0.6
                 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
                 scales: {
-                    y: { grid: { color: '#333' }, ticks: { color: '#aaa' } },
-                    x: { grid: { display: false }, ticks: { color: '#aaa' } }
-                }
+                    x: { grid: { display: false }, ticks: { color: '#888' } },
+                    y: { grid: { color: '#333', borderDash: [4, 4] }, ticks: { color: '#888' } }
+                },
+                plugins: { legend: { display: false } }
             }
         });
 
-        // 2. WYKRES MIESIĘCZNY (Monthly) - Dynamiczny
-        let monthlyChartInstance = null;
-        const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-        function renderMonthlyChart(year) {
-            const ctx = document.getElementById('monthlyChart');
-            if (monthlyChartInstance) monthlyChartInstance.destroy();
-
-            // Pobierz dane dla roku, lub same zera jeśli brak
-            const data = monthlyData[year] || Array(12).fill(0);
-
-            monthlyChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: monthLabels,
-                    datasets: [{
-                        label: `Dividends ${year} (PLN)`,
-                        data: data,
-                        backgroundColor: '#0dcaf0', // Cyan
-                        borderRadius: 4
-                    }]
+        // 2. WYKRES MIESIĘCZNY (Sezonowość)
+        const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        new Chart(document.getElementById('monthlyChart'), {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'Miesięcznie',
+                    data: gd('d-months-val'),
+                    borderColor: SOFT_BLUE,
+                    backgroundColor: 'rgba(66, 165, 245, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: SOFT_BLUE
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#888' } },
+                    y: { grid: { display: false } } // Ukrywamy oś Y dla czystości na małym wykresie
                 },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: '#333' } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-
-            // Aktualizacja przycisków (Active state)
-            document.querySelectorAll('.year-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if(btn.dataset.year == year) btn.classList.add('active');
-            });
-        }
-
-        function switchYear(y) {
-            renderMonthlyChart(y);
-        }
-
-        // Inicjalizacja: Pokaż ostatni dostępny rok (najnowszy)
-        if (years.length > 0) {
-            const lastYear = years[years.length - 1];
-            renderMonthlyChart(lastYear);
-        } else {
-            // Pusty wykres jak brak danych
-            renderMonthlyChart(new Date().getFullYear());
-        }
+                plugins: { legend: { display: false } }
+            }
+        });
     </script>
+
 {% endblock %}
