@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-white mb-0">Portfolio Holdings</h2>
+        <p class="text-muted mb-0">Detailed breakdown by market</p>
+    </div>
+</div>
+
+<div class="card mb-5 border-0 shadow-lg" style="background: linear-gradient(90deg, #121212 0%, #1e1e1e 100%); border-bottom: 2px solid #333 !important;">
+    <div class="card-body p-4">
+        <div class="row text-center text-md-start align-items-center g-4">
+
+            <div class="col-6 col-md-2 border-end border-secondary border-opacity-25">
+                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Total Value</div>
+                <h3 class="mb-0 fw-bold text-white">{{ total_value }} <span class="fs-6 text-muted">PLN</span></h3>
+            </div>
+
+            <div class="col-6 col-md-2 border-end border-secondary border-opacity-25">
+                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Total Profit</div>
+                <h4 class="mb-0 fw-bold {% if total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if total_profit_raw > 0 %}+{% endif %}{{ total_profit }}
+                </h4>
+            </div>
+
+            <div class="col-4 col-md-2 border-end border-secondary border-opacity-25">
+                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Return</div>
+                <span class="fs-5 fw-bold {% if total_return_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if total_return_pct_raw > 0 %}+{% endif %}{{ total_return_pct }}%
+                </span>
+            </div>
+
+            <div class="col-4 col-md-2 border-end border-secondary border-opacity-25" data-bs-toggle="tooltip" title="Time-Weighted Return (Calculated in next update)">
+                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">TWR <i class="fas fa-info-circle ms-1 text-muted"></i></div>
+                <span class="fs-5 fw-bold text-white opacity-50">-- %</span>
+            </div>
+
+            <div class="col-4 col-md-2" data-bs-toggle="tooltip" title="Money-Weighted Return / XIRR (Calculated in next update)">
+                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">MWR <i class="fas fa-info-circle ms-1 text-muted"></i></div>
+                <span class="fs-5 fw-bold text-white opacity-50">-- %</span>
+            </div>
+
+             <div class="col-12 col-md-2 text-end">
+                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Day Change</div>
+                 <span class="badge {% if day_change_pct_raw >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 {% if day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %} px-3 py-2 rounded-pill">
+                    {% if day_change_pct_raw > 0 %}+{% endif %}{{ day_change_pct }}%
+                 </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if pln_items %}
+<div class="d-flex align-items-center mb-3">
+    <span class="fs-4 me-2">🇵🇱</span> <h4 class="mb-0 fw-bold">GPW (Poland)</h4>
+</div>
+
+<div class="card border-secondary border-opacity-25 mb-5">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="table-pln">
+                <thead class="bg-dark text-muted text-uppercase small" style="font-size: 0.75rem;">
+                    <tr>
+                        <th class="ps-4 py-3">Asset</th>
+                        <th class="text-end">1D %</th>
+                        <th class="text-end">Units</th>
+                        <th class="text-end">Avg Price</th>
+                        <th class="text-end">Cur. Price</th>
+                        <th class="text-end">Date</th> <th class="text-end">Days</th> <th class="text-end">Value (PLN)</th>
+                        <th class="text-end">Share %</th>
+                        <th class="text-end">Return %</th>
+                        <th class="text-end pe-4">Profit (PLN)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset in pln_items %}
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
+                        <td class="ps-4">
+                            <div class="fw-bold text-white">{{ asset.symbol }}</div>
+                            <div class="small text-muted">{{ asset.name|truncatechars:20 }}</div>
+                        </td>
+                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ asset.day_change_pct }}%
+                        </td>
+                        <td class="text-end text-white">{{ asset.quantity }}</td>
+                        <td class="text-end text-muted">{{ asset.avg_price_pln }}</td>
+                        <td class="text-end text-white fw-bold">{{ asset.current_price_fmt }}</td>
+                        <td class="text-end text-muted small">{{ asset.price_date|date:"Y-m-d" }}</td>
+                        <td class="text-end text-muted">{{ asset.days_held }}</td>
+                        <td class="text-end text-white fw-bold">{{ asset.value_pln }}</td>
+                        <td class="text-end">
+                            <div class="d-flex align-items-center justify-content-end">
+                                <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
+                                <div class="progress" style="height: 3px; width: 25px; background-color: #333;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ asset.share_pct_raw }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ asset.gain_percent }}%
+                        </td>
+                        <td class="text-end pe-4">
+                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                {% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
+                    <tr class="fw-bold">
+                        <td colspan="7" class="text-end py-3 text-muted text-uppercase small">GPW Summary:</td>
+                        <td class="text-end text-white fs-6">{{ pln_stats.value }}</td>
+                        <td class="text-end text-white small">{{ pln_stats.share_total }}%</td>
+                        <td class="text-end {% if pln_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ pln_stats.return_pct }}%</td>
+                        <td class="text-end pe-4 {% if pln_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %} fs-6">
+                            {% if pln_stats.gain_raw > 0 %}+{% endif %}{{ pln_stats.gain }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+{% if foreign_items %}
+<div class="d-flex align-items-center mb-3">
+    <span class="fs-4 me-2">🌍</span> <h4 class="mb-0 fw-bold">Global Markets</h4>
+</div>
+
+<div class="card border-secondary border-opacity-25 mb-5">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="table-foreign">
+                <thead class="bg-dark text-muted text-uppercase small" style="font-size: 0.75rem;">
+                    <tr>
+                        <th class="ps-4 py-3">Asset</th>
+                        <th class="text-end">1D %</th>
+                        <th class="text-end">Units</th>
+                        <th class="text-end">Avg Price (PLN)</th>
+                        <th class="text-end">Cur. Price</th>
+                        <th class="text-end">Date</th>
+                        <th class="text-end">Days</th>
+                        <th class="text-end">Value (PLN)</th>
+                        <th class="text-end">Share %</th>
+                        <th class="text-end">Return %</th>
+                        <th class="text-end pe-4">Profit (PLN)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset in foreign_items %}
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
+                        <td class="ps-4">
+                            <div class="fw-bold text-white">{{ asset.symbol }}</div>
+                            <div class="small text-muted">{{ asset.name|truncatechars:20 }}</div>
+                        </td>
+                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ asset.day_change_pct }}%
+                        </td>
+                        <td class="text-end text-white">{{ asset.quantity }}</td>
+                        <td class="text-end text-muted">{{ asset.avg_price_pln }}</td>
+                        <td class="text-end text-white fw-bold">{{ asset.current_price_fmt }}</td>
+                        <td class="text-end text-muted small">{{ asset.price_date|date:"Y-m-d" }}</td>
+                        <td class="text-end text-muted">{{ asset.days_held }}</td>
+                        <td class="text-end text-white fw-bold">{{ asset.value_pln }}</td>
+                        <td class="text-end">
+                            <div class="d-flex align-items-center justify-content-end">
+                                <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
+                                <div class="progress" style="height: 3px; width: 25px; background-color: #333;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ asset.share_pct_raw }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ asset.gain_percent }}%
+                        </td>
+                        <td class="text-end pe-4">
+                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                {% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
+                    <tr class="fw-bold">
+                        <td colspan="7" class="text-end py-3 text-muted text-uppercase small">Global Summary:</td>
+                        <td class="text-end text-white fs-6">{{ foreign_stats.value }}</td>
+                        <td class="text-end text-white small">{{ foreign_stats.share_total }}%</td>
+                        <td class="text-end {% if foreign_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ foreign_stats.return_pct }}%</td>
+                        <td class="text-end pe-4 {% if foreign_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %} fs-6">
+                            {% if foreign_stats.gain_raw > 0 %}+{% endif %}{{ foreign_stats.gain }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    // Inicjalizacja Tooltipów (dla TWR/MWR)
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+
+{% endblock %}

@@ -2,307 +2,282 @@
 
 {% block content %}
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <div class="d-flex align-items-center">
-                <h2 class="fw-bold mb-0 text-white me-3">{{ asset.symbol }}</h2>
-                <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 rounded-pill px-3">
-                    {{ asset.currency }}
-                </span>
-            </div>
-            <p class="text-muted mb-0">{{ asset.name }}</p>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'dashboard' %}" class="text-decoration-none text-muted small mb-2 d-inline-block">
+            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <h2 class="fw-bold text-white mb-0">{{ symbol }}</h2>
+        <p class="text-muted mb-0">{{ asset_name }}</p>
+    </div>
+    <div class="text-end">
+        <span class="fs-4 fw-bold {% if total_gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if total_gain_pln_raw > 0 %}+{% endif %}{{ total_gain_pln }} PLN
+        </span>
+        <div class="small text-muted">Total P&L</div>
+    </div>
+</div>
 
-        <div class="d-flex gap-5 text-end">
-            <div>
-                <div class="text-muted small text-uppercase mb-1">1D Change</div>
-                <h3 class="fw-bold mb-0 {% if day_change_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {% if day_change_raw > 0 %}+{% endif %}{{ day_change_pln }} <small class="fs-6 opacity-50">PLN</small>
-                </h3>
-                <small class="{% if day_change_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                     {% if day_change_raw > 0 %}+{% endif %}{{ day_change_pct }}%
-                </small>
-            </div>
-
-            <div>
-                <div class="text-muted small text-uppercase mb-1">Total P&L</div>
-                <h3 class="fw-bold mb-0 {% if profit_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {% if profit_pln_raw > 0 %}+{% endif %}{{ profit_pln }} <small class="fs-6 opacity-50">PLN</small>
-                </h3>
-                <small class="{% if profit_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                    {% if profit_percent_raw > 0 %}<i class="fas fa-caret-up"></i>{% else %}<i class="fas fa-caret-down"></i>{% endif %}
-                    {{ profit_percent }}%
-                </small>
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 border-secondary border-opacity-25">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Current Value</div>
+                <h4 class="fw-bold text-white mb-0">{{ current_value_pln }} PLN</h4>
             </div>
         </div>
     </div>
-
-    <div class="row g-3 mb-5">
-        <div class="col-6 col-md-3">
-            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
-                <div class="card-body py-3">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Kurs (Live)</div>
-                    <h4 class="mb-0 fw-bold text-white">{{ current_price }}</h4>
-                    <small class="text-muted">{{ asset.currency }}</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
-                <div class="card-body py-3">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Posiadane</div>
-                    <h4 class="mb-0 fw-bold text-white">{{ qty }}</h4>
-                    <small class="text-muted">szt.</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
-                <div class="card-body py-3">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Śr. Cena Zakupu</div>
-                    <h4 class="mb-0 fw-bold text-white">{{ avg_price }}</h4>
-                    <small class="text-muted">PLN</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
-                <div class="card-body py-3 text-end">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Wartość</div>
-                    <h4 class="mb-0 fw-bold text-white">{{ value_pln }}</h4>
-                    <small class="text-muted">PLN</small>
-                </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-secondary border-opacity-25">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Avg. Buy Price</div>
+                <h4 class="fw-bold text-white mb-0">{{ avg_price }} PLN</h4>
             </div>
         </div>
     </div>
-
-    <div class="card mb-5 border-secondary border-opacity-25">
-        <div class="card-header border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
-            <span class="text-muted text-uppercase fw-bold ls-1">Analiza Techniczna</span>
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-sm btn-outline-secondary active" onclick="updateChartRange('1M', this)">1M</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateChartRange('3M', this)">3M</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateChartRange('6M', this)">6M</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateChartRange('1Y', this)">1Y</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateChartRange('ALL', this)">MAX</button>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="chart-container-wide">
-                <canvas id="assetChart"></canvas>
+    <div class="col-md-3">
+        <div class="card h-100 border-secondary border-opacity-25">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Quantity</div>
+                <h4 class="fw-bold text-white mb-0">{{ quantity }}</h4>
             </div>
         </div>
     </div>
-
-    <div class="row g-4">
-        <div class="col-lg-5 order-lg-2">
-            <div class="d-flex align-items-center mb-3">
-                <span class="fs-5 me-2">📰</span> <h5 class="mb-0 fw-bold text-muted text-uppercase ls-1">News Feed</h5>
+    <div class="col-md-3">
+        <div class="card h-100 border-secondary border-opacity-25">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Return %</div>
+                <h4 class="fw-bold {% if gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                    {% if gain_percent_raw > 0 %}+{% endif %}{{ gain_percent }}%
+                </h4>
             </div>
-            <div class="d-flex flex-column gap-3">
-                {% for news in news_list %}
-                <a href="{{ news.link }}" target="_blank" class="text-decoration-none">
-                    <div class="card h-100 shadow-sm border-secondary border-opacity-10 bg-transparent hover-card">
-                        <div class="card-body py-2 px-3">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <small class="text-muted" style="font-size: 0.7rem;">{{ news.source }} • {{ news.date_label }}</small>
-                                <div>
-                                    {% if news.freshness == 0 %}<span class="badge bg-danger text-white" style="font-size: 0.6rem;">HOT</span>{% endif %}
-                                    {% for tag in news.tags %}
-                                        {% if tag == 'OFFICIAL' %}<span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25" style="font-size: 0.6rem;">ESPI</span>{% endif %}
-                                        {% if tag == 'MONEY' %}<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" style="font-size: 0.6rem;">$$$</span>{% endif %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <h6 class="mb-0 text-white fw-normal" style="font-size: 0.9rem; line-height: 1.4;">{{ news.title }}</h6>
-                        </div>
-                    </div>
-                </a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-5 border-secondary border-opacity-25">
+    <div class="card-header border-0 pt-4 px-4 bg-transparent d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-muted text-uppercase ls-1 mb-0">Price History</h5>
+
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary active" onclick="updateChartRange('SINCE_BUY')">SINCE BUY</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('1M')">1M</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('3M')">3M</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('1Y')">1Y</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('MAX')">MAX</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="chart-container-wide" style="height: 450px;">
+            <canvas id="assetChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<h4 class="mb-3 text-white fw-bold">Transaction History</h4>
+<div class="card border-secondary border-opacity-25">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-dark text-muted text-uppercase small">
+                <tr>
+                    <th class="ps-4 py-3">Date</th>
+                    <th>Type</th>
+                    <th>Qty</th>
+                    <th>Price (PLN)</th>
+                    <th>Value (PLN)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td class="ps-4 text-white">{{ t.date }}</td>
+                    <td>
+                        {% if t.type == 'OPEN BUY' or t.type == 'BUY' %}
+                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">BUY</span>
+                        {% elif t.type == 'CLOSE SELL' or t.type == 'SELL' %}
+                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25">SELL</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ t.type }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="fw-bold text-white">{{ t.quantity }}</td>
+                    <td class="text-muted">{{ t.price_original }}</td>
+                    <td class="fw-bold text-white">{{ t.value_pln }}</td>
+                </tr>
                 {% empty %}
-                <div class="text-muted text-center py-4 small">Brak newsów dla tej spółki.</div>
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">No transactions found</td>
+                </tr>
                 {% endfor %}
-            </div>
-        </div>
-
-        <div class="col-lg-7 order-lg-1">
-            <div class="d-flex align-items-center mb-3">
-                <span class="fs-5 me-2">📜</span> <h5 class="mb-0 fw-bold text-muted text-uppercase ls-1">Historia Transakcji</h5>
-            </div>
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-0">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-dark">
-                            <tr class="text-muted small text-uppercase">
-                                <th class="ps-4 py-3">Data</th><th>Typ</th><th>Ilość</th><th>Kwota</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for t in history %}
-                            <tr>
-                                <td class="ps-4 text-white font-monospace small">{{ t.date|date:"Y-m-d" }}</td>
-                                <td>
-                                    {% if t.type == 'Kupno' or t.type == 'BUY' %}
-                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">KUPNO</span>
-                                    {% elif t.type == 'Sprzedaż' or t.type == 'SELL' %}
-                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">SPRZEDAŻ</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary text-dark">{{ t.type }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="fw-bold text-white">{{ t.quantity }}</td>
-                                <td class="text-muted">{{ t.amount }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="4" class="text-center py-4 text-muted">Brak transakcji</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+            </tbody>
+        </table>
     </div>
+</div>
 
-    {{ chart_dates|json_script:"c-dates" }}
-    {{ chart_prices|json_script:"c-prices" }}
-    {{ chart_colors|json_script:"c-colors" }}
-    {{ chart_radius|json_script:"c-radius" }}
+{{ chart_dates|json_script:"c-dates" }}
+{{ chart_prices|json_script:"c-prices" }}
+{{ chart_point_colors|json_script:"c-colors" }}
+{{ chart_point_radius|json_script:"c-radius" }}
+{{ first_trade_date|json_script:"first-trade-date" }}
+{{ ath|json_script:"val-ath" }}
+{{ atl|json_script:"val-atl" }}
 
-    <style>
-        .ls-1 { letter-spacing: 1px; }
-        .hover-card { transition: transform 0.2s, background-color 0.2s; }
-        .hover-card:hover { transform: translateY(-2px); background-color: rgba(255,255,255,0.05) !important; }
-    </style>
+<script>
+    const masterDates = JSON.parse(document.getElementById('c-dates').textContent);
+    const masterPrices = JSON.parse(document.getElementById('c-prices').textContent);
+    const masterColors = JSON.parse(document.getElementById('c-colors').textContent);
+    const masterRadius = JSON.parse(document.getElementById('c-radius').textContent);
+    const firstTradeDate = JSON.parse(document.getElementById('first-trade-date').textContent);
 
-    <script>
-        function gd(id) { return JSON.parse(document.getElementById(id).textContent); }
+    // Dane ATH/ATL z backendu
+    const valATH = JSON.parse(document.getElementById('val-ath').textContent);
+    const valATL = JSON.parse(document.getElementById('val-atl').textContent);
 
-        const ctx = document.getElementById('assetChart');
-        const allPrices = gd('c-prices');
-        const allDates = gd('c-dates');
-        const allColors = gd('c-colors');
-        const allRadius = gd('c-radius');
+    let assetChart = null;
+    let currentStartPrice = null; // Cena początkowa widocznego zakresu
 
-        let myChart = null;
+    // --- PLUGIN: Rysowanie linii ATH/ATL i Reference Line ---
+    const horizontalLinesPlugin = {
+        id: 'horizontalLines',
+        afterDraw: (chart) => {
+            const ctx = chart.ctx;
+            const yScale = chart.scales.y;
+            const xScale = chart.scales.x;
+            const chartArea = chart.chartArea;
 
-        function initChart(dates, prices, colors, radius) {
-            // 1. Obliczamy ATH i ATL dla wybranego okresu
-            const maxVal = Math.max(...prices);
-            const minVal = Math.min(...prices);
-            const startVal = prices[0];
-            const endVal = prices[prices.length - 1];
+            ctx.save();
+            ctx.lineWidth = 1;
+            ctx.font = '10px sans-serif';
 
-            // 2. Kolory głównej linii
-            const isGreen = endVal >= startVal;
-            const lineColor = isGreen ? '#98FB98' : '#ef5350';
-            const areaColor = isGreen ? 'rgba(152, 251, 152, 0.1)' : 'rgba(239, 83, 80, 0.1)';
+            // Funkcja rysująca linię
+            function drawLine(value, color, text, isDashed = true) {
+                // Rysuj tylko jeśli wartość mieści się w pionowym zakresie wykresu (opcjonalnie)
+                // Chart.js i tak przytnie, ale warto sprawdzić
+                const y = yScale.getPixelForValue(value);
 
-            // 3. Tworzymy serie danych dla linii poziomych (muszą mieć tyle samo punktów co wykres)
-            const athData = Array(dates.length).fill(maxVal);
-            const atlData = Array(dates.length).fill(minVal);
-            const startLineData = Array(dates.length).fill(startVal);
+                // Linia
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                if(isDashed) ctx.setLineDash([5, 5]);
+                else ctx.setLineDash([2, 4]); // Kropkowana dla referencji
 
-            if (myChart) myChart.destroy();
+                ctx.moveTo(chartArea.left, y);
+                ctx.lineTo(chartArea.right, y);
+                ctx.stroke();
 
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [
-                        {
-                            label: 'Cena',
-                            data: prices,
-                            borderColor: lineColor,
-                            backgroundColor: areaColor,
-                            borderWidth: 2,
-                            fill: true,
-                            pointBackgroundColor: colors,
-                            pointBorderColor: '#fff',
-                            pointRadius: radius,
-                            pointHoverRadius: 8,
-                            tension: 0.2,
-                            order: 1
-                        },
-                        {
-                            label: 'ATH (Szczyt)',
-                            data: athData,
-                            borderColor: 'rgba(152, 251, 152, 0.6)', // Półprzezroczysty zielony
-                            borderWidth: 1,
-                            borderDash: [5, 5], // Linia przerywana
-                            pointRadius: 0,
-                            fill: false,
-                            order: 2
-                        },
-                        {
-                            label: 'ATL (Dołek)',
-                            data: atlData,
-                            borderColor: 'rgba(239, 83, 80, 0.6)', // Półprzezroczysty czerwony
-                            borderWidth: 1,
-                            borderDash: [5, 5],
-                            pointRadius: 0,
-                            fill: false,
-                            order: 3
-                        },
-                        {
-                            label: 'Start',
-                            data: startLineData,
-                            borderColor: 'rgba(255, 255, 255, 0.3)', // Szary
-                            borderWidth: 1,
-                            borderDash: [2, 4],
-                            pointRadius: 0,
-                            fill: false,
-                            order: 4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#888', maxTicksLimit: 8 } },
-                        y: { grid: { color: '#333', borderDash: [4, 4] }, ticks: { color: '#888' } }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            mode: 'index', intersect: false,
-                            callbacks: { label: function(c) { return c.dataset.label + ': ' + c.parsed.y + ' {{ asset.currency }}'; } }
-                        }
+                // Etykieta
+                ctx.fillStyle = color;
+                ctx.fillText(text + ' (' + value.toFixed(2) + ')', chartArea.right - 80, y - 5);
+            }
+
+            // 1. Rysuj ATH (Zielony)
+            drawLine(valATH, '#00ff7f', 'ATH');
+
+            // 2. Rysuj ATL (Czerwony)
+            drawLine(valATL, '#ff4d4d', 'ATL');
+
+            // 3. Rysuj linię odniesienia (Start widocznego zakresu)
+            if (currentStartPrice !== null) {
+                drawLine(currentStartPrice, '#888', 'Ref', false);
+            }
+
+            ctx.restore();
+        }
+    };
+
+    function getStartIndexForRange(range) {
+        const totalPoints = masterDates.length;
+        if (range === 'SINCE_BUY' && firstTradeDate) {
+            const idx = masterDates.indexOf(firstTradeDate);
+            return (idx !== -1) ? Math.max(0, idx - 3) : 0;
+        }
+        let sliceCount = totalPoints;
+        if (range === '1M') sliceCount = 21;
+        else if (range === '3M') sliceCount = 63;
+        else if (range === '1Y') sliceCount = 252;
+
+        if (sliceCount > totalPoints) sliceCount = totalPoints;
+        return totalPoints - sliceCount;
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('assetChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 450);
+        gradient.addColorStop(0, 'rgba(0, 255, 127, 0.2)');
+        gradient.addColorStop(1, 'rgba(0, 255, 127, 0.0)');
+
+        // Domyślny start (SINCE BUY)
+        const initialStart = getStartIndexForRange('SINCE_BUY');
+        currentStartPrice = masterPrices[initialStart]; // Ustawiamy cenę referencyjną
+
+        assetChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: masterDates.slice(initialStart),
+                datasets: [{
+                    label: 'Price (PLN)',
+                    data: masterPrices.slice(initialStart),
+                    borderColor: '#00ff7f',
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    pointBackgroundColor: masterColors.slice(initialStart),
+                    pointBorderColor: '#fff',
+                    pointRadius: masterRadius.slice(initialStart),
+                    pointHoverRadius: 8,
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            plugins: [horizontalLinesPlugin], // <--- REJESTRACJA PLUGINU
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false, // Wyłączona animacja
+                transitions: { active: { animation: { duration: 0 } } },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(30,30,30,0.95)',
+                        titleColor: '#fff',
+                        bodyColor: '#ccc',
+                        borderColor: '#444',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false
                     }
-                }
-            });
-        }
-
-        function updateChartRange(range, btnElement) {
-            document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
-            btnElement.classList.add('active');
-
-            if (range === 'ALL') {
-                initChart(allDates, allPrices, allColors, allRadius);
-                return;
-            }
-
-            const now = new Date();
-            let cutoffDate = new Date();
-
-            if (range === '1M') cutoffDate.setMonth(now.getMonth() - 1);
-            if (range === '3M') cutoffDate.setMonth(now.getMonth() - 3);
-            if (range === '6M') cutoffDate.setMonth(now.getMonth() - 6);
-            if (range === '1Y') cutoffDate.setFullYear(now.getFullYear() - 1);
-
-            let filteredDates = [], filteredPrices = [], filteredColors = [], filteredRadius = [];
-
-            for (let i = 0; i < allDates.length; i++) {
-                let d = new Date(allDates[i]);
-                if (d >= cutoffDate) {
-                    filteredDates.push(allDates[i]);
-                    filteredPrices.push(allPrices[i]);
-                    filteredColors.push(allColors[i]);
-                    filteredRadius.push(allRadius[i]);
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#666', maxTicksLimit: 8 } },
+                    y: { grid: { color: '#333', borderDash: [4, 4] }, ticks: { color: '#a0a0a0' } }
                 }
             }
-            initChart(filteredDates, filteredPrices, filteredColors, filteredRadius);
-        }
+        });
+    }
 
-        updateChartRange('1M', document.querySelector('.btn-group .btn'));
-    </script>
+    function updateChartRange(range) {
+        if (!assetChart) return;
+
+        document.querySelectorAll('.btn-group button').forEach(btn => {
+            btn.classList.remove('active');
+            if(btn.innerText === range.replace('_', ' ')) btn.classList.add('active');
+        });
+
+        const startIndex = getStartIndexForRange(range);
+
+        // Aktualizacja danych
+        assetChart.data.labels = masterDates.slice(startIndex);
+        assetChart.data.datasets[0].data = masterPrices.slice(startIndex);
+        assetChart.data.datasets[0].pointBackgroundColor = masterColors.slice(startIndex);
+        assetChart.data.datasets[0].pointRadius = masterRadius.slice(startIndex);
+
+        // Aktualizacja ceny referencyjnej
+        currentStartPrice = masterPrices[startIndex];
+
+        assetChart.update();
+    }
+
+    initChart();
+</script>
 
 {% endblock %}

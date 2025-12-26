@@ -116,3 +116,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+# Konfiguracja przekierowań po logowaniu
+LOGIN_REDIRECT_URL = 'dashboard'  # Po zalogowaniu idź do dashboard (name='dashboard')
+LOGOUT_REDIRECT_URL = 'login'     # Po wylogowaniu idź do logowania
+LOGIN_URL = 'login'               # Jeśli niezalogowany wejdzie na dashboard, wyślij go tu

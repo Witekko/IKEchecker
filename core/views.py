@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .forms import UploadFileForm
+from django.contrib.auth import login
+from .forms import UploadFileForm, CustomUserCreationForm
 
 # Teraz importujemy gotowe klocki z services
 from .services import (
@@ -35,7 +36,13 @@ def dashboard_view(request):
         return render(request, 'dashboard.html', {'error': context['error']})
     return render(request, 'dashboard.html', context)
 
-
+# --- NOWA FUNKCJA (WKLEJ POD DASHBOARD_VIEW) ---
+@login_required
+def assets_list_view(request):
+    context = get_dashboard_context(request.user)
+    if 'error' in context:
+        return render(request, 'dashboard.html', {'error': context['error']}) # Fallback
+    return render(request, 'assets_list.html', context)
 @login_required
 def dividends_view(request):
     context = get_dividend_context(request.user)
@@ -51,3 +58,16 @@ def asset_details_view(request, symbol):
         return render(request, 'dashboard.html', {'error': context['error']})
 
     return render(request, 'asset_details.html', context)
+def register_view(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user) # Automatyczne logowanie po rejestracji
+            messages.success(request, "Konto utworzone pomyślnie!")
+            return redirect('dashboard')
+        else:
+            messages.error(request, "Błąd rejestracji. Sprawdź formularz.")
+    else:
+        form = CustomUserCreationForm()
+    return render(request, 'register.html', {'form': form})

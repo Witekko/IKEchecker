@@ -1,11 +1,25 @@
 from django.contrib import admin
 from django.urls import path
-from core.views import upload_view, dashboard_view, asset_details_view, dividends_view
+from django.contrib.auth import views as auth_views
+from core import views  # Upewnij się, że ten import jest poprawny
 
 urlpatterns = [
+    # --- PANEL ADMINA ---
     path('admin/', admin.site.urls),
-    path('upload/', upload_view, name='upload'),
-    path('', dashboard_view, name='dashboard'),
-    path('asset/<str:symbol>/', asset_details_view, name='asset_details'),
-    path('dividends/', dividends_view, name='dividends'),
+
+    # --- APLIKACJA (CORE) ---
+    path('', views.dashboard_view, name='dashboard'),
+
+    # !!! TO JEST LINIA, KTÓREJ BRAKUJE LUB JEST BŁĘDNA !!!
+    path('assets/', views.assets_list_view, name='assets_list'),
+    # -----------------------------------------------------
+
+    path('upload/', views.upload_view, name='upload'),
+    path('dividends/', views.dividends_view, name='dividends'),
+    path('asset/<str:symbol>/', views.asset_details_view, name='asset_details'),
+
+    # --- AUTORYZACJA ---
+    path('register/', views.register_view, name='register'),
+    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 ]

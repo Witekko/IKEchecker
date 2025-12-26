@@ -1,5 +1,3 @@
-# core/services/portfolio.py
-
 import math
 import pandas as pd
 import yfinance as yf
@@ -8,209 +6,247 @@ from django.utils import timezone
 from django.db.models import QuerySet
 from .config import fmt_2, fmt_4
 from .market import get_cached_price, get_current_currency_rates
-from .news import get_asset_news
 from ..models import Asset, Portfolio, Transaction
+from .calculator import PortfolioCalculator
+
+
+# =========================================================
+# 1. LOGIKA DASHBOARDU I LISTY AKTYWÓW
+# =========================================================
 
 def calculate_current_holdings(transactions: QuerySet, eur_rate: float, usd_rate: float):
-    assets_summary = {}
-    total_invested = 0.0
-    cash = 0.0
-    first_transaction_date = timezone.now().date()
-    has_transactions = False
+    # 1. Calculator
+    calc = PortfolioCalculator(transactions).process()
+    holdings_data = calc.get_holdings()
+    cash, total_invested = calc.get_cash_balance()
 
-    # 1. Agregacja
-    for t in transactions:
-        has_transactions = True
-        if t.date.date() < first_transaction_date:
-            first_transaction_date = t.date.date()
+    # Kontenery tymczasowe
+    all_assets_temp = []
 
-        amt = float(t.amount)
-        qty = float(t.quantity)
-
-        if t.type == 'DEPOSIT':
-            total_invested += amt;
-            cash += amt
-        elif t.type == 'WITHDRAWAL':
-            total_invested -= abs(amt);
-            cash -= abs(amt)
-        elif t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX']:
-            cash += amt
-
-        if t.asset:
-            s = t.asset.symbol
-            if s not in assets_summary:
-                assets_summary[s] = {'qty': 0.0, 'cost': 0.0, 'realized': 0.0, 'obj': t.asset}
-
-            if t.type == 'BUY':
-                assets_summary[s]['qty'] += qty
-                assets_summary[s]['cost'] += abs(amt)
-            elif t.type == 'SELL':
-                cur_qty = assets_summary[s]['qty']
-                if cur_qty > 0:
-                    ratio = qty / cur_qty
-                    if ratio > 1: ratio = 1
-                    cost_removed = assets_summary[s]['cost'] * ratio
-                    assets_summary[s]['realized'] += (amt - cost_removed)
-                    assets_summary[s]['qty'] -= qty
-                    assets_summary[s]['cost'] -= cost_removed
-
-    pln_holdings = []
-    foreign_holdings = []
-    closed_holdings = []
-    charts = {'labels': [], 'allocation': [], 'profit_labels': [], 'profit_values': [], 'closed_labels': [],
-              'closed_values': []}
-
+    # Zmienne do globalnych sum
     portfolio_value_stock = 0.0
     total_day_change_pln = 0.0
     unrealized_profit = 0.0
     gainers_count = 0
     losers_count = 0
 
-    # 2. Wyliczanie
-    for s, data in assets_summary.items():
-        qty = data['qty']
-        asset = data['obj']
+    # Wykresy
+    charts = {'labels': [], 'allocation': [], 'profit_labels': [], 'profit_values': [], 'closed_labels': [],
+              'closed_values': []}
+    closed_holdings = []
 
+    # 2. Przetwarzanie wszystkich aktywów (Pierwszy przebieg)
+    for sym, data in holdings_data.items():
+        qty = data['qty']
+        asset = data['asset']
+
+        # Pozycje zamknięte
         if qty <= 0.0001:
             if abs(data['realized']) > 0.01:
                 closed_holdings.append({
-                    'symbol': s,
+                    'symbol': sym,
                     'gain_pln': fmt_2(data['realized']),
-                    'gain_pln_raw': data['realized']  # <--- DODANE (do kolorów na dashboardzie)
+                    'gain_pln_raw': data['realized']
                 })
-                charts['closed_labels'].append(s)
+                charts['closed_labels'].append(sym)
                 charts['closed_values'].append(round(data['realized'], 2))
             continue
 
+        # Pozycje otwarte
         cost = data['cost']
-        avg_price = cost / qty if qty > 0 else 0
         cur_price, prev_close = get_cached_price(asset)
 
         multiplier = 1.0
-        currency_code = 'PLN'
-        target_list = pln_holdings
+        currency_sym = 'PLN'
+        is_foreign = False
 
         if asset.currency == 'EUR':
             multiplier = eur_rate
-            currency_code = 'EUR'
-            target_list = foreign_holdings
+            currency_sym = '€'
+            is_foreign = True
         elif asset.currency == 'USD':
             multiplier = usd_rate
-            currency_code = 'USD'
-            target_list = foreign_holdings
+            currency_sym = '$'
+            is_foreign = True
+        elif asset.currency == 'GBP':
+            multiplier = 5.20
+            currency_sym = '£'
+            is_foreign = True
 
         value_pln = (qty * cur_price) * multiplier
         current_position_gain = value_pln - cost
-        unrealized_profit += current_position_gain
         total_gain = current_position_gain + data['realized']
-        gain_percent = (total_gain / cost * 100) if cost > 0 else 0
+
+        avg_price = (cost / qty) if qty > 0 else 0
+        gain_percent = (total_gain / cost * 100) if cost > 0 else 0.0
 
         day_change_pct = ((cur_price - prev_close) / prev_close * 100) if prev_close > 0 else 0.0
         day_change_val = (qty * (cur_price - prev_close)) * multiplier
-        total_day_change_pln += day_change_val
 
         if day_change_pct > 0:
             gainers_count += 1
         elif day_change_pct < 0:
             losers_count += 1
 
-        target_list.append({
-            'symbol': s,
+        portfolio_value_stock += value_pln
+        total_day_change_pln += day_change_val
+        unrealized_profit += current_position_gain
+
+        # Dni inwestycji
+        days_held = 0
+        if data['trades']:
+            sorted_trades = sorted(data['trades'], key=lambda x: x['date'])
+            first_trade = sorted_trades[0]['date'].date()
+            days_held = (date.today() - first_trade).days
+
+        # Zapisujemy do tymczasowej listy
+        all_assets_temp.append({
+            'symbol': sym,
             'name': asset.name,
             'quantity': fmt_4(qty),
             'avg_price_pln': fmt_2(avg_price),
             'current_price_orig': fmt_2(cur_price),
-            'currency': currency_code,
+            'current_price_fmt': f"{cur_price:.2f} {currency_sym}",
+            'price_date': asset.last_updated,  # Data ceny
+
             'value_pln': fmt_2(value_pln),
             'value_pln_raw': value_pln,
+
             'gain_pln': fmt_2(total_gain),
             'gain_pln_raw': total_gain,
+
             'gain_percent': fmt_2(gain_percent),
+            'gain_percent_raw': gain_percent,
+
             'day_change_pct': fmt_2(day_change_pct),
-            'day_change_pct_raw': day_change_pct
+            'day_change_pct_raw': day_change_pct,
+
+            'days_held': days_held,
+            'is_foreign': is_foreign,  # FLAGA DO PODZIAŁU
+
+            # Dane do podsumowań grup
+            'cost_raw': cost,
         })
 
-        portfolio_value_stock += value_pln
-        charts['labels'].append(s)
+        charts['labels'].append(sym)
         charts['allocation'].append(value_pln)
-        charts['profit_labels'].append(s)
+        charts['profit_labels'].append(sym)
         charts['profit_values'].append(total_gain)
 
-    # 3. Sumy dla tabel
-    totals_pln = {
-        'value': sum(x['value_pln_raw'] for x in pln_holdings),
-        'gain': sum(x['gain_pln_raw'] for x in pln_holdings)
-    }
-    totals_foreign = {
-        'value': sum(x['value_pln_raw'] for x in foreign_holdings),
-        'gain': sum(x['gain_pln_raw'] for x in foreign_holdings)
+    # 3. Globalne Sumy
+    total_portfolio_value = portfolio_value_stock + cash
+    total_profit = total_portfolio_value - total_invested
+    total_return_pct = (total_profit / total_invested * 100) if total_invested > 0 else 0.0
+
+    value_yesterday = total_portfolio_value - total_day_change_pln
+    portfolio_day_change_pct = (total_day_change_pln / value_yesterday * 100) if value_yesterday > 0 else 0.0
+
+    # 4. Rozdzielanie na grupy i liczenie udziału %
+    pln_group = {'items': [], 'total_val': 0.0, 'total_gain': 0.0, 'total_cost': 0.0}
+    foreign_group = {'items': [], 'total_val': 0.0, 'total_gain': 0.0, 'total_cost': 0.0}
+
+    for item in all_assets_temp:
+        # Udział % w CAŁYM portfelu
+        share_pct = 0.0
+        if total_portfolio_value > 0:
+            share_pct = (item['value_pln_raw'] / total_portfolio_value) * 100
+
+        item['share_pct'] = fmt_2(share_pct)
+        item['share_pct_raw'] = share_pct
+
+        # Przydział do grupy
+        if item['is_foreign']:
+            foreign_group['items'].append(item)
+            foreign_group['total_val'] += item['value_pln_raw']
+            foreign_group['total_gain'] += item['gain_pln_raw']
+            foreign_group['total_cost'] += item['cost_raw']
+        else:
+            pln_group['items'].append(item)
+            pln_group['total_val'] += item['value_pln_raw']
+            pln_group['total_gain'] += item['gain_pln_raw']
+            pln_group['total_cost'] += item['cost_raw']
+
+    # Sortowanie wewnątrz grup (po udziale)
+    pln_group['items'].sort(key=lambda x: x['share_pct_raw'], reverse=True)
+    foreign_group['items'].sort(key=lambda x: x['share_pct_raw'], reverse=True)
+
+    # 5. Formatowanie sum dla grup
+    pln_stats = {
+        'value': fmt_2(pln_group['total_val']),
+        'gain': fmt_2(pln_group['total_gain']),
+        'gain_raw': pln_group['total_gain'],
+        'return_pct': fmt_2(
+            (pln_group['total_gain'] / pln_group['total_cost'] * 100) if pln_group['total_cost'] > 0 else 0),
+        'share_total': fmt_2((pln_group['total_val'] / total_portfolio_value * 100) if total_portfolio_value > 0 else 0)
     }
 
-    totals_pln_fmt = {
-        'value': fmt_2(totals_pln['value']),
-        'gain': fmt_2(totals_pln['gain']),
-        'gain_raw': totals_pln['gain']
+    foreign_stats = {
+        'value': fmt_2(foreign_group['total_val']),
+        'gain': fmt_2(foreign_group['total_gain']),
+        'gain_raw': foreign_group['total_gain'],
+        'return_pct': fmt_2((foreign_group['total_gain'] / foreign_group['total_cost'] * 100) if foreign_group[
+                                                                                                     'total_cost'] > 0 else 0),
+        'share_total': fmt_2(
+            (foreign_group['total_val'] / total_portfolio_value * 100) if total_portfolio_value > 0 else 0)
     }
-    totals_foreign_fmt = {
-        'value': fmt_2(totals_foreign['value']),
-        'gain': fmt_2(totals_foreign['gain']),
-        'gain_raw': totals_foreign['gain']
-    }
+
+    # Annual Return (uproszczony)
+    annual_return_pct = 0.0
+    if calc.first_date and total_invested > 0:
+        days = (date.today() - calc.first_date).days
+        if days > 365:
+            annual_return_pct = total_return_pct / (days / 365.25)
+        else:
+            annual_return_pct = total_return_pct
 
     if cash > 1:
         charts['labels'].append("CASH")
         charts['allocation'].append(cash)
 
-    total_portfolio_value = portfolio_value_stock + cash
-    total_profit = total_portfolio_value - total_invested
-
-    value_yesterday = total_portfolio_value - total_day_change_pln
-    portfolio_day_change_pct = (total_day_change_pln / value_yesterday * 100) if value_yesterday > 0 else 0.0
-    total_return_pct = (total_profit / total_invested * 100) if total_invested > 0 else 0.0
-
-    annual_return_pct = 0.0
-    if has_transactions and total_invested > 0:
-        days_investing = (date.today() - first_transaction_date).days
-        if days_investing > 0:
-            years = days_investing / 365.25
-            if years < 1:
-                annual_return_pct = total_return_pct
-            else:
-                annual_return_pct = total_return_pct / years
-
     return {
+        # --- GLOBAL SUMMARY ---
+        'total_value': fmt_2(total_portfolio_value),
+        'total_profit': fmt_2(total_profit),
+        'total_profit_raw': total_profit,
+        'total_return_pct': fmt_2(total_return_pct),
+        'total_return_pct_raw': total_return_pct,
+        'day_change_pct': fmt_2(portfolio_day_change_pct),
+        'day_change_pct_raw': portfolio_day_change_pct,
         'cash': fmt_2(cash),
         'invested': fmt_2(total_invested),
-        'stock_value': fmt_2(portfolio_value_stock),
 
-        'tile_value_raw': total_portfolio_value,
-        'tile_day_pct_raw': portfolio_day_change_pct,
-        'tile_total_profit_raw': total_profit,
-        'tile_return_pct_raw': total_return_pct,
-        'tile_day_pln_raw': total_day_change_pln,
-        'tile_current_profit_raw': unrealized_profit,
-        'tile_annual_pct_raw': annual_return_pct,
+        # --- GRUPY AKTYWÓW ---
+        'pln_items': pln_group['items'],
+        'pln_stats': pln_stats,
 
+        'foreign_items': foreign_group['items'],
+        'foreign_stats': foreign_stats,
+
+        'closed_holdings': closed_holdings,
+
+        # --- DASHBOARD CHART DATA ---
         'tile_value_str': fmt_2(total_portfolio_value),
-        'tile_day_pct_str': fmt_2(portfolio_day_change_pct),
         'tile_total_profit_str': fmt_2(total_profit),
         'tile_return_pct_str': fmt_2(total_return_pct),
+        'tile_day_pct_str': fmt_2(portfolio_day_change_pct),
         'tile_day_pln_str': fmt_2(total_day_change_pln),
         'tile_current_profit_str': fmt_2(unrealized_profit),
         'tile_annual_pct_str': fmt_2(annual_return_pct),
-
         'tile_gainers': gainers_count,
         'tile_losers': losers_count,
-
-        'pln_holdings': pln_holdings,
-        'foreign_holdings': foreign_holdings,
-        'closed_holdings': closed_holdings,
-        'totals_pln': totals_pln_fmt,
-        'totals_foreign': totals_foreign_fmt,
-
+        'tile_value_raw': total_portfolio_value,
+        'tile_total_profit_raw': total_profit,
+        'tile_return_pct_raw': total_return_pct,
+        'tile_day_pct_raw': portfolio_day_change_pct,
+        'tile_day_pln_raw': total_day_change_pln,
+        'tile_current_profit_raw': unrealized_profit,
+        'tile_annual_pct_raw': annual_return_pct,
         'charts': charts
     }
 
+# =========================================================
+# 2. LOGIKA WYKRESU HISTORII (TIMELINE)
+# =========================================================
 
 def calculate_historical_timeline(transactions: QuerySet, eur_rate, usd_rate):
     if not transactions.exists(): return {}
@@ -283,10 +319,7 @@ def calculate_historical_timeline(transactions: QuerySet, eur_rate, usd_rate):
                     val *= eur_rate
                 elif '.US' in tk:
                     hist_usd = float(hist_data['USDPLN=X']['Close'].asof(str(current_day)))
-                    if not math.isnan(hist_usd):
-                        val *= hist_usd
-                    else:
-                        val *= usd_rate
+                    val *= hist_usd if not math.isnan(hist_usd) else usd_rate
                 user_val += val
             except:
                 pass
@@ -307,7 +340,6 @@ def calculate_historical_timeline(transactions: QuerySet, eur_rate, usd_rate):
             pass
 
         sim['inflation_capital'] *= 1.06 ** (1 / 365)
-
         timeline['dates'].append(current_day.strftime("%Y-%m-%d"))
         timeline['points'].append(6 if is_deposit_day else 0)
         timeline['val_user'].append(round(user_val, 2))
@@ -321,118 +353,144 @@ def calculate_historical_timeline(transactions: QuerySet, eur_rate, usd_rate):
         timeline['pct_wig'].append(round((wig_val - base) / base * 100 if wig_val > 0 else 0, 2))
         timeline['pct_sp'].append(round((sp_val - base) / base * 100 if sp_val > 0 else 0, 2))
         timeline['pct_inf'].append(round((sim['inflation_capital'] - base) / base * 100, 2))
-
         current_day += timedelta(days=1)
 
     return timeline
 
+
+# =========================================================
+# 3. LOGIKA SZCZEGÓŁÓW AKTYWA (ATH, ATL, KROPKI)
+# =========================================================
 
 def get_asset_details_context(user, symbol):
     portfolio = Portfolio.objects.filter(user=user).first()
     try:
         asset = Asset.objects.get(symbol=symbol)
     except Asset.DoesNotExist:
-        return {'error': f'Nie znaleziono aktywa: {symbol}'}
+        return {'symbol': symbol, 'error': f'Asset not found: {symbol}'}
 
     transactions = Transaction.objects.filter(portfolio=portfolio, asset=asset).order_by('date')
-    total_qty = 0.0
-    total_cost_pln = 0.0
+
+    # 1. Calculator
+    calc = PortfolioCalculator(transactions).process()
+    holdings_data = calc.get_holdings()
+    asset_data = holdings_data.get(symbol, {'qty': 0.0, 'cost': 0.0, 'realized': 0.0, 'trades': []})
+
+    # 2. Data pierwszej transakcji (dla wykresu)
+    first_trade_date_str = None
+    if transactions.exists():
+        first_trade_date_str = transactions.first().date.strftime('%Y-%m-%d')
+
+    rates = get_current_currency_rates()
+    eur_rate = rates.get('EUR', 4.30)
+    usd_rate = rates.get('USD', 4.00)
+    gbp_rate = rates.get('GBP', 5.20)
+    jpy_rate = rates.get('JPY', 1.0) / 100.0
+
+    multiplier = 1.0
+    if asset.currency == 'EUR':
+        multiplier = eur_rate
+    elif asset.currency == 'USD':
+        multiplier = usd_rate
+    elif asset.currency == 'GBP':
+        multiplier = gbp_rate
+    elif asset.currency == 'JPY':
+        multiplier = jpy_rate
+
+    # 3. Historia MAX i ATH/ATL
+    current_price_orig = 0.0
+    ath = 0.0
+    atl = 0.0
+    hist = pd.DataFrame()
+
+    try:
+        ticker = yf.Ticker(asset.yahoo_ticker)
+        # Pobieramy MAX, żeby mieć dane do ATH i pełnego wykresu
+        hist = ticker.history(period="max")
+        if not hist.empty:
+            current_price_orig = float(hist['Close'].iloc[-1])
+            hist.index = hist.index.strftime('%Y-%m-%d')
+
+            # Obliczanie ATH i ATL (w PLN)
+            ath = float(hist['Close'].max()) * multiplier
+            atl = float(hist['Close'].min()) * multiplier
+    except Exception as e:
+        print(f"Error fetching details ({symbol}): {e}")
+        current_price_orig, _ = get_cached_price(asset)
+
+    qty = asset_data['qty']
+    cost = asset_data['cost']
+    current_value_pln = qty * current_price_orig * multiplier
+    avg_price_pln = (cost / qty) if qty > 0 else 0.0
+
+    total_gain_pln = (current_value_pln - cost) + asset_data['realized']
+    profit_percent = (total_gain_pln / cost * 100) if cost > 0.01 else 0
+
     history_table = []
     trade_events = {}
 
-    for t in transactions:
-        qty = float(t.quantity)
-        amt = float(t.amount)
-        if t.type == 'BUY':
-            total_qty += qty
-            total_cost_pln += abs(amt)
-            trade_events[t.date.date().strftime("%Y-%m-%d")] = 'BUY'
-        elif t.type == 'SELL':
-            if total_qty > 0:
-                ratio = qty / total_qty
-                if ratio > 1: ratio = 1
-                total_cost_pln -= (total_cost_pln * ratio)
-                total_qty -= qty
-            trade_events[t.date.date().strftime("%Y-%m-%d")] = 'SELL'
+    for t in asset_data['trades']:
         history_table.append({
-            'date': t.date, 'type': t.get_type_display(), 'quantity': fmt_4(qty),
-            'amount': fmt_2(amt), 'comment': t.comment
+            'date': t['date'].strftime('%Y-%m-%d'),
+            'type': t['type'],
+            'quantity': fmt_4(t['qty']),
+            'price_original': f"{t['price']:.2f}",
+            'currency': 'PLN',
+            'value_pln': fmt_2(abs(t['amount']))
         })
+        d_str = t['date'].strftime("%Y-%m-%d")
+        if t['type'] in ['OPEN BUY', 'BUY']:
+            trade_events[d_str] = 'BUY'
+        elif t['type'] in ['CLOSE SELL', 'SELL']:
+            trade_events[d_str] = 'SELL'
 
-    current_price = 0.0
-    prev_close_price = 0.0
-    hist = pd.DataFrame()
-    try:
-        ticker = yf.Ticker(asset.yahoo_ticker)
-        hist = ticker.history(period="max")
-        if not hist.empty:
-            hist.index = hist.index.tz_localize(None)
-            current_price = float(hist['Close'].iloc[-1])
-            if len(hist) >= 2:
-                prev_close_price = float(hist['Close'].iloc[-2])
-            else:
-                prev_close_price = current_price
-    except Exception as e:
-        print(f"Error fetching details ({symbol}): {e}")
-
-    rates = get_current_currency_rates()
-
-    multiplier = 1.0
-    # Bezpieczne pobieranie z fallbackiem do 1.0
-    if asset.currency in rates:
-        multiplier = rates[asset.currency]
-    elif asset.currency == 'JPY':  # Specjalny przypadek dla Jena (jeśli trzymasz przelicznik za 100)
-        multiplier = rates.get('JPY', 1.0) / 100
-
-    day_change_val = (current_price - prev_close_price) * multiplier * total_qty
-    day_change_pct = ((current_price - prev_close_price) / prev_close_price * 100) if prev_close_price > 0 else 0.0
-
-    avg_price = (total_cost_pln / total_qty) if total_qty > 0 else 0
-    current_value_pln = (total_qty * current_price) * multiplier
-    profit_pln = current_value_pln - total_cost_pln
-    profit_percent = (profit_pln / total_cost_pln * 100) if total_cost_pln > 0.01 else 0
-
+    # 4. Wykres
     chart_dates = []
     chart_prices = []
-    chart_colors = []
-    chart_radius = []
+    chart_point_colors = []
+    chart_point_radius = []
 
     if not hist.empty:
-        for date_idx, row in hist.iterrows():
-            d_str = date_idx.strftime("%Y-%m-%d")
-            chart_dates.append(d_str)
-            chart_prices.append(float(row['Close']))
-            if d_str in trade_events:
-                chart_colors.append('#00ff7f' if trade_events[d_str] == 'BUY' else '#ff4d4d')
-                chart_radius.append(6)
-            else:
-                chart_colors.append('rgba(0,0,0,0)')
-                chart_radius.append(0)
+        all_dates = hist.index.tolist()
+        all_prices = [float(p) * multiplier for p in hist['Close'].tolist()]
 
-    news_data = get_asset_news(asset.symbol, asset.name)
+        for d, p in zip(all_dates, all_prices):
+            chart_dates.append(d)
+            chart_prices.append(p)
+            if d in trade_events:
+                color = '#00ff7f' if trade_events[d] == 'BUY' else '#ff4d4d'
+                chart_point_colors.append(color)
+                chart_point_radius.append(6)
+            else:
+                chart_point_colors.append('rgba(0,0,0,0)')
+                chart_point_radius.append(0)
+    else:
+        chart_dates = [t['date'] for t in history_table]
+        chart_prices = [current_price_orig * multiplier] * len(chart_dates)
+        chart_point_colors = ['#00ff7f'] * len(chart_dates)
+        chart_point_radius = [6] * len(chart_dates)
 
     return {
-        'asset': asset,
-        'current_price': fmt_2(current_price),
-        'qty': fmt_4(total_qty),
-        'avg_price': fmt_2(avg_price),
-        'value_pln': fmt_2(current_value_pln),
+        'symbol': symbol,
+        'asset_name': asset.name,
+        'current_value_pln': fmt_2(current_value_pln),
+        'avg_price': fmt_2(avg_price_pln),
+        'quantity': fmt_4(qty),
+        'gain_percent': fmt_2(profit_percent),
+        'gain_percent_raw': profit_percent,
+        'total_gain_pln': fmt_2(total_gain_pln),
+        'total_gain_pln_raw': total_gain_pln,
+        'transactions': reversed(history_table),
 
-        # --- POPRAWIONE DANE (RAW DO KOLORÓW) ---
-        'profit_pln': fmt_2(profit_pln),
-        'profit_pln_raw': profit_pln,  # <--- WAŻNE
-        'profit_percent': fmt_2(profit_percent),
-        'profit_percent_raw': profit_percent,  # <--- WAŻNE
-
-        'day_change_pln': fmt_2(day_change_val),
-        'day_change_raw': day_change_pct,  # <--- WAŻNE
-        'day_change_pct': fmt_2(day_change_pct),
-
-        'history': reversed(history_table),
-        'currency_rate': fmt_2(multiplier) if multiplier != 1.0 else None,
         'chart_dates': chart_dates,
         'chart_prices': chart_prices,
-        'chart_colors': chart_colors,
-        'chart_radius': chart_radius,
-        'news_list': news_data
+        'chart_point_colors': chart_point_colors,
+        'chart_point_radius': chart_point_radius,
+        'first_trade_date': first_trade_date_str,
+
+        # ATH/ATL
+        'ath': ath,
+        'atl': atl,
+
+        'rates': rates
     }

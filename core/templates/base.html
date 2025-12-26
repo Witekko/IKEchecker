@@ -1,141 +1,301 @@
 <!DOCTYPE html>
-<html lang="pl" data-bs-theme="dark"> <head>
+<html lang="pl" data-bs-theme="dark">
+<head>
     <meta charset="UTF-8">
-    <title>IKE Bloomberg Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IKE Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* --- MODERN SOFT DARK THEME --- */
         :root {
-            --bg-body: #121212;       /* Bardzo ciemne tło strony */
-            --bg-card: #252525;       /* Nieco jaśniejsze tło kart (dla kontrastu) */
-            --text-main: #ffffff;     /* Biały tekst */
-            --text-muted: #a0a0a0;    /* Szary tekst poboczny */
+            /* --- PALETA KOLORÓW --- */
+            --bg-dark: #121212;
+            --card-bg: #1e1e1e;
+            --accent-green: #00ff7f;
+            --text-gray: #a0a0a0;
 
-            --accent-green: #98FB98	;  /* Bardziej morska/miękka zieleń */
-            --accent-red: #ef5350;    /* Miękka czerwień */
-            --accent-blue: #42a5f5;   /* Miękki niebieski */
-
-            --border-radius: 16px;    /* KLUCZOWE: Duże zaokrąglenie */
-            --card-shadow: 0 8px 24px rgba(0,0,0,0.25); /* Miękki cień */
-            --border-color: #333;
+            /* --- WYMIARY --- */
+            --sidebar-width: 260px;
+            --sidebar-collapsed: 80px;
+            --bottom-nav-height: 70px;
         }
 
         body {
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding-top: 80px; /* Więcej oddechu od góry */
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding-bottom: calc(var(--bottom-nav-height) + 10px);
+            overflow-x: hidden;
         }
 
-        /* Navbar - bardziej minimalistyczny */
-        .navbar {
-            background-color: rgba(18, 18, 18, 0.95) !important; /* Półprzezroczysty */
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #333;
+        /* --- BOOTSTRAP OVERRIDES --- */
+        .card { background-color: var(--card-bg) !important; border-color: rgba(255,255,255,0.05) !important; color: #e0e0e0; }
+        .table { --bs-table-bg: transparent; --bs-table-color: #e0e0e0; --bs-table-hover-bg: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+        h1, h2, h3, h4, h5, h6 { color: #fff !important; }
+        .form-control, .form-select { background-color: #2c2c2c !important; border-color: #444 !important; color: #fff !important; }
+        .form-control:focus { background-color: #333 !important; border-color: var(--accent-green) !important; box-shadow: 0 0 0 0.25rem rgba(0, 255, 127, 0.25); }
+
+        /* --- CHART DEFAULTS (GLOBALNE WYMIARY WYKRESÓW) --- */
+        .chart-container-wide {
+            position: relative;
+            width: 100%;
+            height: 450px; /* <--- TWOJE ŻYCZENIE (Idealna wysokość na PC) */
         }
-        .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
-
-        /* Karty (Cards) - Miękkie i zaokrąglone */
-        .card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius) !important; /* Zaokrąglamy wszystko */
-            box-shadow: var(--card-shadow);
-            margin-bottom: 25px;
-            transition: transform 0.2s ease; /* Delikatny efekt przy najechaniu */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 350px; /* Dla mniejszych wykresów (kołowe/słupkowe) */
         }
-        /* Opcjonalnie: lekki ruch przy najechaniu na karty */
-        .card:hover { transform: translateY(-2px); }
 
-        .card-header {
-            background-color: transparent;
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            padding-top: 1.2rem;
-            padding-bottom: 1rem;
+        /* Responsywność wykresów na telefonie */
+        @media (max-width: 768px) {
+            .chart-container-wide { height: 300px; }
+            .chart-container { height: 250px; }
         }
-        .card-body { padding: 1.5rem; }
 
-        /* Kolory zysków/strat - miękkie */
-        .text-success, .gain-pos { color: var(--accent-green) !important; }
-        .text-danger, .gain-neg { color: var(--accent-red) !important; }
-        .text-info { color: var(--accent-blue) !important; }
-        .text-warning { color: #ffca28 !important; }
-
-        /* Tabele - czystsze */
-        .table { color: var(--text-main); --bs-table-border-color: var(--border-color); }
-        .table thead th {
-            background-color: transparent;
-            color: var(--text-muted);
-            border-bottom-width: 1px;
-            font-weight: 600;
-            font-size: 0.85rem;
+        /* --- LOADER --- */
+        #page-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(18, 18, 18, 0.9); z-index: 9999;
+            display: none; justify-content: center; align-items: center; flex-direction: column;
+            backdrop-filter: blur(5px);
         }
-        td a { color: var(--text-main); text-decoration: none; font-weight: 600; }
-        td a:hover { color: var(--accent-blue); }
+        .spinner { width: 50px; height: 50px; border: 4px solid rgba(255, 255, 255, 0.1); border-top: 4px solid var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loader-text { color: #fff; font-family: monospace; letter-spacing: 2px; font-size: 0.8rem; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        /* Wykresy */
-        .chart-container, .chart-container-wide { position: relative; }
-        .chart-container { height: 300px; }
-        .chart-container-wide { height: 450px; } /* Wyższy główny wykres */
+        /* --- DYNAMIC SIDEBAR (DESKTOP) --- */
+        .sidebar-desktop {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: var(--sidebar-collapsed);
+            background-color: var(--card-bg);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            padding: 20px 10px;
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        }
+        .sidebar-desktop:hover { width: var(--sidebar-width); align-items: flex-start; }
 
+        .nav-link {
+            color: var(--text-gray); border-radius: 10px; padding: 12px 15px; margin-bottom: 8px;
+            transition: all 0.2s; display: flex; align-items: center; white-space: nowrap; width: 100%;
+        }
+        .nav-link:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+        .nav-link.active { background-color: rgba(0, 255, 127, 0.1); color: var(--accent-green); font-weight: bold; }
+        .nav-link i { width: 30px; text-align: center; margin-right: 15px; font-size: 1.2rem; flex-shrink: 0; transition: transform 0.2s; }
+        .nav-link:hover i { transform: scale(1.1); }
+
+        .link-text { opacity: 0; visibility: hidden; transition: opacity 0.2s ease-in-out; }
+        .sidebar-desktop:hover .link-text { opacity: 1; visibility: visible; transition-delay: 0.1s; }
+
+        .brand-logo { transition: all 0.3s; justify-content: center; }
+        .sidebar-desktop:hover .brand-logo { justify-content: flex-start; }
+        .brand-text { display: none; }
+        .sidebar-desktop:hover .brand-text { display: block; }
+
+        .user-profile { justify-content: center; }
+        .sidebar-desktop:hover .user-profile { justify-content: flex-start; }
+        .user-info { display: none; }
+        .sidebar-desktop:hover .user-info { display: block; }
+
+        /* --- LAYOUT & CENTERING --- */
+        .main-content { width: 100%; transition: margin-left 0.3s ease; }
+
+        .content-wrapper { width: 100%; margin: 0 auto; }
+
+        @media (max-width: 767px) {
+            .content-wrapper { padding: 0 10px; }
+        }
+
+        @media (min-width: 768px) {
+            .sidebar-desktop { display: flex; }
+            .bottom-nav { display: none; }
+            body { padding-bottom: 0; }
+
+            .main-content {
+                margin-left: var(--sidebar-collapsed);
+                width: calc(100% - var(--sidebar-collapsed));
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+            }
+
+            .content-wrapper {
+                width: 85%;
+                max-width: 1600px;
+            }
+        }
+
+        /* --- MOBILE BOTTOM NAV --- */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: var(--bottom-nav-height);
+            background-color: var(--card-bg);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 1000;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+        }
+        .bottom-link {
+            color: var(--text-gray); text-decoration: none;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.7rem; flex: 1; height: 100%;
+        }
+        .bottom-link i { font-size: 1.4rem; margin-bottom: 4px; }
+        .bottom-link.active { color: var(--accent-green); }
+
+        .ls-1 { letter-spacing: 1px; }
+        .animate-pulse { animation: pulse 2s infinite; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-md navbar-dark fixed-top shadow-sm">
-        <div class="container-fluid"> <a class="navbar-brand" href="/">
-                <i class="fas fa-chart-line"></i> IKE TERMINAL
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">DASHBOARD</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/upload/">IMPORT DATA</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/">ADMIN</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dividends/">DIVIDENDS</a>
+    <div id="page-loader">
+        <div class="spinner"></div>
+        <div class="loader-text">PROCESSING...</div>
+    </div>
+
+    <nav class="sidebar-desktop d-none d-md-flex">
+        <a href="/" class="d-flex align-items-center mb-4 text-white text-decoration-none brand-logo px-1">
+            <div class="rounded-circle bg-success d-flex align-items-center justify-content-center me-0 me-md-3 shadow-lg flex-shrink-0"
+                 style="width: 40px; height: 40px; background: linear-gradient(135deg, #00ff7f, #00b359);">
+                <i class="fas fa-chart-pie text-dark"></i>
+            </div>
+            <div class="brand-text">
+                <div class="fw-bold ls-1 fs-5">IKE Tracker</div>
+                <div class="small text-muted" style="font-size: 0.65rem;">PRO DASHBOARD</div>
+            </div>
+        </a>
+
+        <div class="flex-grow-1 w-100">
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-home"></i> <span class="link-text">Dashboard</span>
+                </a>
+                <a href="{% url 'assets_list' %}" class="nav-link {% if request.resolver_match.url_name == 'assets_list' %}active{% endif %}">
+                    <i class="fas fa-list-ul"></i> <span class="link-text">Assets</span>
+                </a>
+                <a href="{% url 'dividends' %}" class="nav-link {% if request.resolver_match.url_name == 'dividends' %}active{% endif %}">
+                    <i class="fas fa-coins"></i> <span class="link-text">Dywidendy</span>
+                </a>
+                <a href="{% url 'upload' %}" class="nav-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}">
+                    <i class="fas fa-file-excel"></i> <span class="link-text">Import XTB</span>
+                </a>
+                {% if user.is_superuser %}
+                <div class="my-3 border-top border-secondary border-opacity-25 w-75 mx-auto"></div>
+                <a href="/admin/" class="nav-link text-warning">
+                    <i class="fas fa-crown"></i> <span class="link-text">Panel Admina</span>
+                </a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'login' %}" class="nav-link text-success">
+                    <i class="fas fa-sign-in-alt"></i> <span class="link-text">Zaloguj się</span>
+                </a>
+            {% endif %}
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="mt-auto border-top border-secondary border-opacity-25 pt-3 w-100">
+            <div class="dropdown w-100">
+                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle user-profile px-1" data-bs-toggle="dropdown">
+                    <div class="rounded-circle bg-dark border border-secondary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                        {{ user.username|slice:":1"|upper }}
+                    </div>
+                    <div class="user-info ms-3">
+                        <div class="fw-bold small">{{ user.username }}</div>
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+                    <li>
+                        <form action="{% url 'logout' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt me-2"></i>Wyloguj</button>
+                        </form>
                     </li>
                 </ul>
             </div>
         </div>
+        {% endif %}
     </nav>
 
-    <div class="container mt-4 mb-5">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="main-content">
+        <div class="d-flex d-md-none justify-content-between align-items-center p-3 mb-3 bg-dark border-bottom border-secondary border-opacity-25 sticky-top shadow-sm">
+            <a href="/" class="text-white text-decoration-none d-flex align-items-center">
+                <i class="fas fa-chart-pie text-success me-2"></i>
+                <span class="fw-bold">IKE Tracker</span>
+            </a>
+            {% if user.is_authenticated %}
+                <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                    {{ user.username|slice:":1"|upper }}
                 </div>
-            {% endfor %}
-        {% endif %}
+            {% endif %}
+        </div>
 
-        {% block content %}
-        {% endblock %}
+        <div class="content-wrapper">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <nav class="bottom-nav d-flex d-md-none">
+        {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="bottom-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-home"></i><span>Dash</span>
+            </a>
+            <a href="{% url 'dividends' %}" class="bottom-link {% if request.resolver_match.url_name == 'dividends' %}active{% endif %}">
+                <i class="fas fa-coins"></i><span>Divs</span>
+            </a>
+            <a href="{% url 'upload' %}" class="bottom-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}">
+                <i class="fas fa-plus-circle" style="font-size: 1.8rem;"></i>
+            </a>
+            {% if user.is_superuser %}
+            <a href="/admin/" class="bottom-link text-warning"><i class="fas fa-crown"></i><span>Admin</span></a>
+            {% endif %}
+            <form action="{% url 'logout' %}" method="post" class="h-100 flex-grow-1">
+                 {% csrf_token %}
+                 <button type="submit" class="bottom-link w-100 border-0 bg-transparent">
+                    <i class="fas fa-sign-out-alt"></i><span>Exit</span>
+                 </button>
+            </form>
+        {% else %}
+            <a href="{% url 'login' %}" class="bottom-link text-success"><i class="fas fa-sign-in-alt"></i><span>Login</span></a>
+        {% endif %}
+    </nav>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Ustawienia domyślne dla wykresów, żeby pasowały do ciemnego tła
-        Chart.defaults.color = '#a0a0a0'; // Kolor czcionki na wykresach
-        Chart.defaults.borderColor = '#333333'; // Kolor linii siatki
+        document.addEventListener('DOMContentLoaded', function() {
+            const loader = document.getElementById('page-loader');
+            document.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    const target = this.getAttribute('target');
+                    if (href && href !== '#' && !href.startsWith('#') && target !== '_blank' && !href.includes('logout')) {
+                        loader.style.display = 'flex';
+                    }
+                });
+            });
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function() { loader.style.display = 'flex'; });
+            });
+        });
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) document.getElementById('page-loader').style.display = 'none';
+        });
     </script>
 </body>
 </html>
