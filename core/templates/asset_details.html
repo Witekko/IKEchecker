@@ -10,7 +10,7 @@
         <h2 class="fw-bold text-white mb-0">{{ symbol }}</h2>
         <p class="text-muted mb-0">{{ asset_name }}</p>
     </div>
-    </div>
+</div>
 
 <div class="row g-3 mb-4 row-cols-1 row-cols-md-3 row-cols-xl-5">
 
@@ -206,7 +206,6 @@
     let assetChart = null;
     let currentStartPrice = null;
 
-    // --- PLUGIN: Rysowanie linii ATH/ATL ---
     const horizontalLinesPlugin = {
         id: 'horizontalLines',
         afterDraw: (chart) => {
@@ -259,18 +258,12 @@
         return totalPoints - sliceCount;
     }
 
-    // --- NOWOŚĆ: Funkcja aktualizująca 5. kafelek ---
     function updateDynamicTile(range, startIndex) {
         const lbl = document.getElementById('dynamic-label');
         const val = document.getElementById('dynamic-value');
         const sub = document.getElementById('dynamic-sub');
 
-        // Ustawiamy etykietę (np. "3M Change")
         lbl.innerText = range.replace('_', ' ') + " Change %";
-
-        // Obliczamy zmianę w wybranym okresie
-        // Start: masterPrices[startIndex]
-        // End: masterPrices[ostatni]
 
         if (masterPrices.length > 0) {
             const startPrice = masterPrices[startIndex];
@@ -279,13 +272,10 @@
             if (startPrice && startPrice > 0) {
                 const diff = endPrice - startPrice;
                 const pct = (diff / startPrice) * 100;
-
                 const sign = pct >= 0 ? '+' : '';
                 const colorClass = pct >= 0 ? 'text-success' : 'text-danger';
-
                 val.className = `fw-bold mb-0 ${colorClass}`;
                 val.innerText = `${sign}${pct.toFixed(2)}%`;
-
                 sub.innerText = `Price: ${startPrice.toFixed(2)} -> ${endPrice.toFixed(2)}`;
             } else {
                 val.innerText = "N/A";
@@ -303,7 +293,6 @@
         const initialStart = getStartIndexForRange(initialRange);
         currentStartPrice = masterPrices[initialStart];
 
-        // Aktualizacja kafelka na start
         updateDynamicTile(initialRange, initialStart);
 
         assetChart = new Chart(ctx, {
@@ -352,24 +341,17 @@
 
     function updateChartRange(range) {
         if (!assetChart) return;
-
         document.querySelectorAll('.btn-group button').forEach(btn => {
             btn.classList.remove('active');
             if(btn.innerText === range.replace('_', ' ')) btn.classList.add('active');
         });
-
         const startIndex = getStartIndexForRange(range);
-
-        // Aktualizacja wykresu
         assetChart.data.labels = masterDates.slice(startIndex);
         assetChart.data.datasets[0].data = masterPrices.slice(startIndex);
         assetChart.data.datasets[0].pointBackgroundColor = masterColors.slice(startIndex);
         assetChart.data.datasets[0].pointRadius = masterRadius.slice(startIndex);
-
         currentStartPrice = masterPrices[startIndex];
         assetChart.update();
-
-        // --- AKTUALIZACJA DYNAMICZNEGO KAFELKA ---
         updateDynamicTile(range, startIndex);
     }
 

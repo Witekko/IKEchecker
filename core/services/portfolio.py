@@ -1,499 +1,232 @@
-import math
+# core/services/portfolio.py
+
+from datetime import date
 import pandas as pd
-import yfinance as yf
-from datetime import date, timedelta
-from django.db.models import QuerySet
 from .config import fmt_2, fmt_4
-from .market import get_cached_price, get_current_currency_rates
-from ..models import Portfolio, Transaction, Asset
+from .market import get_current_currency_rates, get_cached_price, fetch_historical_data_for_timeline
 from .calculator import PortfolioCalculator
+from .selectors import get_transactions, get_asset_by_symbol, get_portfolio_by_id
+from .analytics import analyze_holdings, analyze_history
 
 
 # =========================================================
-# 1. GŁÓWNY KONTEKST DASHBOARDU
+# 1. GŁÓWNY KONTEKST DASHBOARDU (Presenter)
 # =========================================================
 
 def get_dashboard_context(user, portfolio_id=None):
-    if portfolio_id:
-        transactions = Transaction.objects.filter(portfolio_id=portfolio_id).order_by('date')
-    else:
-        transactions = Transaction.objects.filter(portfolio__user=user).order_by('date')
+    """
+    Zbiera dane z warstwy Selectors i Analytics, formatuje je dla widoku.
+    """
+    # 1. Pobieramy dane (Data Layer)
+    transactions = get_transactions(user, portfolio_id)
 
+    # Jeśli brak transakcji, szybki powrót
     if not transactions.exists():
-        return {
-            'invested': "0.00", 'cash': "0.00", 'stock_value': "0.00",
-            'tile_value_str': "0.00", 'tile_total_profit_str': "0.00",
-            'tile_return_pct_str': "0.00", 'tile_day_pct_str': "0.00",
-            'tile_day_pln_str': "0.00", 'tile_current_profit_str': "0.00",
-            'tile_annual_pct_str': "0.00",
-            'tile_gainers': 0, 'tile_losers': 0,
-            'rates': get_current_currency_rates()
-        }
+        return _get_empty_dashboard_context()
 
+    # 2. Pobieramy dane rynkowe (External API Layer)
     rates = get_current_currency_rates()
     eur_rate = rates.get('EUR', 4.30)
     usd_rate = rates.get('USD', 4.00)
 
-    # 3. Wyliczenia
-    context = calculate_current_holdings(transactions, eur_rate, usd_rate)
+    # 3. Analityka (Business Logic Layer)
+    stats = analyze_holdings(transactions, eur_rate, usd_rate)
+    timeline = analyze_history(transactions, eur_rate, usd_rate)
 
-    # 4. Wykres
-    timeline = calculate_historical_timeline(transactions, eur_rate, usd_rate)
+    # 4. Prezentacja (Formatting Layer)
+    charts = _prepare_dashboard_charts(stats['assets'], stats['cash'])
 
-    full_context = {
+    # --- FIX: Obliczamy Annual Return raz, żeby mieć wersję RAW i STR ---
+    annual_ret = _calculate_annual_return(stats['total_profit'], stats['invested'], stats['first_date'])
+    # -------------------------------------------------------------------
+
+    # 5. Budowanie ostatecznego słownika dla szablonu
+    context = {
+        # Kafelki główne
+        'tile_value_str': fmt_2(stats['total_value']),
+        'tile_value_raw': stats['total_value'],
+
+        'tile_total_profit_str': fmt_2(stats['total_profit']),
+        'tile_total_profit_raw': stats['total_profit'],
+
+        'tile_return_pct_str': fmt_2((stats['total_profit'] / stats['invested'] * 100) if stats['invested'] > 0 else 0),
+        'tile_return_pct_raw': (stats['total_profit'] / stats['invested'] * 100) if stats['invested'] > 0 else 0,
+
+        'tile_day_pln_str': fmt_2(stats['day_change_pln']),
+        'tile_day_pln_raw': stats['day_change_pln'],
+
+        'tile_day_pct_str': fmt_2(
+            (stats['day_change_pln'] / (stats['total_value'] - stats['day_change_pln']) * 100) if (stats['total_value'] - stats['day_change_pln']) > 0 else 0),
+        'tile_day_pct_raw': (stats['day_change_pln'] / (stats['total_value'] - stats['day_change_pln']) * 100) if (stats['total_value'] - stats['day_change_pln']) > 0 else 0,
+
+        'tile_current_profit_str': fmt_2(stats['total_profit']),
+        'tile_current_profit_raw': stats['total_profit'],
+
+        'tile_gainers': stats['gainers'],
+        'tile_losers': stats['losers'],
+
+        # --- FIX: Przekazujemy RAW do koloru ---
+        'tile_annual_pct_str': fmt_2(annual_ret),
+        'tile_annual_pct_raw': annual_ret,
+        # ---------------------------------------
+
+        # Wykresy i Tabele
+        'chart_labels': charts['labels'],
+        'chart_allocation': charts['allocation'],
+        'chart_profit_labels': charts['profit_labels'],
+        'chart_profit_values': charts['profit_values'],
+        'closed_labels': charts['closed_labels'],
+        'closed_values': charts['closed_values'],
+        'closed_holdings': charts['closed_items_display'],
+
+        # Timeline
+        'timeline_dates': timeline['dates'],
+        'timeline_total_value': timeline['val_user'],
+        'timeline_invested': timeline['val_inv'],
+        'timeline_deposit_points': timeline['points'],
+        'timeline_pct_user': timeline['pct_user'],
+        'timeline_pct_wig': [],
+        'timeline_pct_sp500': timeline['pct_sp'],
+        'timeline_pct_inflation': timeline['pct_inf'],
+        'last_market_date': timeline['last_market_date'],
+
+        # Pozostałe
         'rates': rates,
-        'timeline_dates': timeline.get('dates', []),
-        'timeline_total_value': timeline.get('val_user', []),
-        'timeline_invested': timeline.get('val_inv', []),
-        'timeline_deposit_points': timeline.get('points', []),
-        'timeline_pct_user': timeline.get('pct_user', []),
-        'timeline_pct_wig': timeline.get('pct_wig', []),
-        'timeline_pct_sp500': timeline.get('pct_sp', []),
-        'timeline_pct_inflation': timeline.get('pct_inf', []),
-        'last_market_date': timeline.get('last_market_date', 'N/A'),
-
-        'chart_labels': context['charts']['labels'],
-        'chart_allocation': context['charts']['allocation'],
-        'chart_profit_labels': context['charts']['profit_labels'],
-        'chart_profit_values': context['charts']['profit_values'],
-        'closed_labels': context['charts']['closed_labels'],
-        'closed_values': context['charts']['closed_values'],
+        'invested': fmt_2(stats['invested']),
+        'cash': fmt_2(stats['cash']),
+        'pln_items': [],
+        'foreign_items': []
     }
 
-    full_context.update(context)
-    return full_context
+    _enrich_context_with_groups(context, stats['assets'], stats['total_value'])
+
+    return context
 
 
 # =========================================================
-# 2. OBLICZENIA STANU PORTFELA
-# =========================================================
-
-def calculate_current_holdings(transactions: QuerySet, eur_rate: float, usd_rate: float):
-    calc = PortfolioCalculator(transactions).process()
-    holdings_data = calc.get_holdings()
-    cash, total_invested = calc.get_cash_balance()
-
-    all_assets_temp = []
-    closed_holdings = []
-    charts = {'labels': [], 'allocation': [], 'profit_labels': [], 'profit_values': [], 'closed_labels': [],
-              'closed_values': []}
-
-    portfolio_value_stock = 0.0
-    total_day_change_pln = 0.0
-    unrealized_profit = 0.0
-    gainers_count = 0
-    losers_count = 0
-
-    for sym, data in holdings_data.items():
-        qty = data['qty']
-        asset = data['asset']
-
-        if qty <= 0.0001:
-            if abs(data['realized']) > 0.01:
-                closed_holdings.append({
-                    'symbol': sym,
-                    'gain_pln': fmt_2(data['realized']),
-                    'gain_pln_raw': data['realized']
-                })
-                charts['closed_labels'].append(sym)
-                charts['closed_values'].append(round(data['realized'], 2))
-            continue
-
-        cost = data['cost']
-
-        # Pobieramy cenę (funkcja w market.py jest już bezpieczna na NaN)
-        cur_price, prev_close = get_cached_price(asset)
-
-        # OSTATECZNE ZABEZPIECZENIE PRZED NAN W PORTFOLIO
-        # Jeśli mimo wszystko przyjdzie 0 lub NaN, system nie może paść.
-        if cur_price is None or math.isnan(cur_price) or cur_price <= 0:
-            # Jeśli nie ma ceny, bierzemy koszt zakupu jako fallback,
-            # ALE w nowym market.py get_cached_price szuka 30 dni wstecz, więc to się nie powinno zdarzyć.
-            cur_price = (cost / qty) if qty > 0 else 0
-            prev_close = cur_price
-
-        multiplier = 1.0
-        currency_sym = 'PLN'
-        is_foreign = False
-
-        if asset.currency == 'EUR':
-            multiplier = eur_rate;
-            currency_sym = '€';
-            is_foreign = True
-        elif asset.currency == 'USD':
-            multiplier = usd_rate;
-            currency_sym = '$';
-            is_foreign = True
-        elif asset.currency == 'GBP':
-            multiplier = 5.20;
-            currency_sym = '£';
-            is_foreign = True
-
-        # Zabezpieczenie kursu walut przed NaN
-        if math.isnan(multiplier): multiplier = 1.0
-
-        value_pln = (qty * cur_price) * multiplier
-        current_position_gain = value_pln - cost
-        total_gain = current_position_gain + data['realized']
-
-        gain_percent = (total_gain / cost * 100) if cost > 0 else 0.0
-
-        day_change_pct = ((cur_price - prev_close) / prev_close * 100) if prev_close > 0 else 0.0
-        day_change_val = (qty * (cur_price - prev_close)) * multiplier
-
-        if day_change_pct > 0:
-            gainers_count += 1
-        elif day_change_pct < 0:
-            losers_count += 1
-
-        portfolio_value_stock += value_pln
-        total_day_change_pln += day_change_val
-        unrealized_profit += current_position_gain
-
-        days_held = 0
-        if data['trades']:
-            sorted_trades = sorted(data['trades'], key=lambda x: x['date'])
-            days_held = (date.today() - sorted_trades[0]['date'].date()).days
-
-        avg_price = (cost / qty) if qty > 0 else 0
-
-        all_assets_temp.append({
-            'symbol': sym, 'name': asset.name, 'quantity': fmt_4(qty),
-            'avg_price_pln': fmt_2(avg_price), 'current_price_orig': fmt_2(cur_price),
-            'current_price_fmt': f"{cur_price:.2f} {currency_sym}", 'price_date': asset.last_updated,
-            'value_pln': fmt_2(value_pln), 'value_pln_raw': value_pln,
-            'gain_pln': fmt_2(total_gain), 'gain_pln_raw': total_gain,
-            'gain_percent': fmt_2(gain_percent), 'gain_percent_raw': gain_percent,
-            'day_change_pct': fmt_2(day_change_pct), 'day_change_pct_raw': day_change_pct,
-            'days_held': days_held, 'is_foreign': is_foreign, 'cost_raw': cost,
-        })
-
-        charts['labels'].append(sym)
-        charts['allocation'].append(value_pln)
-        charts['profit_labels'].append(sym)
-        charts['profit_values'].append(total_gain)
-
-    total_portfolio_value = portfolio_value_stock + cash
-    total_profit = total_portfolio_value - total_invested
-    total_return_pct = (total_profit / total_invested * 100) if total_invested > 0 else 0.0
-
-    value_yesterday = total_portfolio_value - total_day_change_pln
-    portfolio_day_change_pct = (total_day_change_pln / value_yesterday * 100) if value_yesterday > 0 else 0.0
-
-    pln_group = {'items': [], 'total_val': 0.0, 'total_gain': 0.0, 'total_cost': 0.0}
-    foreign_group = {'items': [], 'total_val': 0.0, 'total_gain': 0.0, 'total_cost': 0.0}
-
-    for item in all_assets_temp:
-        share_pct = (item['value_pln_raw'] / total_portfolio_value * 100) if total_portfolio_value > 0 else 0.0
-        item['share_pct'] = fmt_2(share_pct);
-        item['share_pct_raw'] = share_pct
-        if item['is_foreign']:
-            foreign_group['items'].append(item);
-            foreign_group['total_val'] += item['value_pln_raw']
-            foreign_group['total_gain'] += item['gain_pln_raw'];
-            foreign_group['total_cost'] += item['cost_raw']
-        else:
-            pln_group['items'].append(item);
-            pln_group['total_val'] += item['value_pln_raw']
-            pln_group['total_gain'] += item['gain_pln_raw'];
-            pln_group['total_cost'] += item['cost_raw']
-
-    pln_group['items'].sort(key=lambda x: x['share_pct_raw'], reverse=True)
-    foreign_group['items'].sort(key=lambda x: x['share_pct_raw'], reverse=True)
-
-    pln_stats = {
-        'value': fmt_2(pln_group['total_val']), 'gain': fmt_2(pln_group['total_gain']),
-        'gain_raw': pln_group['total_gain'],
-        'return_pct': fmt_2(
-            (pln_group['total_gain'] / pln_group['total_cost'] * 100) if pln_group['total_cost'] > 0 else 0),
-        'share_total': fmt_2((pln_group['total_val'] / total_portfolio_value * 100) if total_portfolio_value > 0 else 0)
-    }
-    foreign_stats = {
-        'value': fmt_2(foreign_group['total_val']), 'gain': fmt_2(foreign_group['total_gain']),
-        'gain_raw': foreign_group['total_gain'],
-        'return_pct': fmt_2((foreign_group['total_gain'] / foreign_group['total_cost'] * 100) if foreign_group[
-                                                                                                     'total_cost'] > 0 else 0),
-        'share_total': fmt_2(
-            (foreign_group['total_val'] / total_portfolio_value * 100) if total_portfolio_value > 0 else 0)
-    }
-
-    annual_return_pct = 0.0
-    if calc.first_date and total_invested > 0:
-        days = (date.today() - calc.first_date).days
-        if days > 365:
-            annual_return_pct = total_return_pct / (days / 365.25)
-        else:
-            annual_return_pct = total_return_pct
-
-    if cash > 1:
-        charts['labels'].append("CASH");
-        charts['allocation'].append(cash)
-
-    return {
-        'total_value': fmt_2(total_portfolio_value), 'total_profit': fmt_2(total_profit),
-        'total_profit_raw': total_profit,
-        'total_return_pct': fmt_2(total_return_pct), 'total_return_pct_raw': total_return_pct,
-        'day_change_pct': fmt_2(portfolio_day_change_pct), 'day_change_pct_raw': portfolio_day_change_pct,
-        'cash': fmt_2(cash), 'invested': fmt_2(total_invested),
-        'pln_items': pln_group['items'], 'pln_stats': pln_stats,
-        'foreign_items': foreign_group['items'], 'foreign_stats': foreign_stats,
-        'closed_holdings': closed_holdings,
-        'tile_value_str': fmt_2(total_portfolio_value), 'tile_total_profit_str': fmt_2(total_profit),
-        'tile_return_pct_str': fmt_2(total_return_pct), 'tile_day_pct_str': fmt_2(portfolio_day_change_pct),
-        'tile_day_pln_str': fmt_2(total_day_change_pln), 'tile_current_profit_str': fmt_2(unrealized_profit),
-        'tile_annual_pct_str': fmt_2(annual_return_pct), 'tile_gainers': gainers_count, 'tile_losers': losers_count,
-        'tile_value_raw': total_portfolio_value, 'tile_total_profit_raw': total_profit,
-        'tile_return_pct_raw': total_return_pct, 'tile_day_pct_raw': portfolio_day_change_pct,
-        'tile_day_pln_raw': total_day_change_pln, 'tile_current_profit_raw': unrealized_profit,
-        'tile_annual_pct_raw': annual_return_pct,
-        'charts': charts
-    }
-
-
-# =========================================================
-# 3. WYKRES TIMELINE (BEZ WIG, BEZPIECZNA HISTORIA)
-# =========================================================
-
-def calculate_historical_timeline(transactions: QuerySet, eur_rate, usd_rate):
-    if not transactions.exists(): return {}
-
-    # Sortowanie transakcji
-    sorted_trans = transactions.order_by('date')
-    start_date = sorted_trans.first().date.date()
-    end_date = date.today()
-
-    # --- FIX NA PRZYSZŁOŚĆ ---
-    # Cofamy datę startu pobierania danych na 2 lata wstecz,
-    # żeby na pewno złapać "koniec danych" w Yahoo (który jest w 2024/2025).
-    safe_download_start = start_date - timedelta(days=730)
-
-    user_tickers = list(set([t.asset.yahoo_ticker for t in transactions if t.asset]))
-    # USUNIĘTO ^WIG z listy benchmarków, bo robi problemy
-    benchmarks = ['^GSPC', 'USDPLN=X']
-    all_tickers = list(set(user_tickers + benchmarks))
-
-    hist_data = pd.DataFrame()
-    last_market_date_str = "Waiting for data..."  # Domyślny tekst
-
-    try:
-        # threads=False dla stabilności
-        hist_data = yf.download(
-            all_tickers,
-            start=safe_download_start,
-            end=end_date + timedelta(days=1),
-            group_by='ticker',
-            progress=False,
-            threads=False
-        )
-        if not hist_data.empty:
-            # Pobieramy ostatni indeks (Timestamp)
-            last_idx = hist_data.index[-1]
-            # Formatujemy na czytelny string: np. "27 Dec 2024"
-            last_market_date_str = last_idx.strftime('%d %b %Y')
-    except:
-        hist_data = pd.DataFrame()
-
-    # Helper: Pobiera cenę z danego dnia. Jeśli brak -> bierze ostatnią dostępną (ffill)
-    # TO JEST KLUCZOWE: .asof() szuka w tył!
-    def get_price_ffill(ticker, query_date):
-        if hist_data.empty: return 0.0
-        try:
-            if isinstance(hist_data.columns, pd.MultiIndex):
-                if ticker not in hist_data.columns.levels[0]: return 0.0
-                series = hist_data[ticker]['Close']
-            else:
-                if ticker != all_tickers[0]: return 0.0
-                series = hist_data['Close']
-
-            # .asof() zwróci ostatnią znaną cenę przed query_date.
-            # Jeśli query_date to 2025, a dane kończą się w 2024, zwróci cenę z 2024.
-            val = series.asof(str(query_date))
-            return float(val) if not pd.isna(val) else 0.0
-        except:
-            return 0.0
-
-    sim = {'cash': 0.0, 'invested': 0.0, 'holdings': {}, 'sp500_units': 0.0, 'inflation_capital': 0.0}
-    timeline = {'dates': [], 'points': [], 'val_user': [], 'val_inv': [], 'val_sp': [], 'val_inf': [], 'pct_user': [],
-                'pct_sp': [], 'pct_inf': [], 'last_market_date': last_market_date_str}
-
-    trans_list = list(sorted_trans)
-    trans_idx = 0
-    total_trans = len(trans_list)
-    current_day = start_date
-
-    while current_day <= end_date:
-        is_deposit_day = False
-        while trans_idx < total_trans and trans_list[trans_idx].date.date() <= current_day:
-            t = trans_list[trans_idx];
-            amt = float(t.amount);
-            qty = float(t.quantity)
-
-            if t.type == 'DEPOSIT':
-                sim['cash'] += amt;
-                sim['invested'] += amt;
-                sim['inflation_capital'] += amt;
-                is_deposit_day = True
-                p_usd = get_price_ffill('USDPLN=X', current_day);
-                p_sp = get_price_ffill('^GSPC', current_day)
-                if p_usd > 0 and p_sp > 0: sim['sp500_units'] += (amt / p_usd) / p_sp
-
-            elif t.type == 'WITHDRAWAL':
-                sim['cash'] -= abs(amt);
-                sim['invested'] -= abs(amt);
-                sim['inflation_capital'] -= abs(amt)
-            elif t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX']:
-                sim['cash'] += amt
-
-            if t.asset:
-                tk = t.asset.yahoo_ticker
-                if t.type == 'BUY':
-                    sim['holdings'][tk] = sim['holdings'].get(tk, 0.0) + qty
-                elif t.type == 'SELL':
-                    sim['holdings'][tk] = sim['holdings'].get(tk, 0.0) - qty
-            trans_idx += 1
-
-        user_val = sim['cash']
-        for tk, q in sim['holdings'].items():
-            if q <= 0.0001: continue
-
-            # Pobieramy cenę historyczną (ostatnią dostępną)
-            price = get_price_ffill(tk, current_day)
-
-            if price > 0:
-                val = price * q
-                if '.DE' in tk:
-                    # Zabezpieczenie eur_rate przed nan
-                    if math.isnan(eur_rate):
-                        val *= 4.30
-                    else:
-                        val *= eur_rate
-                elif '.US' in tk or '.UK' in tk:
-                    hist_usd = get_price_ffill('USDPLN=X', current_day)
-                    # Zabezpieczenie usd_rate
-                    fallback_usd = usd_rate if not math.isnan(usd_rate) else 4.00
-                    val *= hist_usd if hist_usd > 0 else fallback_usd
-                user_val += val
-
-        sp_val = 0.0
-        p_sp = get_price_ffill('^GSPC', current_day);
-        p_usd = get_price_ffill('USDPLN=X', current_day)
-        if p_sp > 0 and p_usd > 0: sp_val = sim['sp500_units'] * p_sp * p_usd
-
-        sim['inflation_capital'] *= 1.06 ** (1 / 365)
-
-        timeline['dates'].append(current_day.strftime("%Y-%m-%d"))
-        timeline['points'].append(6 if is_deposit_day else 0)
-        timeline['val_user'].append(round(user_val, 2))
-        timeline['val_inv'].append(round(sim['invested'], 2))
-        timeline['val_sp'].append(round(sp_val, 2) if sp_val > 0 else round(sim['invested'], 2))
-        timeline['val_inf'].append(round(sim['inflation_capital'], 2))
-
-        base = sim['invested'] if sim['invested'] > 0 else 1.0
-        timeline['pct_user'].append(round((user_val - base) / base * 100, 2))
-        timeline['pct_sp'].append(round((sp_val - base) / base * 100 if sp_val > 0 else 0, 2))
-        timeline['pct_inf'].append(round((sim['inflation_capital'] - base) / base * 100, 2))
-
-        current_day += timedelta(days=1)
-
-    return timeline
-
-
-# =========================================================
-# 4. SZCZEGÓŁY AKTYWA (ATH/ATL, Wykres)
+# 2. SZCZEGÓŁY AKTYWA (Presenter)
 # =========================================================
 
 def get_asset_details_context(user, symbol, portfolio_id=None):
-    if portfolio_id:
-        portfolio = Portfolio.objects.filter(id=portfolio_id, user=user).first()
-    else:
-        portfolio = Portfolio.objects.filter(user=user).first()
+    """
+    Buduje szczegółowy widok jednego aktywa.
+    """
+    portfolio = get_portfolio_by_id(user, portfolio_id)
+    asset = get_asset_by_symbol(symbol)
 
-    if not portfolio: return {'symbol': symbol, 'error': 'No portfolio found.'}
-    try:
-        asset = Asset.objects.get(symbol=symbol)
-    except Asset.DoesNotExist:
-        return {'symbol': symbol, 'error': f'Asset not found: {symbol}'}
+    if not portfolio or not asset:
+        return {'symbol': symbol, 'error': 'Asset or Portfolio not found.'}
 
-    transactions = Transaction.objects.filter(portfolio=portfolio, asset=asset).order_by('date')
-    calc = PortfolioCalculator(transactions).process()
-    holdings_data = calc.get_holdings()
-    asset_data = holdings_data.get(symbol, {'qty': 0.0, 'cost': 0.0, 'realized': 0.0, 'trades': []})
+    # Pobieramy transakcje TYLKO dla tego aktywa
+    all_trans = get_transactions(user, portfolio.id)
+    asset_trans = all_trans.filter(asset=asset).order_by('date')
 
-    first_trade_date_str = transactions.first().date.strftime('%Y-%m-%d') if transactions.exists() else None
+    # Obliczenia pozycji
+    calc = PortfolioCalculator(asset_trans).process()
+    holdings = calc.get_holdings()
+    asset_data = holdings.get(symbol, {'qty': 0.0, 'cost': 0.0, 'realized': 0.0, 'trades': []})
+
     rates = get_current_currency_rates()
     eur_rate = rates.get('EUR', 4.30);
     usd_rate = rates.get('USD', 4.00);
-    gbp_rate = rates.get('GBP', 5.20);
-    jpy_rate = rates.get('JPY', 1.0) / 100.0
+    gbp_rate = rates.get('GBP', 5.20)
 
     multiplier = 1.0
-    currency_sym = 'PLN'
     if asset.currency == 'EUR':
-        multiplier = eur_rate; currency_sym = '€'
+        multiplier = eur_rate
     elif asset.currency == 'USD':
-        multiplier = usd_rate; currency_sym = '$'
+        multiplier = usd_rate
     elif asset.currency == 'GBP':
-        multiplier = gbp_rate; currency_sym = '£'
+        multiplier = gbp_rate
     elif asset.currency == 'JPY':
-        multiplier = jpy_rate
-    if math.isnan(multiplier): multiplier = 1.0
+        multiplier = rates.get('JPY', 1.0) / 100.0
 
-    # 1. Historia i Cena
+    # Historia cen (Market Layer)
+    first_date = asset_trans.first().date.date() if asset_trans.exists() else date.today()
+    hist_df = fetch_historical_data_for_timeline([asset.yahoo_ticker], first_date)
+
     current_price_orig = 0.0
     prev_close = 0.0
-    ath = 0.0;
-    atl = 0.0;
-    hist = pd.DataFrame()
+    ath = 0.0
+    atl = 0.0
+    chart_dates = []
+    chart_prices = []
 
     try:
-        ticker = yf.Ticker(asset.yahoo_ticker)
-        hist = ticker.history(period="2y")
-        if not hist.empty:
-            current_price_orig = float(hist['Close'].iloc[-1])
-            # Do obliczenia 1D change
-            if len(hist) >= 2:
-                prev_close = float(hist['Close'].iloc[-2])
+        if not hist_df.empty:
+            series = None
+            # Obsługa MultiIndex (YFinance group_by='ticker')
+            if isinstance(hist_df.columns, pd.MultiIndex):
+                if asset.yahoo_ticker in hist_df.columns.levels[0]:
+                    series = hist_df[asset.yahoo_ticker]['Close']
             else:
-                prev_close = current_price_orig
+                series = hist_df['Close']
 
-            hist.index = hist.index.strftime('%Y-%m-%d')
-            ath = float(hist['Close'].max()) * multiplier
-            atl = float(hist['Close'].min()) * multiplier
+            if series is not None and not series.empty:
+                # --- FIX: DROPNA() JEST KLUCZOWE ---
+                # Usuwamy dni, w których giełda nie działała dla tego konkretnego tickera
+                # (np. święta w USA, gdy pobraliśmy też benchmarki z USA)
+                series = series.dropna()
+
+                if not series.empty:
+                    # Ostatnia cena
+                    current_price_orig = float(series.iloc[-1])
+                    if len(series) >= 2:
+                        prev_close = float(series.iloc[-2])
+                    else:
+                        prev_close = current_price_orig
+
+                    # ATH / ATL
+                    ath = float(series.max()) * multiplier
+                    atl = float(series.min()) * multiplier
+
+                    # Dane do wykresu (teraz bez NaN)
+                    chart_dates = series.index.strftime('%Y-%m-%d').tolist()
+                    chart_prices = [float(p) * multiplier for p in series.tolist()]
+                else:
+                    # Jeśli po dropna() nic nie zostało
+                    current_price_orig, prev_close = get_cached_price(asset)
+            else:
+                current_price_orig, prev_close = get_cached_price(asset)
+        else:
+            current_price_orig, prev_close = get_cached_price(asset)
+
     except Exception as e:
-        print(f"Error fetching details ({symbol}): {e}")
-        # Fallback do cache
+        print(f"Details Chart Error: {e}")
         current_price_orig, prev_close = get_cached_price(asset)
 
-    qty = asset_data['qty'];
+    # Fallback ceny, gdyby nadal 0
+    qty = asset_data['qty']
     cost = asset_data['cost']
-
-    # Fallback ceny
-    if current_price_orig <= 0 or math.isnan(current_price_orig):
+    if current_price_orig <= 0:
         current_price_orig = (cost / qty) if qty > 0 else 0
         prev_close = current_price_orig
 
-    # 2. Obliczenia Finansowe
+    # Wyliczenia końcowe
     current_value_pln = qty * current_price_orig * multiplier
     avg_price_pln = (cost / qty) if qty > 0 else 0.0
     total_gain_pln = (current_value_pln - cost) + asset_data['realized']
     profit_percent = (total_gain_pln / cost * 100) if cost > 0.01 else 0
 
-    # --- NOWOŚĆ: Obliczanie 1D Change ---
     day_change_pct = 0.0
     day_change_pln = 0.0
     if prev_close > 0:
         day_change_pct = ((current_price_orig - prev_close) / prev_close) * 100
-        # Zmiana wartości w PLN
         day_change_pln = (qty * (current_price_orig - prev_close)) * multiplier
 
     # Tabela historii
     history_table = []
     trade_events = {}
+
     for t in asset_data['trades']:
         price_val = t.get('price', 0.0)
         history_table.append({
-            'date': t['date'].strftime('%Y-%m-%d'), 'type': t['type'], 'quantity': fmt_4(t['qty']),
-            'price_original': f"{price_val:.2f}", 'currency': 'PLN', 'value_pln': fmt_2(abs(t['amount']))
+            'date': t['date'].strftime('%Y-%m-%d'),
+            'type': t['type'],
+            'quantity': fmt_4(t['qty']),
+            'price_original': f"{price_val:.2f}",
+            'currency': 'PLN',
+            'value_pln': fmt_2(abs(t['amount']))
         })
         d_str = t['date'].strftime("%Y-%m-%d")
         if t['type'] in ['OPEN BUY', 'BUY']:
@@ -501,46 +234,174 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
         elif t['type'] in ['CLOSE SELL', 'SELL']:
             trade_events[d_str] = 'SELL'
 
-    # Wykres
-    chart_dates = [];
-    chart_prices = [];
-    chart_point_colors = [];
+    # Kolory punktów na wykresie
+    chart_point_colors = []
     chart_point_radius = []
-    if not hist.empty:
-        all_dates = hist.index.tolist();
-        all_prices = [float(p) * multiplier for p in hist['Close'].tolist()]
-        for d, p in zip(all_dates, all_prices):
-            chart_dates.append(d);
-            chart_prices.append(p)
-            if d in trade_events:
-                color = '#00ff7f' if trade_events[d] == 'BUY' else '#ff4d4d'
-                chart_point_colors.append(color);
-                chart_point_radius.append(6)
-            else:
-                chart_point_colors.append('rgba(0,0,0,0)');
-                chart_point_radius.append(0)
-    else:
-        chart_dates = [t['date'] for t in history_table]
-        chart_prices = [current_price_orig * multiplier] * len(chart_dates)
-        chart_point_colors = ['#00ff7f'] * len(chart_dates);
-        chart_point_radius = [6] * len(chart_dates)
+    for d in chart_dates:
+        if d in trade_events:
+            color = '#00ff7f' if trade_events[d] == 'BUY' else '#ff4d4d'
+            chart_point_colors.append(color)
+            chart_point_radius.append(6)
+        else:
+            chart_point_colors.append('rgba(0,0,0,0)')
+            chart_point_radius.append(0)
 
     return {
-        'symbol': symbol, 'asset_name': asset.name,
+        'symbol': symbol,
+        'asset_name': asset.name,
         'current_value_pln': fmt_2(current_value_pln),
         'avg_price': fmt_2(avg_price_pln),
         'quantity': fmt_4(qty),
-        'gain_percent': fmt_2(profit_percent), 'gain_percent_raw': profit_percent,
-        'total_gain_pln': fmt_2(total_gain_pln), 'total_gain_pln_raw': total_gain_pln,
-
-        # --- NOWE POLA ---
-        'current_price': fmt_2(current_price_orig * multiplier),  # Cena w PLN
-        'currency_sym': 'PLN',  # Ponieważ wszystko przeliczamy na PLN w detalach
+        'gain_percent': fmt_2(profit_percent),
+        'gain_percent_raw': profit_percent,
+        'total_gain_pln': fmt_2(total_gain_pln),
+        'total_gain_pln_raw': total_gain_pln,
+        'current_price': fmt_2(current_price_orig * multiplier),
+        'currency_sym': 'PLN',
         'day_change_pct': fmt_2(day_change_pct), 'day_change_pct_raw': day_change_pct,
         'day_change_pln': fmt_2(day_change_pln), 'day_change_pln_raw': day_change_pln,
-        # -----------------
-
-        'transactions': reversed(history_table), 'chart_dates': chart_dates, 'chart_prices': chart_prices,
-        'chart_point_colors': chart_point_colors, 'chart_point_radius': chart_point_radius,
-        'first_trade_date': first_trade_date_str, 'ath': ath, 'atl': atl, 'rates': rates
+        'transactions': reversed(history_table),
+        'chart_dates': chart_dates,
+        'chart_prices': chart_prices,
+        'chart_point_colors': chart_point_colors,
+        'chart_point_radius': chart_point_radius,
+        'first_trade_date': first_date.strftime('%Y-%m-%d'),
+        'ath': ath,
+        'atl': atl,
+        'rates': rates
     }
+
+
+# =========================================================
+# HELPERY PREZENTACJI (Prywatne)
+# =========================================================
+
+def _get_empty_dashboard_context():
+    """Zwraca pusty stan dashboardu."""
+    return {
+        'invested': "0.00", 'cash': "0.00", 'stock_value': "0.00",
+        'tile_value_str': "0.00", 'tile_total_profit_str': "0.00",
+        'tile_return_pct_str': "0.00", 'tile_day_pct_str': "0.00",
+        'tile_day_pln_str': "0.00", 'tile_current_profit_str': "0.00",
+        'tile_annual_pct_str': "0.00",
+        'tile_gainers': 0, 'tile_losers': 0,
+        'rates': get_current_currency_rates()
+    }
+
+
+def _prepare_dashboard_charts(assets, cash):
+    """Przerabia surowe dane z analytics na format dla Chart.js."""
+    charts = {
+        'labels': [], 'allocation': [],
+        'profit_labels': [], 'profit_values': [],
+        'closed_labels': [], 'closed_values': [], 'closed_items_display': []
+    }
+
+    sorted_assets = sorted([a for a in assets if not a['is_closed']], key=lambda x: x['value_pln'], reverse=True)
+
+    for a in sorted_assets:
+        charts['labels'].append(a['symbol'])
+        charts['allocation'].append(a['value_pln'])
+        charts['profit_labels'].append(a['symbol'])
+        charts['profit_values'].append(a['total_gain_pln'])
+
+    if cash > 1:
+        charts['labels'].append("CASH")
+        charts['allocation'].append(cash)
+
+    closed_assets = [a for a in assets if a['is_closed']]
+    for a in closed_assets:
+        charts['closed_labels'].append(a['symbol'])
+        charts['closed_values'].append(round(a['realized_pln'], 2))
+        charts['closed_items_display'].append({
+            'symbol': a['symbol'],
+            'gain_pln': fmt_2(a['realized_pln']),
+            'gain_pln_raw': a['realized_pln']
+        })
+
+    return charts
+
+
+def _calculate_annual_return(total_profit, invested, first_date):
+    if not first_date or invested <= 0: return 0.0
+    days = (date.today() - first_date).days
+    total_return_pct = (total_profit / invested * 100)
+    if days > 365:
+        return total_return_pct / (days / 365.25)
+    return total_return_pct
+
+
+def _enrich_context_with_groups(context, assets, total_portfolio_value):
+    """
+    Odtwarza grupy PLN/Foreign dla tabeli w dashboardzie.
+    """
+    pln_items = []
+    foreign_items = []
+
+    # Tylko aktywne
+    active_assets = [a for a in assets if not a['is_closed']]
+
+    for a in active_assets:
+        # --- FIX: OBLICZANIE DNI POSIADANIA ---
+        days_held = 0
+        if a.get('trades'):
+            # Sortujemy transakcje, żeby znaleźć pierwszą
+            sorted_trades = sorted(a['trades'], key=lambda x: x['date'])
+            first_trade_date = sorted_trades[0]['date'].date()
+            days_held = (date.today() - first_trade_date).days
+        # --------------------------------------
+
+        # Konwersja na format wyświetlania (stringi)
+        item = {
+            'symbol': a['symbol'], 'name': a['name'],
+            'quantity': fmt_4(a['qty']),
+            'avg_price_pln': fmt_2(a['avg_price']),
+            'current_price_fmt': f"{a['cur_price']:.2f} {a['currency']}",
+            'value_pln': fmt_2(a['value_pln']), 'value_pln_raw': a['value_pln'],
+            'gain_pln': fmt_2(a['total_gain_pln']), 'gain_pln_raw': a['total_gain_pln'],
+            'gain_percent': fmt_2((a['total_gain_pln'] / a['cost_pln'] * 100) if a['cost_pln'] > 0 else 0),
+            'gain_percent_raw': (a['total_gain_pln'] / a['cost_pln'] * 100) if a['cost_pln'] > 0 else 0,
+            'day_change_pct': fmt_2(a['day_change_pct']), 'day_change_pct_raw': a['day_change_pct'],
+            # --- FIX: Przekazywanie daty i dni ---
+            'days_held': days_held,
+            'price_date': a['price_date'],
+            # -------------------------------------
+            'share_pct': fmt_2((a['value_pln'] / total_portfolio_value * 100) if total_portfolio_value > 0 else 0),
+            'share_pct_raw': (a['value_pln'] / total_portfolio_value * 100) if total_portfolio_value > 0 else 0,
+            'cost_pln_raw': a['cost_pln'],
+            'is_foreign': a['is_foreign']
+        }
+
+        if a['is_foreign']:
+            foreign_items.append(item)
+        else:
+            pln_items.append(item)
+
+    # Sortowanie
+    pln_items.sort(key=lambda x: x['share_pct_raw'], reverse=True)
+    foreign_items.sort(key=lambda x: x['share_pct_raw'], reverse=True)
+
+    # Proste statystyki grup
+    context['pln_items'] = pln_items
+    context['foreign_items'] = foreign_items
+
+    # Szybka suma dla stats (stopka tabeli)
+    def calculate_group_stats(items):
+        if not items: return {'value': "0.00", 'gain': "0.00", 'gain_raw': 0, 'return_pct': "0.00",
+                              'share_total': "0.00"}
+        sum_val = sum(x['value_pln_raw'] for x in items)
+        sum_cost = sum(x['cost_pln_raw'] for x in items)
+        sum_gain = sum(x['gain_pln_raw'] for x in items)
+
+        grp_return_pct = (sum_gain / sum_cost * 100) if sum_cost > 0 else 0.0
+        grp_share = (sum_val / total_portfolio_value * 100) if total_portfolio_value > 0 else 0.0
+
+        return {
+            'value': fmt_2(sum_val),
+            'gain': fmt_2(sum_gain), 'gain_raw': sum_gain,
+            'return_pct': fmt_2(grp_return_pct),
+            'share_total': fmt_2(grp_share)
+        }
+
+    context['pln_stats'] = calculate_group_stats(pln_items)
+    context['foreign_stats'] = calculate_group_stats(foreign_items)

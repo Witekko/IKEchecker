@@ -15,20 +15,20 @@
 
             <div class="col-6 col-md-2 border-end border-secondary border-opacity-25">
                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Total Value</div>
-                <h3 class="mb-0 fw-bold text-white">{{ total_value }} <span class="fs-6 text-muted">PLN</span></h3>
+                <h3 class="mb-0 fw-bold text-white">{{ tile_value_str }} <span class="fs-6 text-muted">PLN</span></h3>
             </div>
 
             <div class="col-6 col-md-2 border-end border-secondary border-opacity-25">
                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Total Profit</div>
-                <h4 class="mb-0 fw-bold {% if total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {% if total_profit_raw > 0 %}+{% endif %}{{ total_profit }}
+                <h4 class="mb-0 fw-bold {% if tile_total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if tile_total_profit_raw > 0 %}+{% endif %}{{ tile_total_profit_str }}
                 </h4>
             </div>
 
             <div class="col-4 col-md-2 border-end border-secondary border-opacity-25">
                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Return</div>
-                <span class="fs-5 fw-bold {% if total_return_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {% if total_return_pct_raw > 0 %}+{% endif %}{{ total_return_pct }}%
+                <span class="fs-5 fw-bold {% if tile_return_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if tile_return_pct_raw > 0 %}+{% endif %}{{ tile_return_pct_str }}%
                 </span>
             </div>
 
@@ -44,8 +44,8 @@
 
              <div class="col-12 col-md-2 text-end">
                  <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Day Change</div>
-                 <span class="badge {% if day_change_pct_raw >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 {% if day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %} px-3 py-2 rounded-pill">
-                    {% if day_change_pct_raw > 0 %}+{% endif %}{{ day_change_pct }}%
+                 <span class="badge {% if tile_day_pct_raw >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %} px-3 py-2 rounded-pill">
+                    {% if tile_day_pct_raw > 0 %}+{% endif %}{{ tile_day_pct_str }}%
                  </span>
             </div>
         </div>
@@ -68,7 +68,9 @@
                         <th class="text-end">Units</th>
                         <th class="text-end">Avg Price</th>
                         <th class="text-end">Cur. Price</th>
-                        <th class="text-end">Date</th> <th class="text-end">Days</th> <th class="text-end">Value (PLN)</th>
+                        <th class="text-end">Date</th>
+                        <th class="text-end">Days</th>
+                        <th class="text-end">Value (PLN)</th>
                         <th class="text-end">Share %</th>
                         <th class="text-end">Return %</th>
                         <th class="text-end pe-4">Profit (PLN)</th>

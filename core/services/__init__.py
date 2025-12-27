@@ -6,11 +6,7 @@ from .importer import process_xtb_file
 from .news import get_asset_news
 from .dividends import get_dividend_context
 from .portfolio import (
-    calculate_current_holdings,
-    calculate_historical_timeline,
     get_asset_details_context,
     get_dashboard_context,
 )
 from ..models import Portfolio, Transaction
-
-
