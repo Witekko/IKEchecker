@@ -68,9 +68,7 @@
                         <th class="text-end">Units</th>
                         <th class="text-end">Avg Price</th>
                         <th class="text-end">Cur. Price</th>
-                        <th class="text-end">Date</th>
-                        <th class="text-end">Days</th>
-                        <th class="text-end">Value (PLN)</th>
+                        <th class="text-end">Date</th> <th class="text-end">Days</th> <th class="text-end">Value (PLN)</th>
                         <th class="text-end">Share %</th>
                         <th class="text-end">Return %</th>
                         <th class="text-end pe-4">Profit (PLN)</th>
@@ -199,6 +197,46 @@
                         </td>
                     </tr>
                 </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if closed_items %}
+<div class="d-flex align-items-center mb-3">
+    <span class="fs-4 me-2">🔒</span> <h4 class="mb-0 fw-bold">Closed Positions</h4>
+</div>
+
+<div class="card border-secondary border-opacity-25 mb-5">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-dark text-muted text-uppercase small" style="font-size: 0.75rem;">
+                    <tr>
+                        <th class="ps-4 py-3">Asset</th>
+                        <th class="text-end">Status</th>
+                        <th class="text-end pe-4">Realized Profit (PLN)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset in closed_items %}
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
+                        <td class="ps-4">
+                            <div class="fw-bold text-white">{{ asset.symbol }}</div>
+                            <div class="small text-muted">{{ asset.name|truncatechars:30 }}</div>
+                        </td>
+                        <td class="text-end">
+                            <span class="badge bg-secondary">SOLD</span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                {% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
     </div>

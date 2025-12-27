@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from .forms import UploadFileForm, CustomUserCreationForm
 from .models import Portfolio
-
+from .services.taxes import get_taxes_context
 # Importujemy serwisy
 from .services import (
     process_xtb_file,
@@ -65,7 +65,9 @@ def assets_list_view(request):
 @login_required
 def dividends_view(request):
     active_portfolio = get_active_portfolio(request)
-    context = get_dividend_context(request.user)
+
+    # --- ZMIANA: Przekazujemy ID aktywnego portfela ---
+    context = get_dividend_context(request.user, portfolio_id=active_portfolio.id)
 
     context['all_portfolios'] = Portfolio.objects.filter(user=request.user)
     context['active_portfolio'] = active_portfolio
@@ -87,8 +89,7 @@ def asset_details_view(request, symbol):
             'active_portfolio': active_portfolio
         })
 
-    # 2. Pobieramy newsy (niezależnie od logiki portfela) - TO JEST NOWOŚĆ
-    # Wykorzystujemy nazwę assetu zwróconą przez get_asset_details_context
+    # 2. Pobieramy newsy
     asset_name = context.get('asset_name', '')
     context['news'] = get_asset_news(symbol, asset_name)
 
@@ -160,3 +161,16 @@ def register_view(request):
     else:
         form = CustomUserCreationForm()
     return render(request, 'register.html', {'form': form})
+
+
+def taxes_view(request):
+    active_portfolio = get_active_portfolio(request)
+
+    # Logika podatkowa
+    context = get_taxes_context(request.user, portfolio_id=active_portfolio.id)
+
+    # Standardowe dane nawigacyjne
+    context['all_portfolios'] = Portfolio.objects.filter(user=request.user)
+    context['active_portfolio'] = active_portfolio
+
+    return render(request, 'taxes.html', context)

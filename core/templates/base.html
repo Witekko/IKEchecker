@@ -254,21 +254,30 @@
                 <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                     <i class="fas fa-home"></i> <span class="link-text">Dashboard</span>
                 </a>
+
                 <a href="{% url 'assets_list' %}" class="nav-link {% if request.resolver_match.url_name == 'assets_list' %}active{% endif %}">
                     <i class="fas fa-list-ul"></i> <span class="link-text">Assets</span>
                 </a>
+
                 <a href="{% url 'dividends' %}" class="nav-link {% if request.resolver_match.url_name == 'dividends' %}active{% endif %}">
                     <i class="fas fa-coins"></i> <span class="link-text">Dywidendy</span>
                 </a>
+
+                <a href="{% url 'taxes' %}" class="nav-link {% if request.resolver_match.url_name == 'taxes' %}active{% endif %}">
+                    <i class="fas fa-file-invoice-dollar"></i> <span class="link-text">Taxes</span>
+                </a>
+
                 <a href="{% url 'upload' %}" class="nav-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}">
                     <i class="fas fa-file-excel"></i> <span class="link-text">Import XTB</span>
                 </a>
+
                 {% if user.is_superuser %}
                 <div class="my-3 border-top border-secondary border-opacity-25 w-75 mx-auto"></div>
                 <a href="/admin/" class="nav-link text-warning">
                     <i class="fas fa-crown"></i> <span class="link-text">Panel Admina</span>
                 </a>
                 {% endif %}
+
             {% else %}
                 <a href="{% url 'login' %}" class="nav-link text-success">
                     <i class="fas fa-sign-in-alt"></i> <span class="link-text">Zaloguj się</span>

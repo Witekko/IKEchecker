@@ -1,18 +1,23 @@
 # core/services/dividends.py
 
-from ..models import Transaction, Portfolio
 from .market import get_current_currency_rates
 from .config import fmt_2
+from .selectors import get_transactions  # <--- Używamy warstwy Selectors
 
 
-def get_dividend_context(user):
-    portfolio = Portfolio.objects.filter(user=user).first()
-    if not portfolio: return {}
+def get_dividend_context(user, portfolio_id=None):
+    # 1. Pobieramy wszystkie transakcje dla wybranego portfela
+    # (zgodnie z architekturą, nie pytamy tutaj o model Portfolio bezpośrednio)
+    all_txs = get_transactions(user, portfolio_id)
 
-    # 1. Pobieramy słownik kursów {'EUR': 4.30, 'USD': 4.00, ...}
+    # Filtrujemy tylko dywidendy i podatki
+    txs = all_txs.filter(type__in=['DIVIDEND', 'TAX'])
+
+    if not txs.exists():
+        return {}
+
+    # 2. Pobieramy słownik kursów
     rates = get_current_currency_rates()
-
-    txs = Transaction.objects.filter(portfolio=portfolio, type__in=['DIVIDEND', 'TAX']).order_by('date')
 
     total_received_pln = 0.0
     total_tax_pln = 0.0
@@ -24,12 +29,9 @@ def get_dividend_context(user):
     for t in txs:
         amt = float(t.amount)
 
-        # 2. Inteligentne przeliczanie walut
+        # 3. Inteligentne przeliczanie walut
         multiplier = 1.0
         if t.asset and t.asset.currency != 'PLN':
-            # Pobierz kurs ze słownika, jeśli brak to 1.0
-            # Uwaga: Dla JPY w market.py mamy cenę za 100 sztuk, tutaj zakładamy standardowe przeliczanie
-            # Jeśli market.py zwraca JPY=2.60 (za 100), to musimy to podzielić.
             curr = t.asset.currency
             if curr == 'JPY':
                 multiplier = rates.get('JPY', 1.0) / 100
@@ -78,6 +80,6 @@ def get_dividend_context(user):
         # Dane do wykresów
         'years_labels': sorted_years,
         'years_data': yearly_values,
-        'monthly_data': current_year_monthly,  # Domyślnie ostatni rok
-        'all_monthly_data': monthly_data,  # Pełne dane do przełączania w JS (opcjonalnie)
+        'monthly_data': current_year_monthly,
+        'all_monthly_data': monthly_data,
     }

@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-white mb-0">Tax Center</h2>
+        <p class="text-muted mb-0">
+            {% if is_ike %}
+                IKE/IKZE Optimization & Exit Simulator
+            {% else %}
+                Capital Gains Tax Simulator (PIT-38)
+            {% endif %}
+        </p>
+    </div>
+    {% if is_ike %}
+    <div>
+        <span class="badge bg-success fs-6">Tax-Free Wrapper Active</span>
+    </div>
+    {% endif %}
+</div>
+
+{% if error %}
+<div class="alert alert-warning">{{ error }}</div>
+{% else %}
+
+    {% if is_ike %}
+    <div class="row g-4 mb-5">
+        <div class="col-md-6">
+            <div class="card border-success border-opacity-25 h-100" style="background: rgba(25, 135, 84, 0.1);">
+                <div class="card-body text-center p-4">
+                    <div class="text-success text-uppercase fw-bold mb-2 ls-1">Estimated Tax Shield</div>
+                    <h1 class="display-4 fw-bold text-white mb-0">{{ deferred_tax }} <small class="fs-6">PLN</small></h1>
+                    <p class="text-muted mt-2 mb-0">Money saved by deferring Belka Tax (19%)</p>
+                    <hr class="border-success opacity-25 my-3">
+                    <div class="row text-center">
+                        <div class="col">
+                            <div class="small text-muted text-uppercase">Dividends Saved</div>
+                            <div class="fw-bold text-success">{{ tax_saved_dividends }} PLN</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-secondary border-opacity-25 h-100">
+                <div class="card-body p-4">
+                    <h5 class="text-white fw-bold mb-4">Portfolio Status</h5>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Total Contributions (Cost Basis):</span>
+                        <span class="text-white fw-bold">{{ total_deposits }} PLN</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Current Value:</span>
+                        <span class="text-white fw-bold">{{ current_value }} PLN</span>
+                    </div>
+                    <div class="d-flex justify-content-between border-top border-secondary pt-3">
+                        <span class="text-muted">Total Gain:</span>
+                        <span class="{% if total_gain_raw > 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                            {{ total_gain }} PLN
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-danger border-opacity-25">
+        <div class="card-header bg-danger bg-opacity-10 border-danger border-opacity-25">
+            <h5 class="mb-0 text-danger fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> Early Withdrawal Simulator (Zwrot)</h5>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted small mb-4">
+                Calculate your tax liability if you withdraw funds today. Tax is calculated proportionally on the profit part of your withdrawal.
+            </p>
+
+            <label class="form-label text-white mb-2">Withdrawal Amount (PLN)</label>
+
+            <div class="row align-items-center mb-4">
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <input type="number" id="manualInput" class="form-control bg-dark text-white border-secondary" value="0" min="0" max="{{ js_current_value }}" step="0.01">
+                        <span class="input-group-text bg-secondary border-secondary text-white">PLN</span>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <input type="range" class="form-range mt-2" id="withdrawalRange" min="0" max="{{ js_current_value }}" step="10" value="0">
+                </div>
+            </div>
+
+            <div class="row text-center g-3">
+                <div class="col-md-4">
+                    <div class="p-3 bg-dark rounded border border-secondary">
+                        <div class="small text-muted text-uppercase">Withdrawal</div>
+                        <h4 class="text-white mb-0" id="val-gross">0.00</h4>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-dark rounded border border-danger">
+                        <div class="small text-danger text-uppercase">Tax (19%)</div>
+                        <h4 class="text-danger mb-0" id="val-tax">0.00</h4>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-dark rounded border border-success">
+                        <div class="small text-success text-uppercase">Net Payout</div>
+                        <h4 class="text-success mb-0" id="val-net">0.00</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pobieramy dane z backendu (liczby)
+        const currentValue = {{ js_current_value }};
+        const costBasis = {{ js_cost_basis }};
+
+        // Obliczamy % zysku w całym portfelu (Współczynnik zyskowności)
+        let profitRatio = 0;
+        if (currentValue > costBasis && currentValue > 0) {
+            profitRatio = (currentValue - costBasis) / currentValue;
+        }
+
+        const slider = document.getElementById('withdrawalRange');
+        const manualInput = document.getElementById('manualInput');
+
+        const valGross = document.getElementById('val-gross');
+        const valTax = document.getElementById('val-tax');
+        const valNet = document.getElementById('val-net');
+
+        function updateCalculator(val) {
+            // Walidacja MAX
+            let amount = parseFloat(val);
+            if (isNaN(amount)) amount = 0;
+            if (amount < 0) amount = 0;
+            if (amount > currentValue) amount = currentValue;
+
+            // Aktualizacja obu inputów
+            slider.value = amount;
+            manualInput.value = amount.toFixed(2); // Input pokazuje 2 miejsca po przecinku
+
+            // Obliczenia
+            valGross.innerText = amount.toFixed(2);
+
+            // Podatek od części zyskowej
+            let taxablePart = amount * profitRatio;
+
+            // Zaokrąglenie podatku do pełnych groszy (standardowe)
+            // Math.round(X * 100) / 100 to standardowe zaokrąglanie
+            let tax = Math.round((taxablePart * 0.19) * 100) / 100;
+
+            let net = amount - tax;
+
+            valTax.innerText = tax.toFixed(2);
+            valNet.innerText = net.toFixed(2);
+        }
+
+        // Event Listeners (Synchronizacja)
+        slider.addEventListener('input', function() {
+            updateCalculator(this.value);
+        });
+
+        manualInput.addEventListener('input', function() {
+            // Tu nie aktualizujemy od razu slidera przy każdym znaku, bo to irytujące
+            // Ale zrobimy przeliczenie live
+            let val = parseFloat(this.value);
+            if (!isNaN(val)) {
+                 // Sprawdzamy limit tylko do obliczeń, ale pozwalamy wpisać co chce,
+                 // dopiero przy 'change' (enter/blur) utniemy do limitu.
+                 if (val > currentValue) val = currentValue;
+
+                 // Kopiujemy logikę obliczeń bez zmiany wartości inputa (żeby kursor nie skakał)
+                 let taxablePart = val * profitRatio;
+                 let tax = Math.round((taxablePart * 0.19) * 100) / 100;
+                 let net = val - tax;
+
+                 valGross.innerText = val.toFixed(2);
+                 valTax.innerText = tax.toFixed(2);
+                 valNet.innerText = net.toFixed(2);
+                 slider.value = val;
+            }
+        });
+
+        // Walidacja końcowa po wyjściu z pola
+        manualInput.addEventListener('change', function() {
+             updateCalculator(this.value);
+        });
+
+    </script>
+
+    {% else %}
+    <div class="card border-secondary border-opacity-25">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-dark text-muted text-uppercase small">
+                    <tr>
+                        <th class="ps-4 py-3">Tax Year</th>
+                        <th class="text-end">Stock Income</th>
+                        <th class="text-end text-danger">Stock Tax (19%)</th>
+                        <th class="text-end">Div. Gross</th>
+                        <th class="text-end">Div. Tax Paid</th>
+                        <th class="text-end text-warning">Div. Top-up</th>
+                        <th class="text-end pe-4 fw-bold">TOTAL DUE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report %}
+                    <tr>
+                        <td class="ps-4 text-white fw-bold">{{ row.year }}</td>
+                        <td class="text-end text-white">{{ row.stock_result }}</td>
+                        <td class="text-end text-danger">{{ row.stock_tax }}</td>
+                        <td class="text-end text-muted">{{ row.div_gross }}</td>
+                        <td class="text-end text-muted">{{ row.div_tax_paid }}</td>
+                        <td class="text-end text-warning">{{ row.div_tax_topup }}</td>
+                        <td class="text-end pe-4 fw-bold text-white">{{ row.total_tax_due }} PLN</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">No taxable events found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+{% endif %}
+
+{% endblock %}

@@ -17,6 +17,7 @@ urlpatterns = [
     path('upload/', views.upload_view, name='upload'),
     path('dividends/', views.dividends_view, name='dividends'),
     path('asset/<str:symbol>/', views.asset_details_view, name='asset_details'),
+    path('taxes/', views.taxes_view, name='taxes'),
 # --- PORTFEL---
     path('portfolio/switch/<int:portfolio_id>/', views.switch_portfolio_view, name='switch_portfolio'),
     path('portfolio/create/', views.create_portfolio_view, name='create_portfolio'),

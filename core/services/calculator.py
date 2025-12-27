@@ -1,28 +1,28 @@
 from decimal import Decimal
 from collections import defaultdict
 
+
 class PortfolioCalculator:
     def __init__(self, transactions):
         self.transactions = transactions
         self.holdings = {}
         self.first_date = None
-        # Używamy Decimal dla precyzji finansowej
-        self.total_cash_operations = Decimal('0.00')
+        # To śledzi tylko WPŁATY/WYPŁATY netto od użytkownika (Twój kapitał)
+        self.total_invested_net = Decimal('0.00')
 
     def process(self):
-        # Grupowanie transakcji po symbolu aktywa
         asset_groups = defaultdict(list)
 
         for t in self.transactions:
             if not self.first_date:
                 self.first_date = t.date.date()
 
-            # Konwersja na Decimal (bezpieczna matematyka)
             amt = Decimal(str(t.amount))
             qty = Decimal(str(t.quantity))
 
+            # 1. Tylko DEPOSIT i WITHDRAWAL wpływają na "Zainwestowany Kapitał"
             if t.type in ['DEPOSIT', 'WITHDRAWAL']:
-                self.total_cash_operations += amt
+                self.total_invested_net += amt
 
             elif t.type in ['BUY', 'SELL']:
                 if t.asset:
@@ -33,13 +33,12 @@ class PortfolioCalculator:
                         'qty': qty,
                         'asset_obj': t.asset
                     })
-                else:
-                    self.total_cash_operations += amt
+                # Jeśli transakcja nie ma assetu, ignorujemy ją w holdings,
+                # ale cash balance policzy się poprawnie w get_cash_balance
 
-            elif t.type in ['DIVIDEND', 'TAX']:
-                self.total_cash_operations += amt
+            # UWAGA: DIVIDEND i TAX nie ruszają total_invested_net.
+            # To są zyski/koszty wewnątrz portfela, a nie dopłaty kapitału.
 
-        # Przetwarzanie każdego aktywa osobno
         for symbol, trades in asset_groups.items():
             self._process_single_asset(symbol, trades)
 
@@ -58,15 +57,11 @@ class PortfolioCalculator:
             amt = t['amount']
             qty = t['qty']
 
-            # --- FIX: OBLICZANIE CENY JEDNOSTKOWEJ ---
-            # Liczymy to tutaj raz, żeby portfolio.py mogło z tego korzystać
             if qty > 0:
                 t['price'] = float(abs(amt) / qty)
             else:
                 t['price'] = 0.0
-            # -----------------------------------------
 
-            # Obsługa korekt zysku (np. domknięcie pozycji)
             if qty == 0:
                 realized_pln += amt
                 continue
@@ -114,10 +109,14 @@ class PortfolioCalculator:
         return self.holdings
 
     def get_cash_balance(self):
-        net_deposits = float(self.total_cash_operations)
+        # Zainwestowane = Wpłaty - Wypłaty
+        net_invested = float(self.total_invested_net)
+
+        # Gotówka = Zainwestowane + Wynik wszystkich operacji pieniężnych
         trading_cash_flow = Decimal('0.00')
         for t in self.transactions:
             if t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX']:
                 trading_cash_flow += Decimal(str(t.amount))
-        current_cash = float(self.total_cash_operations + trading_cash_flow)
-        return current_cash, net_deposits
+
+        current_cash = float(self.total_invested_net + trading_cash_flow)
+        return current_cash, net_invested

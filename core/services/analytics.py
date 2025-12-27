@@ -10,8 +10,6 @@ from .market import get_cached_price, fetch_historical_data_for_timeline
 def analyze_holdings(transactions, eur_rate, usd_rate):
     """
     Analizuje stan posiadania na DZISIAJ.
-    Łączy dane ilościowe (Calculator) z danymi rynkowymi (Market).
-    Zwraca słownik z surowymi danymi liczbowymi.
     """
     calc = PortfolioCalculator(transactions).process()
     holdings_data = calc.get_holdings()
@@ -20,8 +18,8 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
     processed_assets = []
     portfolio_value_stock = 0.0
     total_day_change_pln = 0.0
+    total_unrealized_pln = 0.0
 
-    # Statystyki zysków/strat dziennych
     gainers = 0
     losers = 0
 
@@ -35,36 +33,39 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
                 processed_assets.append({
                     'is_closed': True,
                     'symbol': sym,
-                    'realized_pln': data['realized']
+                    'name': asset.name,  # Dodajemy nazwę dla tabeli zamkniętych
+                    'realized_pln': data['realized'],
+                    'currency': asset.currency
                 })
             continue
 
         # Pozycje otwarte
         cost = data['cost']
-
-        # Pobranie ceny rynkowej (z market.py)
         cur_price, prev_close = get_cached_price(asset)
 
-        # Fallback ceny (gdyby market zwrócił 0)
         if cur_price <= 0:
             cur_price = (cost / qty) if qty > 0 else 0
             prev_close = cur_price
 
-        # Wybór waluty
         multiplier = 1.0
         is_foreign = False
         if asset.currency == 'EUR':
-            multiplier = eur_rate; is_foreign = True
+            multiplier = eur_rate;
+            is_foreign = True
         elif asset.currency == 'USD':
-            multiplier = usd_rate; is_foreign = True
+            multiplier = usd_rate;
+            is_foreign = True
         elif asset.currency == 'GBP':
-            multiplier = 5.20; is_foreign = True  # Sztywne 5.20 lub dodać do market.py
+            multiplier = 5.20;
+            is_foreign = True
 
         if math.isnan(multiplier): multiplier = 1.0
 
-        # Matematyka wyceny
         value_pln = (qty * cur_price) * multiplier
+
         current_position_gain = value_pln - cost
+        total_unrealized_pln += current_position_gain
+
         total_gain = current_position_gain + data['realized']
 
         day_change_pct = 0.0
@@ -98,7 +99,7 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
             'day_change_pct': day_change_pct,
             'is_foreign': is_foreign,
             'price_date': asset.last_updated,
-            'trades': data['trades']  # Potrzebne do historii assetu
+            'trades': data['trades']
         })
 
     total_value = portfolio_value_stock + cash
@@ -109,6 +110,7 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
         'invested': total_invested,
         'cash': cash,
         'total_profit': total_profit,
+        'unrealized_profit': total_unrealized_pln,
         'day_change_pln': total_day_change_pln,
         'assets': processed_assets,
         'gainers': gainers,
@@ -120,7 +122,6 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
 def analyze_history(transactions, eur_rate, usd_rate):
     """
     Generuje dane do wykresu historycznego.
-    Używa mechanizmu 'Safe Price' (Forward Fill) z market.py.
     """
     if not transactions.exists():
         return {'dates': [], 'val_user': [], 'val_inv': [], 'last_date': 'N/A'}
@@ -129,36 +130,26 @@ def analyze_history(transactions, eur_rate, usd_rate):
     start_date = sorted_trans.first().date.date()
     end_date = date.today()
 
-    # Pobieramy tickery z transakcji
     user_tickers = list(set([t.asset.yahoo_ticker for t in transactions if t.asset]))
-
-    # Pobieramy dane (z market.py)
     hist_data = fetch_historical_data_for_timeline(user_tickers, start_date)
 
     last_market_date_str = "N/A"
     if not hist_data.empty:
         last_market_date_str = hist_data.index[-1].strftime('%d %b %Y')
 
-    # Helper wewnątrz funkcji (korzysta z hist_data)
     def get_price_ffill(ticker, query_date):
         if hist_data.empty: return 0.0
         try:
-            # Obsługa MultiIndex (jeśli pobrano wiele tickerów)
             if isinstance(hist_data.columns, pd.MultiIndex):
                 if ticker not in hist_data.columns.levels[0]: return 0.0
                 series = hist_data[ticker]['Close']
             else:
-                # Obsługa pojedynczego tickera (rzadkie przy all_tickers, ale możliwe)
-                # Sprawdzamy czy ticker się zgadza
-                # W tym przypadku yfinance zwraca DataFrame bez poziomu tickera
                 series = hist_data['Close']
-
             val = series.asof(str(query_date))
             return float(val) if not pd.isna(val) else 0.0
         except:
             return 0.0
 
-    # Symulacja dzień po dniu
     sim = {'cash': 0.0, 'invested': 0.0, 'holdings': {}, 'sp500_units': 0.0, 'inflation_capital': 0.0}
     timeline = {
         'dates': [], 'points': [],
@@ -174,8 +165,6 @@ def analyze_history(transactions, eur_rate, usd_rate):
 
     while current_day <= end_date:
         is_deposit_day = False
-
-        # Przetwarzanie transakcji z danego dnia
         while trans_idx < total_trans and trans_list[trans_idx].date.date() <= current_day:
             t = trans_list[trans_idx];
             amt = float(t.amount);
@@ -186,8 +175,7 @@ def analyze_history(transactions, eur_rate, usd_rate):
                 sim['invested'] += amt;
                 sim['inflation_capital'] += amt;
                 is_deposit_day = True
-                # Kupujemy wirtualne SP500
-                p_usd = get_price_ffill('USDPLN=X', current_day)
+                p_usd = get_price_ffill('USDPLN=X', current_day);
                 p_sp = get_price_ffill('^GSPC', current_day)
                 if p_usd > 0 and p_sp > 0: sim['sp500_units'] += (amt / p_usd) / p_sp
 
@@ -204,45 +192,41 @@ def analyze_history(transactions, eur_rate, usd_rate):
                     sim['holdings'][tk] = sim['holdings'].get(tk, 0.0) + qty
                 elif t.type == 'SELL':
                     sim['holdings'][tk] = sim['holdings'].get(tk, 0.0) - qty
-
             trans_idx += 1
 
-        # Wycena na koniec dnia
         user_val = sim['cash']
         for tk, q in sim['holdings'].items():
             if q <= 0.0001: continue
-
             price = get_price_ffill(tk, current_day)
-
             if price > 0:
                 val = price * q
                 if '.DE' in tk:
-                    # Zabezpieczenie EUR
                     val *= 4.30 if math.isnan(eur_rate) else eur_rate
                 elif '.US' in tk or '.UK' in tk:
                     hist_usd = get_price_ffill('USDPLN=X', current_day)
-                    usd_val = hist_usd if hist_usd > 0 else (usd_rate if not math.isnan(usd_rate) else 4.00)
-                    val *= usd_val
+                    val *= hist_usd if hist_usd > 0 else (usd_rate if not math.isnan(usd_rate) else 4.00)
                 user_val += val
 
-        # Benchmarki
         sp_val = 0.0
-        p_sp = get_price_ffill('^GSPC', current_day)
+        p_sp = get_price_ffill('^GSPC', current_day);
         p_usd = get_price_ffill('USDPLN=X', current_day)
         if p_sp > 0 and p_usd > 0: sp_val = sim['sp500_units'] * p_sp * p_usd
 
-        # Inflacja (6%)
         sim['inflation_capital'] *= 1.06 ** (1 / 365)
 
-        # Zapis do osi czasu
         timeline['dates'].append(current_day.strftime("%Y-%m-%d"))
         timeline['points'].append(6 if is_deposit_day else 0)
         timeline['val_user'].append(round(user_val, 2))
-        timeline['val_inv'].append(round(sim['invested'], 2))
+
+        # --- FIX: ZABEZPIECZENIE PRZED MINUSEM NA WYKRESIE ---
+        # Jeśli wypłaciłeś więcej niż wpłaciłeś (czyli wypłaciłeś zyski),
+        # matematycznie kapitał jest ujemny, ale wizualnie ustawiamy 0.
+        timeline['val_inv'].append(max(0.0, round(sim['invested'], 2)))
+        # -----------------------------------------------------
+
         timeline['val_sp'].append(round(sp_val, 2) if sp_val > 0 else round(sim['invested'], 2))
         timeline['val_inf'].append(round(sim['inflation_capital'], 2))
 
-        # Procenty
         base = sim['invested'] if sim['invested'] > 0 else 1.0
         timeline['pct_user'].append(round((user_val - base) / base * 100, 2))
         timeline['pct_sp'].append(round((sp_val - base) / base * 100 if sp_val > 0 else 0, 2))

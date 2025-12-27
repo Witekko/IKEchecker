@@ -1,6 +1,6 @@
 # core/services/__init__.py
 
-from .config import TICKER_CONFIG, fmt_2, fmt_4
+from .config import SUFFIX_MAP, fmt_2, fmt_4
 from .market import get_current_currency_rates, get_cached_price
 from .importer import process_xtb_file
 from .news import get_asset_news
