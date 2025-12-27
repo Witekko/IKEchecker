@@ -1,12 +1,10 @@
-# core/services/importer.py
-
 import pandas as pd
 import re
 from ..models import Portfolio, Transaction, Asset
 from .config import TICKER_CONFIG
 
 
-def process_xtb_file(uploaded_file, user):
+def process_xtb_file(uploaded_file, portfolio_obj): # <--- ZMIANA: Przyjmuje obiekt portfolio
     try:
         xls = pd.ExcelFile(uploaded_file)
     except Exception as e:
@@ -33,7 +31,9 @@ def process_xtb_file(uploaded_file, user):
     df = pd.read_excel(uploaded_file, sheet_name=target_sheet, header=header_idx)
     df.columns = df.columns.str.strip()
 
-    portfolio, _ = Portfolio.objects.get_or_create(user=user, defaults={'name': 'My IKE'})
+    # <--- USUNIĘTO: Tworzenie portfela "My IKE" na sztywno
+    # Zamiast tego używamy przekazanego portfolio_obj
+
     stats = {'added': 0, 'skipped': 0}
 
     for _, row in df.iterrows():
@@ -63,7 +63,9 @@ def process_xtb_file(uploaded_file, user):
         _, created = Transaction.objects.update_or_create(
             xtb_id=xtb_id,
             defaults={
-                'portfolio': portfolio, 'asset': asset_obj, 'date': date_obj,
+                'portfolio': portfolio_obj, # <--- UŻYCIE AKTYWNEGO PORTFELA
+                'asset': asset_obj,
+                'date': date_obj,
                 'type': trans_type, 'amount': amount, 'quantity': quantity,
                 'comment': str(row.get('Comment', ''))
             }

@@ -1,97 +1,123 @@
-# core/services/calculator.py
-
-from ..models import Transaction
-
+from decimal import Decimal
+from collections import defaultdict
 
 class PortfolioCalculator:
-    """
-    Silnik obliczeniowy portfela.
-    Przetwarza surowe transakcje i zwraca stan posiadania (ilość, koszt, zysk zrealizowany).
-    """
-
     def __init__(self, transactions):
         self.transactions = transactions
-        # Główne kontenery stanu
-        self.holdings = {}  # { 'PKN.PL': { 'qty': 10, 'cost': 500, 'realized': 50, 'asset': Obj, 'trades': [] } }
-        self.cash = 0.0
-        self.total_invested = 0.0
+        self.holdings = {}
         self.first_date = None
+        # Używamy Decimal dla precyzji finansowej
+        self.total_cash_operations = Decimal('0.00')
 
     def process(self):
-        """
-        Główna pętla przetwarzająca transakcje chronologicznie.
-        """
+        # Grupowanie transakcji po symbolu aktywa
+        asset_groups = defaultdict(list)
+
         for t in self.transactions:
             if not self.first_date:
                 self.first_date = t.date.date()
 
-            # Konwersja na float dla bezpieczeństwa
-            amt = float(t.amount)
-            qty = float(t.quantity)
+            # Konwersja na Decimal (bezpieczna matematyka)
+            amt = Decimal(str(t.amount))
+            qty = Decimal(str(t.quantity))
 
-            # 1. Obsługa Gotówki (Cash Flow)
-            if t.type == 'DEPOSIT':
-                self.total_invested += amt
-                self.cash += amt
-            elif t.type == 'WITHDRAWAL':
-                self.total_invested -= abs(amt)
-                self.cash -= abs(amt)
-            elif t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX']:
-                # BUY ma ujemne amt (wydatek), SELL/DIV dodatnie (przychód)
-                self.cash += amt
+            if t.type in ['DEPOSIT', 'WITHDRAWAL']:
+                self.total_cash_operations += amt
 
-            # 2. Obsługa Aktywów (Assets Logic)
-            if t.asset:
-                sym = t.asset.symbol
+            elif t.type in ['BUY', 'SELL']:
+                if t.asset:
+                    asset_groups[t.asset.symbol].append({
+                        'date': t.date,
+                        'type': t.type,
+                        'amount': amt,
+                        'qty': qty,
+                        'asset_obj': t.asset
+                    })
+                else:
+                    self.total_cash_operations += amt
 
-                # Inicjalizacja wpisu dla aktywa, jeśli nie istnieje
-                if sym not in self.holdings:
-                    self.holdings[sym] = {
-                        'qty': 0.0,
-                        'cost': 0.0,  # Średni ważony koszt zakupu całej pozycji
-                        'realized': 0.0,  # Zysk/Strata z zamkniętych pozycji
-                        'asset': t.asset,  # Obiekt Asset (potrzebny do cen/walut)
-                        'trades': []  # Historia transakcji dla tego aktywa (do wykresów/tabel)
-                    }
+            elif t.type in ['DIVIDEND', 'TAX']:
+                self.total_cash_operations += amt
 
-                # Zapisujemy transakcję w historii aktywa (z wyliczoną ceną jednostkową)
-                implied_price = (abs(amt) / qty) if qty > 0 else 0.0
-                self.holdings[sym]['trades'].append({
-                    'date': t.date,
-                    'type': t.type,
-                    'qty': qty,
-                    'amount': amt,
-                    'price': implied_price,
-                    'currency': 'PLN'  # XTB raportuje amount w PLN
-                })
-
-                # Logika kupna/sprzedaży (Average Cost Basis)
-                if t.type in ['OPEN BUY', 'BUY']:
-                    self.holdings[sym]['qty'] += qty
-                    self.holdings[sym]['cost'] += abs(amt)
-
-                elif t.type in ['CLOSE SELL', 'SELL']:
-                    current_qty = self.holdings[sym]['qty']
-                    if current_qty > 0:
-                        # Obliczamy proporcję sprzedanej części
-                        ratio = qty / current_qty
-                        if ratio > 1: ratio = 1  # Zabezpieczenie
-
-                        # Zdejmujemy koszt proporcjonalnie
-                        cost_removed = self.holdings[sym]['cost'] * ratio
-
-                        self.holdings[sym]['cost'] -= cost_removed
-                        self.holdings[sym]['qty'] -= qty
-
-                        # Zysk zrealizowany = Przychód ze sprzedaży - Koszt sprzedanej części
-                        # amt jest dodatnie przy sprzedaży
-                        self.holdings[sym]['realized'] += (amt - cost_removed)
+        # Przetwarzanie każdego aktywa osobno
+        for symbol, trades in asset_groups.items():
+            self._process_single_asset(symbol, trades)
 
         return self
 
-    # Helpery do pobierania wyników
+    def _process_single_asset(self, symbol, trades):
+        total_qty = Decimal('0.0000')
+        total_cost = Decimal('0.00')
+        realized_pln = Decimal('0.00')
+        buy_queue = []
+
+        trades.sort(key=lambda x: x['date'])
+        asset_obj = trades[0]['asset_obj']
+
+        for t in trades:
+            amt = t['amount']
+            qty = t['qty']
+
+            # --- FIX: OBLICZANIE CENY JEDNOSTKOWEJ ---
+            # Liczymy to tutaj raz, żeby portfolio.py mogło z tego korzystać
+            if qty > 0:
+                t['price'] = float(abs(amt) / qty)
+            else:
+                t['price'] = 0.0
+            # -----------------------------------------
+
+            # Obsługa korekt zysku (np. domknięcie pozycji)
+            if qty == 0:
+                realized_pln += amt
+                continue
+
+            if t['type'] == 'BUY':
+                total_qty += qty
+                cost_of_trade = abs(amt)
+                total_cost += cost_of_trade
+                price_per_unit = cost_of_trade / qty
+                buy_queue.append([price_per_unit, qty])
+
+            elif t['type'] == 'SELL':
+                total_qty -= qty
+                revenue = amt
+                cost_basis_for_sale = Decimal('0.00')
+                shares_to_sell = qty
+
+                while shares_to_sell > 0 and buy_queue:
+                    batch = buy_queue[0]
+                    batch_price = batch[0]
+                    batch_qty = batch[1]
+
+                    if batch_qty <= shares_to_sell:
+                        cost_basis_for_sale += batch_qty * batch_price
+                        shares_to_sell -= batch_qty
+                        buy_queue.pop(0)
+                    else:
+                        cost_basis_for_sale += shares_to_sell * batch_price
+                        batch[1] -= shares_to_sell
+                        shares_to_sell = 0
+
+                total_cost -= cost_basis_for_sale
+                trade_profit = revenue - cost_basis_for_sale
+                realized_pln += trade_profit
+
+        self.holdings[symbol] = {
+            'qty': float(total_qty),
+            'cost': float(total_cost),
+            'realized': float(realized_pln),
+            'asset': asset_obj,
+            'trades': trades
+        }
+
     def get_holdings(self):
         return self.holdings
 
     def get_cash_balance(self):
-        return self.cash, self.total_invested
+        net_deposits = float(self.total_cash_operations)
+        trading_cash_flow = Decimal('0.00')
+        for t in self.transactions:
+            if t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX']:
+                trading_cash_flow += Decimal(str(t.amount))
+        current_cash = float(self.total_cash_operations + trading_cash_flow)
+        return current_cash, net_deposits

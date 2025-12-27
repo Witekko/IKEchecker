@@ -11,22 +11,34 @@ class Asset(models.Model):
 
     # Cache
     last_price = models.DecimalField(max_digits=10, decimal_places=4, default=0.0)
-    previous_close = models.DecimalField(max_digits=10, decimal_places=4, default=0.0)  # <--- NOWOŚĆ
+    previous_close = models.DecimalField(max_digits=10, decimal_places=4, default=0.0)
     last_updated = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.symbol
 
+
 class Portfolio(models.Model):
     """
-    User portfolio.
+    User portfolio with support for multiple types (IKE vs Standard).
     """
+    PORTFOLIO_TYPES = [
+        ('IKE', 'IKE (Tax-Free)'),
+        ('IKZE', 'IKZE (Tax-Free)'),
+        ('STANDARD', 'Standard (Taxable)'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='portfolios')
     name = models.CharField(max_length=50, default="My IKE")
+
+    # To jest kluczowe nowe pole:
+    portfolio_type = models.CharField(max_length=10, choices=PORTFOLIO_TYPES, default='IKE')
+
+    currency = models.CharField(max_length=3, default='PLN')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Portfolio: {self.name} ({self.user.username})"
+        return f"{self.name} ({self.get_portfolio_type_display()})"
 
 
 class Transaction(models.Model):

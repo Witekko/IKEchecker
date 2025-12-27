@@ -47,12 +47,19 @@
                         <span>{{ rates.GBP }}</span>
                     </div>
                 </div>
+                <div class="d-flex align-items-center">
+                    <div class="spinner-grow {% if '2025' in last_market_date %}text-success{% else %}text-warning{% endif %} me-2" role="status" style="width: 0.8rem; height: 0.8rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
 
-                <div>
-                    <span class="badge bg-dark border border-success text-success px-3 py-2 rounded-pill"
-                          style="color: var(--accent-green) !important; border-color: var(--accent-green) !important;">
-                        <i class="fas fa-circle me-2 animate-pulse" style="font-size: 0.6rem;"></i>LIVE
-                    </span>
+                    <div class="d-flex flex-column justify-content-center">
+                        <div class="text-muted small text-uppercase fw-bold" style="font-size: 0.70rem; line-height: 1.1;">
+                            DATA: <span class="text-white">{{ last_market_date }}</span>
+                        </div>
+                        <div class="text-secondary" style="font-size: 0.60rem; line-height: 1;">
+                            CHECKED: {% now "H:i" %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -199,7 +206,39 @@
                 </div>
             </div>
         </div>
+        {% if closed_holdings %}
+        <div class="d-flex align-items-center mb-3 mt-5">
+            <i class="fas fa-history me-2 text-muted fs-4"></i>
+            <h4 class="mb-0 fw-bold text-white">Closed Positions (History)</h4>
+        </div>
 
+        <div class="card border-secondary border-opacity-25 mb-5">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-dark text-muted text-uppercase small">
+                            <tr>
+                                <th class="ps-4 py-3">Asset</th>
+                                <th class="text-end pe-4">Realized Profit (PLN)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in closed_holdings %}
+                            <tr>
+                                <td class="ps-4 fw-bold text-white">{{ item.symbol }}</td>
+                                <td class="text-end pe-4">
+                                    <span class="fw-bold {% if item.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {% if item.gain_pln_raw > 0 %}+{% endif %}{{ item.gain_pln }} PLN
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         {{ chart_labels|json_script:"l-alloc" }} {{ chart_allocation|json_script:"d-alloc" }}
         {{ chart_profit_labels|json_script:"l-prof" }} {{ chart_profit_values|json_script:"d-prof" }}
         {{ closed_labels|json_script:"l-closed" }} {{ closed_values|json_script:"d-closed" }}

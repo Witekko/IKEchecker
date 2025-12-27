@@ -10,53 +10,71 @@
         <h2 class="fw-bold text-white mb-0">{{ symbol }}</h2>
         <p class="text-muted mb-0">{{ asset_name }}</p>
     </div>
-    <div class="text-end">
-        <span class="fs-4 fw-bold {% if total_gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-            {% if total_gain_pln_raw > 0 %}+{% endif %}{{ total_gain_pln }} PLN
-        </span>
-        <div class="small text-muted">Total P&L</div>
     </div>
-</div>
 
-<div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="card h-100 border-secondary border-opacity-25">
-            <div class="card-body">
+<div class="row g-3 mb-4 row-cols-1 row-cols-md-3 row-cols-xl-5">
+
+    <div class="col">
+        <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
+            <div class="card-body p-3">
                 <div class="text-muted small text-uppercase fw-bold mb-1">Current Value</div>
-                <h4 class="fw-bold text-white mb-0">{{ current_value_pln }} PLN</h4>
+                <h4 class="fw-bold text-white mb-1">{{ current_value_pln }} <small class="fs-6 text-muted">PLN</small></h4>
+
+                <div class="small fw-bold {% if total_gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if total_gain_pln_raw > 0 %}+{% endif %}{{ total_gain_pln }} PLN (Total)
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card h-100 border-secondary border-opacity-25">
-            <div class="card-body">
+
+    <div class="col">
+        <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
+            <div class="card-body p-3">
                 <div class="text-muted small text-uppercase fw-bold mb-1">Avg. Buy Price</div>
-                <h4 class="fw-bold text-white mb-0">{{ avg_price }} PLN</h4>
+                <h4 class="fw-bold text-white mb-1">{{ avg_price }} <small class="fs-6 text-muted">PLN</small></h4>
+                <div class="small text-muted">Qty: <span class="text-white">{{ quantity }}</span></div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card h-100 border-secondary border-opacity-25">
-            <div class="card-body">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Quantity</div>
-                <h4 class="fw-bold text-white mb-0">{{ quantity }}</h4>
+
+    <div class="col">
+        <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
+            <div class="card-body p-3">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Current Price</div>
+                <h4 class="fw-bold text-white mb-1">{{ current_price }} <small class="fs-6 text-muted">PLN</small></h4>
+
+                <div class="small fw-bold {% if day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if day_change_pct_raw > 0 %}+{% endif %}{{ day_change_pct }}% (1D)
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card h-100 border-secondary border-opacity-25">
-            <div class="card-body">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Return %</div>
+
+    <div class="col">
+        <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
+            <div class="card-body p-3">
+                <div class="text-muted small text-uppercase fw-bold mb-1">My Position ROI</div>
                 <h4 class="fw-bold {% if gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
                     {% if gain_percent_raw > 0 %}+{% endif %}{{ gain_percent }}%
                 </h4>
+                <div class="small text-muted mt-1">All time</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark bg-opacity-50">
+            <div class="card-body p-3">
+                <div class="text-muted small text-uppercase fw-bold mb-1" id="dynamic-label">Period Change</div>
+                <h4 class="fw-bold mb-0" id="dynamic-value">---</h4>
+                <div class="small text-muted mt-1" id="dynamic-sub">Select range</div>
             </div>
         </div>
     </div>
 </div>
 
 <div class="card mb-5 border-secondary border-opacity-25">
-    <div class="card-header border-0 pt-4 px-4 bg-transparent d-flex justify-content-between align-items-center">
+    <div class="card-header border-0 pt-4 px-4 bg-transparent d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="fw-bold text-muted text-uppercase ls-1 mb-0">Price History</h5>
 
         <div class="btn-group btn-group-sm" role="group">
@@ -74,43 +92,86 @@
     </div>
 </div>
 
-<h4 class="mb-3 text-white fw-bold">Transaction History</h4>
-<div class="card border-secondary border-opacity-25">
-    <div class="card-body p-0">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="bg-dark text-muted text-uppercase small">
-                <tr>
-                    <th class="ps-4 py-3">Date</th>
-                    <th>Type</th>
-                    <th>Qty</th>
-                    <th>Price (PLN)</th>
-                    <th>Value (PLN)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in transactions %}
-                <tr>
-                    <td class="ps-4 text-white">{{ t.date }}</td>
-                    <td>
-                        {% if t.type == 'OPEN BUY' or t.type == 'BUY' %}
-                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">BUY</span>
-                        {% elif t.type == 'CLOSE SELL' or t.type == 'SELL' %}
-                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25">SELL</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ t.type }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="fw-bold text-white">{{ t.quantity }}</td>
-                    <td class="text-muted">{{ t.price_original }}</td>
-                    <td class="fw-bold text-white">{{ t.value_pln }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center py-4 text-muted">No transactions found</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="row g-4">
+    <div class="col-xl-6">
+        <h4 class="mb-3 text-white fw-bold">Transaction History</h4>
+        <div class="card border-secondary border-opacity-25 h-100">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-dark text-muted text-uppercase small">
+                            <tr>
+                                <th class="ps-4 py-3">Date</th>
+                                <th>Type</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th class="text-end pe-4">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in transactions %}
+                            <tr>
+                                <td class="ps-4 text-white small">{{ t.date }}</td>
+                                <td>
+                                    {% if t.type == 'OPEN BUY' or t.type == 'BUY' %}
+                                        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" style="font-size: 0.65rem;">BUY</span>
+                                    {% elif t.type == 'CLOSE SELL' or t.type == 'SELL' %}
+                                        <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25" style="font-size: 0.65rem;">SELL</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary" style="font-size: 0.65rem;">{{ t.type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-bold text-white small">{{ t.quantity }}</td>
+                                <td class="text-muted small">{{ t.price_original }}</td>
+                                <td class="fw-bold text-white text-end pe-4 small">{{ t.value_pln }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No transactions found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0 text-white fw-bold">Market News</h4>
+            <span class="badge bg-secondary bg-opacity-25 text-muted">Auto-generated</span>
+        </div>
+
+        <div class="card border-secondary border-opacity-25 h-100">
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for n in news %}
+                    <a href="{{ n.link }}" target="_blank" class="list-group-item list-group-item-action bg-transparent border-secondary border-opacity-25 py-3 px-4">
+                        <div class="d-flex w-100 justify-content-between align-items-start mb-1">
+                            <h6 class="mb-1 text-white fw-bold text-truncate-2" style="line-height: 1.4;">{{ n.title }}</h6>
+                            <small class="{% if n.freshness == 0 %}text-success fw-bold{% elif n.freshness == 1 %}text-white{% else %}text-muted{% endif %} ms-2 text-nowrap" style="font-size: 0.7rem;">
+                                {{ n.date_label }}
+                            </small>
+                        </div>
+                        <div class="d-flex align-items-center mt-2">
+                            <small class="text-muted me-2" style="font-size: 0.7rem;"><i class="fas fa-newspaper me-1"></i> {{ n.source }}</small>
+                            {% for tag in n.tags %}
+                                <span class="badge rounded-pill {% if tag == 'OFFICIAL' %}bg-info text-dark{% elif tag == 'MONEY' %}bg-success{% elif tag == 'RESULTS' %}bg-warning text-dark{% else %}bg-secondary{% endif %} me-1" style="font-size: 0.6rem;">
+                                    {{ tag }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-newspaper fa-3x mb-3 opacity-25"></i>
+                        <p>No recent news found for this asset.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -122,6 +183,16 @@
 {{ ath|json_script:"val-ath" }}
 {{ atl|json_script:"val-atl" }}
 
+<style>
+    .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: normal;
+    }
+</style>
+
 <script>
     const masterDates = JSON.parse(document.getElementById('c-dates').textContent);
     const masterPrices = JSON.parse(document.getElementById('c-prices').textContent);
@@ -129,54 +200,42 @@
     const masterRadius = JSON.parse(document.getElementById('c-radius').textContent);
     const firstTradeDate = JSON.parse(document.getElementById('first-trade-date').textContent);
 
-    // Dane ATH/ATL z backendu
     const valATH = JSON.parse(document.getElementById('val-ath').textContent);
     const valATL = JSON.parse(document.getElementById('val-atl').textContent);
 
     let assetChart = null;
-    let currentStartPrice = null; // Cena początkowa widocznego zakresu
+    let currentStartPrice = null;
 
-    // --- PLUGIN: Rysowanie linii ATH/ATL i Reference Line ---
+    // --- PLUGIN: Rysowanie linii ATH/ATL ---
     const horizontalLinesPlugin = {
         id: 'horizontalLines',
         afterDraw: (chart) => {
             const ctx = chart.ctx;
             const yScale = chart.scales.y;
-            const xScale = chart.scales.x;
             const chartArea = chart.chartArea;
 
             ctx.save();
             ctx.lineWidth = 1;
             ctx.font = '10px sans-serif';
 
-            // Funkcja rysująca linię
             function drawLine(value, color, text, isDashed = true) {
-                // Rysuj tylko jeśli wartość mieści się w pionowym zakresie wykresu (opcjonalnie)
-                // Chart.js i tak przytnie, ale warto sprawdzić
                 const y = yScale.getPixelForValue(value);
-
-                // Linia
                 ctx.beginPath();
                 ctx.strokeStyle = color;
                 if(isDashed) ctx.setLineDash([5, 5]);
-                else ctx.setLineDash([2, 4]); // Kropkowana dla referencji
+                else ctx.setLineDash([2, 4]);
 
                 ctx.moveTo(chartArea.left, y);
                 ctx.lineTo(chartArea.right, y);
                 ctx.stroke();
 
-                // Etykieta
                 ctx.fillStyle = color;
                 ctx.fillText(text + ' (' + value.toFixed(2) + ')', chartArea.right - 80, y - 5);
             }
 
-            // 1. Rysuj ATH (Zielony)
             drawLine(valATH, '#00ff7f', 'ATH');
-
-            // 2. Rysuj ATL (Czerwony)
             drawLine(valATL, '#ff4d4d', 'ATL');
 
-            // 3. Rysuj linię odniesienia (Start widocznego zakresu)
             if (currentStartPrice !== null) {
                 drawLine(currentStartPrice, '#888', 'Ref', false);
             }
@@ -200,15 +259,52 @@
         return totalPoints - sliceCount;
     }
 
+    // --- NOWOŚĆ: Funkcja aktualizująca 5. kafelek ---
+    function updateDynamicTile(range, startIndex) {
+        const lbl = document.getElementById('dynamic-label');
+        const val = document.getElementById('dynamic-value');
+        const sub = document.getElementById('dynamic-sub');
+
+        // Ustawiamy etykietę (np. "3M Change")
+        lbl.innerText = range.replace('_', ' ') + " Change %";
+
+        // Obliczamy zmianę w wybranym okresie
+        // Start: masterPrices[startIndex]
+        // End: masterPrices[ostatni]
+
+        if (masterPrices.length > 0) {
+            const startPrice = masterPrices[startIndex];
+            const endPrice = masterPrices[masterPrices.length - 1];
+
+            if (startPrice && startPrice > 0) {
+                const diff = endPrice - startPrice;
+                const pct = (diff / startPrice) * 100;
+
+                const sign = pct >= 0 ? '+' : '';
+                const colorClass = pct >= 0 ? 'text-success' : 'text-danger';
+
+                val.className = `fw-bold mb-0 ${colorClass}`;
+                val.innerText = `${sign}${pct.toFixed(2)}%`;
+
+                sub.innerText = `Price: ${startPrice.toFixed(2)} -> ${endPrice.toFixed(2)}`;
+            } else {
+                val.innerText = "N/A";
+            }
+        }
+    }
+
     function initChart() {
         const ctx = document.getElementById('assetChart').getContext('2d');
         const gradient = ctx.createLinearGradient(0, 0, 0, 450);
         gradient.addColorStop(0, 'rgba(0, 255, 127, 0.2)');
         gradient.addColorStop(1, 'rgba(0, 255, 127, 0.0)');
 
-        // Domyślny start (SINCE BUY)
-        const initialStart = getStartIndexForRange('SINCE_BUY');
-        currentStartPrice = masterPrices[initialStart]; // Ustawiamy cenę referencyjną
+        const initialRange = 'SINCE_BUY';
+        const initialStart = getStartIndexForRange(initialRange);
+        currentStartPrice = masterPrices[initialStart];
+
+        // Aktualizacja kafelka na start
+        updateDynamicTile(initialRange, initialStart);
 
         assetChart = new Chart(ctx, {
             type: 'line',
@@ -228,12 +324,11 @@
                     tension: 0.2
                 }]
             },
-            plugins: [horizontalLinesPlugin], // <--- REJESTRACJA PLUGINU
+            plugins: [horizontalLinesPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: false, // Wyłączona animacja
-                transitions: { active: { animation: { duration: 0 } } },
+                animation: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { display: false },
@@ -265,16 +360,17 @@
 
         const startIndex = getStartIndexForRange(range);
 
-        // Aktualizacja danych
+        // Aktualizacja wykresu
         assetChart.data.labels = masterDates.slice(startIndex);
         assetChart.data.datasets[0].data = masterPrices.slice(startIndex);
         assetChart.data.datasets[0].pointBackgroundColor = masterColors.slice(startIndex);
         assetChart.data.datasets[0].pointRadius = masterRadius.slice(startIndex);
 
-        // Aktualizacja ceny referencyjnej
         currentStartPrice = masterPrices[startIndex];
-
         assetChart.update();
+
+        // --- AKTUALIZACJA DYNAMICZNEGO KAFELKA ---
+        updateDynamicTile(range, startIndex);
     }
 
     initChart();

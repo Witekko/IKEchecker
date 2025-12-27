@@ -41,12 +41,12 @@
         .chart-container-wide {
             position: relative;
             width: 100%;
-            height: 450px; /* <--- TWOJE ŻYCZENIE (Idealna wysokość na PC) */
+            height: 450px;
         }
         .chart-container {
             position: relative;
             width: 100%;
-            height: 350px; /* Dla mniejszych wykresów (kołowe/słupkowe) */
+            height: 350px;
         }
 
         /* Responsywność wykresów na telefonie */
@@ -152,6 +152,40 @@
 
         .ls-1 { letter-spacing: 1px; }
         .animate-pulse { animation: pulse 2s infinite; }
+
+        /* --- SIDEBAR FIXES (NAPRAWA ZWINIĘTEGO MENU) --- */
+        /* Działa tylko na desktopie, gdy menu jest zwinięte */
+        @media (min-width: 768px) {
+            /* Gdy sidebar nie jest najechany myszką (zwinięty) */
+            .sidebar-desktop:not(:hover) .dropdown-toggle {
+                border-color: transparent !important; /* Usuwa białą ramkę */
+                background: transparent !important;   /* Usuwa tło */
+                padding: 0 !important;                /* Usuwa marginesy wewn. */
+                justify-content: center !important;   /* Centruje ikonę */
+                width: 100% !important;
+                box-shadow: none !important;          /* Usuwa cień */
+            }
+
+            /* Ukryj strzałkę (trójkącik) */
+            .sidebar-desktop:not(:hover) .dropdown-toggle::after {
+                display: none !important;
+            }
+
+            /* Ukryj teksty wewnątrz przycisku */
+            .sidebar-desktop:not(:hover) .dropdown-toggle .text-start,
+            .sidebar-desktop:not(:hover) .dropdown-toggle .text-truncate,
+            .sidebar-desktop:not(:hover) .dropdown-toggle .small,
+            .sidebar-desktop:not(:hover) .dropdown-toggle div:not(:first-child) {
+                display: none !important;
+            }
+
+            /* Zostawiamy tylko diva z ikoną i powiększamy ikonę */
+            .sidebar-desktop:not(:hover) .dropdown-toggle i {
+                margin-right: 0 !important;
+                font-size: 1.4rem !important;
+                color: #ffca28 !important; /* Kolor ikonki (warning/żółty) */
+            }
+        }
     </style>
 </head>
 <body>
@@ -172,6 +206,48 @@
                 <div class="small text-muted" style="font-size: 0.65rem;">PRO DASHBOARD</div>
             </div>
         </a>
+
+        {% if user.is_authenticated %}
+        <div class="px-3 mb-4 w-100">
+            <div class="dropdown w-100">
+                <button class="btn btn-outline-secondary border-opacity-25 w-100 d-flex justify-content-between align-items-center dropdown-toggle text-white"
+                        type="button" data-bs-toggle="dropdown" style="background: rgba(255,255,255,0.05);">
+                    <div class="d-flex align-items-center overflow-hidden">
+                        <i class="fas fa-wallet me-2 text-warning"></i>
+                        <div class="text-start text-truncate">
+                            <div class="small text-muted" style="font-size: 0.65rem; line-height: 1;">PORTFOLIO</div>
+                            <div class="fw-bold" style="font-size: 0.85rem;">{{ active_portfolio.name }}</div>
+                        </div>
+                    </div>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark w-100 shadow-lg">
+                    <li class="px-3 py-2 text-muted small text-uppercase fw-bold">Switch Portfolio</li>
+                    {% for p in all_portfolios %}
+                    <li>
+                        <a class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}"
+                           href="{% url 'switch_portfolio' p.id %}">
+                           <span>
+                               <i class="fas {% if p.portfolio_type == 'IKE' %}fa-shield-alt{% else %}fa-briefcase{% endif %} me-2 opacity-50"></i>
+                               {{ p.name }}
+                           </span>
+                           {% if p.portfolio_type == 'IKE' %}
+                           <span class="badge bg-success bg-opacity-25 text-success" style="font-size: 0.6rem;">IKE</span>
+                           {% else %}
+                           <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.6rem;">STD</span>
+                           {% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#createPortfolioModal">
+                            <i class="fas fa-plus-circle me-2"></i> Create New
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="flex-grow-1 w-100">
             {% if user.is_authenticated %}
@@ -276,6 +352,39 @@
         {% endif %}
     </nav>
 
+    <div class="modal fade" id="createPortfolioModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border border-secondary border-opacity-25 text-white">
+                <div class="modal-header border-bottom border-secondary border-opacity-25">
+                    <h5 class="modal-title">Create New Portfolio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{% url 'create_portfolio' %}" method="post">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Portfolio Name</label>
+                            <input type="text" name="name" class="form-control bg-dark text-white border-secondary" placeholder="e.g., My Speculation" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Type</label>
+                            <select name="type" class="form-select bg-dark text-white border-secondary">
+                                <option value="IKE">IKE (Tax Free)</option>
+                                <option value="STANDARD">Standard (Taxable 19%)</option>
+                            </select>
+                            <div class="form-text text-muted small mt-2">
+                                <i class="fas fa-info-circle me-1"></i> Defines how dividends and taxes are calculated.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top border-secondary border-opacity-25">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Create Portfolio</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
