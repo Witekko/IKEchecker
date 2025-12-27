@@ -220,7 +220,7 @@ def _parse_transaction_type(raw_type):
     raw = raw_type.lower().strip()
     if 'stock' in raw and 'purchase' in raw: return 'BUY'
     if 'stock' in raw and 'sale' in raw: return 'SELL'
-    if 'close' in raw or 'profit' in raw: return 'SELL'
+    if 'close' in raw or 'profit' in raw: return 'CLOSE'
     if 'deposit' in raw: return 'DEPOSIT'
     if 'withdrawal' in raw: return 'WITHDRAWAL'
     if 'dividend' in raw: return 'DIVIDEND'

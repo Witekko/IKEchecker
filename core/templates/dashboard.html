@@ -206,6 +206,7 @@
                 </div>
             </div>
         </div>
+
         {% if closed_holdings %}
         <div class="d-flex align-items-center mb-3 mt-5">
             <i class="fas fa-history me-2 text-muted fs-4"></i>
@@ -239,6 +240,60 @@
             </div>
         </div>
         {% endif %}
+
+        <div class="d-flex align-items-center mb-3 mt-5">
+            <span class="fs-4 me-2">📋</span> <h4 class="mb-0 fw-bold">Recent Transactions</h4>
+        </div>
+
+        <div class="card border-secondary border-opacity-25 mb-5">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-dark text-muted text-uppercase small" style="font-size: 0.75rem;">
+                            <tr>
+                                <th class="ps-4 py-3">Date</th>
+                                <th>Type</th>
+                                <th>Instrument</th>
+                                <th class="text-end pe-4">Amount (PLN)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in last_transactions %}
+                            <tr>
+                                <td class="ps-4 text-white small">{{ t.date|date:"Y-m-d" }}</td>
+                                <td>
+                                    {% if t.type == 'DEPOSIT' %}<span class="badge bg-success bg-opacity-25 text-success">DEPOSIT</span>
+                                    {% elif t.type == 'WITHDRAWAL' %}<span class="badge bg-secondary">WITHDRAWAL</span>
+                                    {% elif t.type == 'BUY' %}<span class="badge bg-info bg-opacity-25 text-info">BUY</span>
+                                    {% elif t.type == 'SELL' %}<span class="badge bg-warning bg-opacity-25 text-warning">SELL</span>
+                                    {% elif t.type == 'CLOSE' %}<span class="badge bg-success bg-opacity-25 text-success">CLOSE (PROFIT)</span>
+                                    {% elif t.type == 'DIVIDEND' %}<span class="badge bg-primary bg-opacity-25 text-primary">DIVIDEND</span>
+                                    {% elif t.type == 'TAX' %}<span class="badge bg-danger bg-opacity-25 text-danger">TAX</span>
+                                    {% else %}<span class="badge bg-secondary">{{ t.type }}</span>{% endif %}
+                                </td>
+                                <td class="text-white">
+                                    {% if t.asset %}
+                                        {{ t.asset.symbol }}
+                                    {% else %}
+                                        <span class="text-muted fst-italic">--</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4 fw-bold {% if t.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ t.amount }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No recent transactions found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
         {{ chart_labels|json_script:"l-alloc" }} {{ chart_allocation|json_script:"d-alloc" }}
         {{ chart_profit_labels|json_script:"l-prof" }} {{ chart_profit_values|json_script:"d-prof" }}
         {{ closed_labels|json_script:"l-closed" }} {{ closed_values|json_script:"d-closed" }}

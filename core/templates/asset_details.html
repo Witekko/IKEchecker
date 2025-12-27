@@ -191,6 +191,12 @@
         overflow: hidden;
         white-space: normal;
     }
+    .btn-group .btn.active {
+        background-color: var(--accent-green);
+        color: #121212 !important;
+        border-color: var(--accent-green);
+        font-weight: bold;
+    }
 </style>
 
 <script>
@@ -206,6 +212,14 @@
     let assetChart = null;
     let currentStartPrice = null;
 
+    // --- KLUCZOWA ZMIENNA: Indeks pierwszej kropki (First Trade) ---
+    // Szukamy pierwszego indeksu, gdzie radius > 0 (czyli jest transakcja)
+    let firstTradeIndex = masterRadius.findIndex(r => r > 0);
+    // Zabezpieczenie: jeśli nie ma kropek, bierzemy 0
+    if (firstTradeIndex === -1) firstTradeIndex = 0;
+
+
+    // --- PLUGIN: Rysowanie linii ATH/ATL ---
     const horizontalLinesPlugin = {
         id: 'horizontalLines',
         afterDraw: (chart) => {
@@ -219,6 +233,9 @@
 
             function drawLine(value, color, text, isDashed = true) {
                 const y = yScale.getPixelForValue(value);
+                // Rysujemy tylko jeśli linia mieści się w obszarze wykresu
+                if(y < chartArea.top || y > chartArea.bottom) return;
+
                 ctx.beginPath();
                 ctx.strokeStyle = color;
                 if(isDashed) ctx.setLineDash([5, 5]);
@@ -247,6 +264,7 @@
         const totalPoints = masterDates.length;
         if (range === 'SINCE_BUY' && firstTradeDate) {
             const idx = masterDates.indexOf(firstTradeDate);
+            // Tutaj zostawiamy Twój bufor (-3 dni) dla rysowania wykresu
             return (idx !== -1) ? Math.max(0, idx - 3) : 0;
         }
         let sliceCount = totalPoints;
@@ -258,12 +276,16 @@
         return totalPoints - sliceCount;
     }
 
+    // --- Funkcja aktualizująca 5. kafelek ---
     function updateDynamicTile(range, startIndex) {
         const lbl = document.getElementById('dynamic-label');
         const val = document.getElementById('dynamic-value');
         const sub = document.getElementById('dynamic-sub');
 
         lbl.innerText = range.replace('_', ' ') + " Change %";
+
+        // Obliczamy zmianę.
+        // startIndex to indeks, od którego liczymy MATEMATYKĘ (niekoniecznie rysowanie)
 
         if (masterPrices.length > 0) {
             const startPrice = masterPrices[startIndex];
@@ -272,10 +294,13 @@
             if (startPrice && startPrice > 0) {
                 const diff = endPrice - startPrice;
                 const pct = (diff / startPrice) * 100;
+
                 const sign = pct >= 0 ? '+' : '';
                 const colorClass = pct >= 0 ? 'text-success' : 'text-danger';
+
                 val.className = `fw-bold mb-0 ${colorClass}`;
                 val.innerText = `${sign}${pct.toFixed(2)}%`;
+
                 sub.innerText = `Price: ${startPrice.toFixed(2)} -> ${endPrice.toFixed(2)}`;
             } else {
                 val.innerText = "N/A";
@@ -290,24 +315,33 @@
         gradient.addColorStop(1, 'rgba(0, 255, 127, 0.0)');
 
         const initialRange = 'SINCE_BUY';
-        const initialStart = getStartIndexForRange(initialRange);
-        currentStartPrice = masterPrices[initialStart];
 
-        updateDynamicTile(initialRange, initialStart);
+        // --- INICJALIZACJA ---
+        // 1. Wykres (z buforem)
+        const chartStartIndex = getStartIndexForRange(initialRange);
+
+        // 2. Matematyka (bez bufora dla SINCE_BUY)
+        let mathStartIndex = chartStartIndex;
+        if (initialRange === 'SINCE_BUY') {
+            mathStartIndex = firstTradeIndex;
+        }
+
+        currentStartPrice = masterPrices[chartStartIndex];
+        updateDynamicTile(initialRange, mathStartIndex);
 
         assetChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: masterDates.slice(initialStart),
+                labels: masterDates.slice(chartStartIndex),
                 datasets: [{
                     label: 'Price (PLN)',
-                    data: masterPrices.slice(initialStart),
+                    data: masterPrices.slice(chartStartIndex),
                     borderColor: '#00ff7f',
                     backgroundColor: gradient,
                     borderWidth: 2,
-                    pointBackgroundColor: masterColors.slice(initialStart),
+                    pointBackgroundColor: masterColors.slice(chartStartIndex),
                     pointBorderColor: '#fff',
-                    pointRadius: masterRadius.slice(initialStart),
+                    pointRadius: masterRadius.slice(chartStartIndex),
                     pointHoverRadius: 8,
                     fill: true,
                     tension: 0.2
@@ -323,12 +357,7 @@
                     legend: { display: false },
                     tooltip: {
                         backgroundColor: 'rgba(30,30,30,0.95)',
-                        titleColor: '#fff',
-                        bodyColor: '#ccc',
-                        borderColor: '#444',
-                        borderWidth: 1,
-                        padding: 10,
-                        displayColors: false
+                        titleColor: '#fff', bodyColor: '#ccc', borderColor: '#444', borderWidth: 1, padding: 10, displayColors: false
                     }
                 },
                 scales: {
@@ -341,18 +370,35 @@
 
     function updateChartRange(range) {
         if (!assetChart) return;
+
         document.querySelectorAll('.btn-group button').forEach(btn => {
             btn.classList.remove('active');
             if(btn.innerText === range.replace('_', ' ')) btn.classList.add('active');
         });
-        const startIndex = getStartIndexForRange(range);
-        assetChart.data.labels = masterDates.slice(startIndex);
-        assetChart.data.datasets[0].data = masterPrices.slice(startIndex);
-        assetChart.data.datasets[0].pointBackgroundColor = masterColors.slice(startIndex);
-        assetChart.data.datasets[0].pointRadius = masterRadius.slice(startIndex);
-        currentStartPrice = masterPrices[startIndex];
+
+        // 1. RYSOWANIE (z buforem dla SINCE_BUY)
+        const chartStartIndex = getStartIndexForRange(range);
+
+        // Aktualizacja danych wykresu
+        assetChart.data.labels = masterDates.slice(chartStartIndex);
+        assetChart.data.datasets[0].data = masterPrices.slice(chartStartIndex);
+        assetChart.data.datasets[0].pointBackgroundColor = masterColors.slice(chartStartIndex);
+        assetChart.data.datasets[0].pointRadius = masterRadius.slice(chartStartIndex);
+
+        currentStartPrice = masterPrices[chartStartIndex];
         assetChart.update();
-        updateDynamicTile(range, startIndex);
+
+        // 2. MATEMATYKA (bez bufora dla SINCE_BUY / MAX)
+        // Jeśli range to SINCE_BUY lub MAX -> liczymy od pierwszej kropki (firstTradeIndex)
+        // W przeciwnym razie (1M, 1Y) -> liczymy od początku widocznego wykresu (chartStartIndex)
+
+        let mathStartIndex = chartStartIndex;
+
+        if (range === 'SINCE_BUY' || range === 'MAX') {
+            mathStartIndex = firstTradeIndex;
+        }
+
+        updateDynamicTile(range, mathStartIndex);
     }
 
     initChart();

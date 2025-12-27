@@ -48,6 +48,7 @@ class Transaction(models.Model):
     TRANSACTION_TYPES = [
         ('BUY', 'Buy'),
         ('SELL', 'Sell'),
+        ('CLOSE', 'Close Position'),  # <--- NOWOŚĆ
         ('DEPOSIT', 'Deposit'),
         ('WITHDRAWAL', 'Withdrawal'),
         ('DIVIDEND', 'Dividend'),

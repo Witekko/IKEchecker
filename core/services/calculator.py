@@ -24,7 +24,9 @@ class PortfolioCalculator:
             if t.type in ['DEPOSIT', 'WITHDRAWAL']:
                 self.total_invested_net += amt
 
-            elif t.type in ['BUY', 'SELL']:
+            # 2. Grupowanie transakcji dot. aktywów (Kupno, Sprzedaż, Zamknięcie zysku)
+            # --- ZMIANA: Dodano 'CLOSE' do listy ---
+            elif t.type in ['BUY', 'SELL', 'CLOSE']:
                 if t.asset:
                     asset_groups[t.asset.symbol].append({
                         'date': t.date,
@@ -57,14 +59,19 @@ class PortfolioCalculator:
             amt = t['amount']
             qty = t['qty']
 
+            # --- NOWOŚĆ: Obsługa typu CLOSE (Zysk bez zmiany ilości akcji) ---
+            if t['type'] == 'CLOSE':
+                realized_pln += amt
+                continue  # Idziemy do kolejnej transakcji, nie ruszamy quantity ani kolejki FIFO
+            # ----------------------------------------------------------------
+
             if qty > 0:
                 t['price'] = float(abs(amt) / qty)
             else:
                 t['price'] = 0.0
 
-            if qty == 0:
-                realized_pln += amt
-                continue
+            # --- USUNIĘTO STARY KOD ---
+            # Wcześniej tutaj był warunek "if qty == 0", teraz obsługuje to blok 'CLOSE' powyżej.
 
             if t['type'] == 'BUY':
                 total_qty += qty
@@ -115,7 +122,8 @@ class PortfolioCalculator:
         # Gotówka = Zainwestowane + Wynik wszystkich operacji pieniężnych
         trading_cash_flow = Decimal('0.00')
         for t in self.transactions:
-            if t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX']:
+            # --- ZMIANA: Dodano 'CLOSE' do listy przepływów pieniężnych ---
+            if t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX', 'CLOSE']:
                 trading_cash_flow += Decimal(str(t.amount))
 
         current_cash = float(self.total_invested_net + trading_cash_flow)

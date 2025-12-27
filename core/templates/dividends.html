@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-1 text-white">Dividend Center</h2>
-            <p class="text-muted mb-0">Twoje pasywne źródło dochodu. Wartości w PLN.</p>
+            <p class="text-muted mb-0">Your passive income source. Values in PLN.</p>
         </div>
         <div>
             <span class="badge bg-dark border border-success text-success px-3 py-2 rounded-pill"
@@ -20,9 +20,9 @@
         <div class="col-md-3">
             <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
                 <div class="card-body py-3">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Dywidendy Netto</div>
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Net Dividends</div>
                     <h3 class="mb-0 fw-bold text-success">{{ total_net }} <small class="fs-6 text-muted">PLN</small></h3>
-                    <small class="text-muted">Po odliczeniu podatku</small>
+                    <small class="text-muted">After tax</small>
                 </div>
             </div>
         </div>
@@ -30,7 +30,7 @@
         <div class="col-md-3">
             <div class="card h-100 shadow-sm border-secondary border-opacity-25">
                 <div class="card-body py-3">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Łącznie Brutto</div>
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Total Gross</div>
                     <h4 class="mb-0 fw-bold text-white">{{ total_gross }}</h4>
                     <small class="text-muted">PLN</small>
                 </div>
@@ -40,7 +40,7 @@
         <div class="col-md-3">
             <div class="card h-100 shadow-sm border-secondary border-opacity-25">
                 <div class="card-body py-3">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Zapłacony Podatek</div>
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Tax Paid</div>
                     <h4 class="mb-0 fw-bold text-danger">{{ total_tax }}</h4>
                     <small class="text-muted">PLN</small>
                 </div>
@@ -50,13 +50,13 @@
         <div class="col-md-3">
             <div class="card h-100 shadow-sm border-secondary border-opacity-25">
                 <div class="card-body py-3">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Top Płatnik</div>
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Top Payer</div>
                     {% if top_payer %}
                         <h4 class="mb-0 fw-bold text-white">{{ top_payer.symbol }}</h4>
                         <small class="text-success fw-bold">+{{ top_payer.amount }} PLN</small>
                     {% else %}
                         <h4 class="mb-0 fw-bold text-white">-</h4>
-                        <small class="text-muted">Brak danych</small>
+                        <small class="text-muted">No data</small>
                     {% endif %}
                 </div>
             </div>
@@ -67,7 +67,7 @@
         <div class="col-lg-7">
             <div class="card h-100 border-secondary border-opacity-25">
                 <div class="card-header border-0 pt-4 px-4">
-                    <span class="text-muted text-uppercase fw-bold ls-1">Wypłaty Roczne (Yearly)</span>
+                    <span class="text-muted text-uppercase fw-bold ls-1">Yearly Payouts</span>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -80,7 +80,7 @@
         <div class="col-lg-5">
             <div class="card h-100 border-secondary border-opacity-25">
                 <div class="card-header border-0 pt-4 px-4">
-                    <span class="text-muted text-uppercase fw-bold ls-1">Sezonowość (Ostatni Rok)</span>
+                    <span class="text-muted text-uppercase fw-bold ls-1">Seasonality (Last Year)</span>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -91,7 +91,7 @@
         </div>
     </div>
 
-    <h4 class="mb-3 text-muted text-uppercase fw-bold ls-1">Ranking Spółek</h4>
+    <h4 class="mb-3 text-muted text-uppercase fw-bold ls-1">Top Payers Ranking</h4>
     <div class="card border-0 shadow-sm mb-5">
         <div class="card-body p-0">
             <table class="table table-hover align-middle mb-0">
@@ -99,8 +99,8 @@
                     <tr class="text-muted small text-uppercase">
                         <th class="ps-4 py-3">#</th>
                         <th>Symbol</th>
-                        <th>Łącznie wypłacono (Brutto)</th>
-                        <th>Udział</th>
+                        <th>Total Paid (Gross)</th>
+                        <th>Share</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -120,7 +120,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center py-4 text-muted">Brak dywidend</td></tr>
+                    <tr><td colspan="4" class="text-center py-4 text-muted">No dividends</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -169,7 +169,7 @@
             data: {
                 labels: monthLabels,
                 datasets: [{
-                    label: 'Miesięcznie',
+                    label: 'Monthly',
                     data: gd('d-months-val'),
                     borderColor: SOFT_BLUE,
                     backgroundColor: 'rgba(66, 165, 245, 0.1)',
