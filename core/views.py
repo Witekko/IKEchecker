@@ -158,12 +158,33 @@ def dashboard_view(request):
 @login_required
 def assets_list_view(request):
     active_portfolio = get_active_portfolio(request)
+
+    # 1. Obsługa zakresu dat (Tak samo jak w Dashboard)
+    range_mode = request.GET.get('range', 'all')
+    start_date = _calculate_range_dates(range_mode)
+
     context = get_dashboard_context(request.user, portfolio_id=active_portfolio.id)
     context['all_portfolios'] = Portfolio.objects.filter(user=request.user)
     context['active_portfolio'] = active_portfolio
+    context['current_range'] = range_mode
+
+    # 2. Obliczamy dynamiczne metryki dla wybranego zakresu
     transactions = Transaction.objects.filter(portfolio=active_portfolio)
-    mwr, _, _, _, _ = _calculate_performance_metrics(transactions)
+    mwr, twr, roi, profit, _ = _calculate_performance_metrics(transactions, start_date)
+
+    # 3. Nadpisujemy kafelki w kontekście
     context['tile_mwr'] = mwr
+    context['tile_twr'] = twr
+    context['tile_return_pct_str'] = roi
+    context['tile_total_profit_str'] = profit
+
+    # Nadpisanie kolorów (opcjonalne, do logiki w HTML)
+    try:
+        context['tile_total_profit_raw'] = float(profit)
+        context['tile_return_pct_raw'] = float(roi)
+    except:
+        pass
+
     if 'error' in context:
         return render(request, 'dashboard.html', {'error': context['error']})
     return render(request, 'assets_list.html', context)

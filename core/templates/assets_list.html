@@ -7,46 +7,52 @@
         <h2 class="fw-bold text-white mb-0">Portfolio Holdings</h2>
         <p class="text-muted mb-0">Detailed breakdown by market</p>
     </div>
+
+    <div class="btn-group shadow-sm bg-dark rounded-pill p-1 border border-secondary border-opacity-25" role="group">
+        <a href="?range=1m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1m' %}btn-success{% else %}btn-dark text-muted{% endif %}">1M</a>
+        <a href="?range=3m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '3m' %}btn-success{% else %}btn-dark text-muted{% endif %}">3M</a>
+        <a href="?range=1y" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1y' %}btn-success{% else %}btn-dark text-muted{% endif %}">1Y</a>
+        <a href="?range=all" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'all' or not current_range %}btn-success{% else %}btn-dark text-muted{% endif %}">MAX</a>
+    </div>
 </div>
 
 <div class="card mb-5 border-0 shadow-lg" style="background: linear-gradient(90deg, #121212 0%, #1e1e1e 100%); border-bottom: 2px solid #333 !important;">
     <div class="card-body p-4">
         <div class="row text-center text-md-start align-items-center g-4">
 
-            <div class="col-6 col-md-2 border-end border-secondary border-opacity-25">
+            <div class="col-6 col-md-3 border-end border-secondary border-opacity-25">
                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Total Value</div>
                 <h3 class="mb-0 fw-bold text-white">{{ tile_value_str }} <span class="fs-6 text-muted">PLN</span></h3>
             </div>
 
-            <div class="col-6 col-md-2 border-end border-secondary border-opacity-25">
-                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Total Profit</div>
+            <div class="col-6 col-md-3 border-end border-secondary border-opacity-25">
+                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Profit ({{ current_range|upper }})</div>
                 <h4 class="mb-0 fw-bold {% if tile_total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                     {% if tile_total_profit_raw > 0 %}+{% endif %}{{ tile_total_profit_str }}
                 </h4>
             </div>
 
-            <div class="col-4 col-md-2 border-end border-secondary border-opacity-25">
-                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Return</div>
+            <div class="col-6 col-md-3 border-end border-secondary border-opacity-25">
+                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Return ({{ current_range|upper }})</div>
                 <span class="fs-5 fw-bold {% if tile_return_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                     {% if tile_return_pct_raw > 0 %}+{% endif %}{{ tile_return_pct_str }}%
                 </span>
             </div>
 
-            <div class="col-4 col-md-2 border-end border-secondary border-opacity-25" data-bs-toggle="tooltip" title="Time-Weighted Return (Calculated in next update)">
-                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">TWR <i class="fas fa-info-circle ms-1 text-muted"></i></div>
-                <span class="fs-5 fw-bold text-white opacity-50">-- %</span>
-            </div>
+            <div class="col-6 col-md-3" style="cursor: pointer;" onclick="togglePerf()">
+                <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 mb-1">
+                    <span id="lbl-twr" class="small fw-bold text-white text-uppercase" style="border-bottom: 2px solid #0dcaf0; font-size: 0.7rem;">TWR</span>
+                    <span class="text-muted small">|</span>
+                    <span id="lbl-mwr" class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">MWR</span>
+                    <i class="fas fa-sync-alt small text-muted opacity-50 ms-2"></i>
+                </div>
 
-            <div class="col-4 col-md-2" data-bs-toggle="tooltip" title="Money-Weighted Return / XIRR (Calculated in next update)">
-                <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">MWR <i class="fas fa-info-circle ms-1 text-muted"></i></div>
-                <span class="fs-5 fw-bold text-white opacity-50">-- %</span>
-            </div>
-
-             <div class="col-12 col-md-2 text-end">
-                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Day Change</div>
-                 <span class="badge {% if tile_day_pct_raw >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %} px-3 py-2 rounded-pill">
-                    {% if tile_day_pct_raw > 0 %}+{% endif %}{{ tile_day_pct_str }}%
-                 </span>
+                <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">
+                    {{ tile_twr }}%
+                </h4>
+                <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
+                    {{ tile_mwr }}%
+                </h4>
             </div>
         </div>
     </div>
@@ -125,7 +131,6 @@
     </div>
 </div>
 {% endif %}
-
 
 {% if foreign_items %}
 <div class="d-flex align-items-center mb-3">
@@ -244,7 +249,30 @@
 {% endif %}
 
 <script>
-    // Inicjalizacja Tooltipów (dla TWR/MWR)
+    // JS do przełączania TWR/MWR (Wklejony z powrotem, bo jest niezbędny)
+    let showTwr = true;
+
+    function togglePerf() {
+        showTwr = !showTwr;
+        const vMwr = document.getElementById('val-mwr');
+        const vTwr = document.getElementById('val-twr');
+        const lMwr = document.getElementById('lbl-mwr');
+        const lTwr = document.getElementById('lbl-twr');
+
+        if (showTwr) {
+            vMwr.style.display = 'none';
+            vTwr.style.display = 'block';
+            lMwr.style.borderBottom = 'none'; lMwr.classList.replace('text-white', 'text-muted');
+            lTwr.style.borderBottom = '2px solid #0dcaf0'; lTwr.classList.replace('text-muted', 'text-white');
+        } else {
+            vMwr.style.display = 'block';
+            vTwr.style.display = 'none';
+            lTwr.style.borderBottom = 'none'; lTwr.classList.replace('text-white', 'text-muted');
+            lMwr.style.borderBottom = '2px solid #198754'; lMwr.classList.replace('text-muted', 'text-white');
+        }
+    }
+
+    // Inicjalizacja Tooltipów (dla TWR/MWR - ze starego kodu)
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl)
