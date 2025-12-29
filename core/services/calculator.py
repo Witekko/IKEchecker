@@ -1,3 +1,5 @@
+# core/services/calculator.py
+
 from decimal import Decimal
 from collections import defaultdict
 
@@ -13,19 +15,39 @@ class PortfolioCalculator:
     def process(self):
         asset_groups = defaultdict(list)
 
-        for t in self.transactions:
+        # Sortujemy transakcje chronologicznie, żeby "Podłoga Zero" działała poprawnie
+        # Jeśli data jest ta sama, DEPOSIT (wpłata) ma pierwszeństwo przed innymi
+        sorted_transactions = sorted(
+            self.transactions,
+            key=lambda x: (x.date, 0 if x.type == 'DEPOSIT' else 1)
+        )
+
+        for t in sorted_transactions:
             if not self.first_date:
                 self.first_date = t.date.date()
 
             amt = Decimal(str(t.amount))
             qty = Decimal(str(t.quantity))
 
-            # 1. Tylko DEPOSIT i WITHDRAWAL wpływają na "Zainwestowany Kapitał"
-            if t.type in ['DEPOSIT', 'WITHDRAWAL']:
+            # --- SEKCJA DEPOSIT (WPŁATY I "UJEMNE WPŁATY") ---
+            if t.type == 'DEPOSIT':
                 self.total_invested_net += amt
 
-            # 2. Grupowanie transakcji dot. aktywów (Kupno, Sprzedaż, Zamknięcie zysku)
-            # --- ZMIANA: Dodano 'CLOSE' do listy ---
+                # FIX: Jeśli "ujemna wpłata" (wypłata zysków przez XTB)
+                # sprawiła, że kapitał spadł poniżej zera -> resetujemy do 0.
+                if self.total_invested_net < 0:
+                    self.total_invested_net = Decimal('0.00')
+
+            # --- SEKCJA WITHDRAWAL (STANDARDOWE WYPŁATY) ---
+            elif t.type == 'WITHDRAWAL':
+                self.total_invested_net += amt
+
+                # Jeśli wypłaciliśmy więcej niż wpłaciliśmy (wypłata zysków),
+                # resetujemy zainwestowany kapitał do 0. Nie robimy "ujemnej dziury".
+                if self.total_invested_net < 0:
+                    self.total_invested_net = Decimal('0.00')
+
+            # --- POZOSTAŁE ---
             elif t.type in ['BUY', 'SELL', 'CLOSE']:
                 if t.asset:
                     asset_groups[t.asset.symbol].append({
@@ -35,11 +57,6 @@ class PortfolioCalculator:
                         'qty': qty,
                         'asset_obj': t.asset
                     })
-                # Jeśli transakcja nie ma assetu, ignorujemy ją w holdings,
-                # ale cash balance policzy się poprawnie w get_cash_balance
-
-            # UWAGA: DIVIDEND i TAX nie ruszają total_invested_net.
-            # To są zyski/koszty wewnątrz portfela, a nie dopłaty kapitału.
 
         for symbol, trades in asset_groups.items():
             self._process_single_asset(symbol, trades)
@@ -59,19 +76,15 @@ class PortfolioCalculator:
             amt = t['amount']
             qty = t['qty']
 
-            # --- NOWOŚĆ: Obsługa typu CLOSE (Zysk bez zmiany ilości akcji) ---
+            # Obsługa typu CLOSE (Zysk bez zmiany ilości akcji)
             if t['type'] == 'CLOSE':
                 realized_pln += amt
-                continue  # Idziemy do kolejnej transakcji, nie ruszamy quantity ani kolejki FIFO
-            # ----------------------------------------------------------------
+                continue
 
             if qty > 0:
                 t['price'] = float(abs(amt) / qty)
             else:
                 t['price'] = 0.0
-
-            # --- USUNIĘTO STARY KOD ---
-            # Wcześniej tutaj był warunek "if qty == 0", teraz obsługuje to blok 'CLOSE' powyżej.
 
             if t['type'] == 'BUY':
                 total_qty += qty
@@ -116,15 +129,11 @@ class PortfolioCalculator:
         return self.holdings
 
     def get_cash_balance(self):
-        # Zainwestowane = Wpłaty - Wypłaty
-        net_invested = float(self.total_invested_net)
-
-        # Gotówka = Zainwestowane + Wynik wszystkich operacji pieniężnych
-        trading_cash_flow = Decimal('0.00')
+        # Gotówka to suma wszystkiego (tu ujemne wypłaty są OK, bo gotówki fizycznie ubywa)
+        # Niezależnie od tego czy licznik "invested" się wyzerował, gotówka na koncie jest faktem.
+        total_cash = Decimal('0.00')
         for t in self.transactions:
-            # --- ZMIANA: Dodano 'CLOSE' do listy przepływów pieniężnych ---
-            if t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX', 'CLOSE']:
-                trading_cash_flow += Decimal(str(t.amount))
+            total_cash += Decimal(str(t.amount))
 
-        current_cash = float(self.total_invested_net + trading_cash_flow)
-        return current_cash, net_invested
+        # Zwracamy: (Faktyczna Gotówka na koncie, Zainwestowane "Netto" z podłogą zero)
+        return float(total_cash), float(self.total_invested_net)

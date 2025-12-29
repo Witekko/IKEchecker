@@ -1,62 +1,169 @@
+from datetime import timedelta, date, datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
+
+# --- MODELE ---
+from .models import Portfolio, Transaction
 from .forms import UploadFileForm, CustomUserCreationForm
-from .models import Portfolio
-from .services.taxes import get_taxes_context
-# Importujemy serwisy
+
+# --- SERWISY ---
 from .services import (
-    process_xtb_file,
-    get_dashboard_context,
-    get_dividend_context,
+    process_xtb_file, get_dashboard_context, get_dividend_context,
     get_asset_details_context
 )
-# Importujemy newsy osobno
+from .services.taxes import get_taxes_context
+from .services.analytics import analyze_history, analyze_holdings
+from .services.market import get_current_currency_rates
 from .services.news import get_asset_news
+from .services.performance import PerformanceCalculator
+
+try:
+    from .services.config import fmt_2
+except ImportError:
+    def fmt_2(val):
+        return "{:.2f}".format(val)
 
 
-# --- HELPER: POBIERANIE AKTYWNEGO PORTFELA ---
 def get_active_portfolio(request):
     user_portfolios = Portfolio.objects.filter(user=request.user).order_by('id')
     if not user_portfolios.exists():
         new_p = Portfolio.objects.create(user=request.user, name="My IKE", portfolio_type='IKE')
         request.session['active_portfolio_id'] = new_p.id
         return new_p
-
     active_id = request.session.get('active_portfolio_id')
     if active_id:
-        portfolio = user_portfolios.filter(id=active_id).first()
-        if portfolio: return portfolio
+        p = user_portfolios.filter(id=active_id).first()
+        if p: return p
+    first_p = user_portfolios.first()
+    request.session['active_portfolio_id'] = first_p.id
+    return first_p
 
-    first_portfolio = user_portfolios.first()
-    request.session['active_portfolio_id'] = first_portfolio.id
-    return first_portfolio
 
+def _calculate_range_dates(range_mode):
+    today = date.today()
+    if range_mode == '1m': return today - timedelta(days=30)
+    elif range_mode == '3m': return today - timedelta(days=90)
+    elif range_mode == '6m': return today - timedelta(days=180) # TO MUSI BYĆ
+    elif range_mode == 'ytd': return date(today.year, 1, 1) # TO MUSI BYĆ
+    elif range_mode == '1y': return today - timedelta(days=365)
+    return None # Dla 'all' lub 'max'
+
+def _filter_timeline(timeline, start_date):
+    if not start_date: return timeline
+    dates_str = timeline.get('dates', [])
+    if not dates_str: return timeline
+    start_idx = 0
+    for i, d_str in enumerate(dates_str):
+        try:
+            if datetime.strptime(d_str, "%Y-%m-%d").date() >= start_date:
+                start_idx = i
+                break
+        except:
+            pass
+    filtered = {}
+    for key, val in timeline.items():
+        if isinstance(val, list) and len(val) == len(dates_str):
+            filtered[key] = val[start_idx:]
+        else:
+            filtered[key] = val
+    return filtered
+
+
+def _calculate_performance_metrics(transactions, start_date=None):
+    if not transactions.exists():
+        return "0.00", "0.00", "0.00", "0.00", {}
+
+    rates = get_current_currency_rates()
+    eur = rates.get('EUR', 4.30)
+    usd = rates.get('USD', 4.00)
+
+    # 1. Timeline (Pełny - potrzebny do znalezienia wartości startowej!)
+    full_timeline = analyze_history(transactions, eur, usd)
+
+    # 2. Bieżąca wartość (na koniec)
+    stats = analyze_holdings(transactions, eur, usd)
+    current_val = stats['total_value']
+
+    # 3. Performance
+    perf = PerformanceCalculator(transactions)
+
+    # PRZEKAZUJEMY full_timeline!
+    metrics = perf.calculate_metrics(
+        timeline_data=full_timeline,
+        start_date=start_date,
+        current_total_value=current_val
+    )
+
+    mwr_str = fmt_2(metrics['xirr'])
+    roi_str = fmt_2(metrics['simple_return'])
+    profit_str = fmt_2(metrics['profit'])
+
+    # 4. TWR
+    twr_percent = perf.calculate_twr(full_timeline, start_date_filter=start_date)
+    twr_str = fmt_2(twr_percent)
+
+    # 5. Filter Timeline (do wykresu)
+    filtered_timeline = _filter_timeline(full_timeline, start_date)
+
+    return mwr_str, twr_str, roi_str, profit_str, filtered_timeline
 
 # --- WIDOKI ---
 
 @login_required
 def dashboard_view(request):
     active_portfolio = get_active_portfolio(request)
-    context = get_dashboard_context(request.user, portfolio_id=active_portfolio.id)
+    range_mode = request.GET.get('range', 'all')
+    start_date = _calculate_range_dates(range_mode)
 
+    context = get_dashboard_context(request.user, portfolio_id=active_portfolio.id)
     context['all_portfolios'] = Portfolio.objects.filter(user=request.user)
     context['active_portfolio'] = active_portfolio
+    context['current_range'] = range_mode
+
+    # Obliczenia "Lifetime / Continuous"
+    transactions = Transaction.objects.filter(portfolio=active_portfolio)
+    mwr, twr, roi, profit, chart_data = _calculate_performance_metrics(transactions, start_date)
+
+    context['tile_mwr'] = mwr
+    context['tile_twr'] = twr
+
+    # Nadpisujemy ROI i Profit - teraz używają logiki "450 zł zainwestowane łącznie"
+    context['tile_return_pct_str'] = roi
+    context['tile_total_profit_str'] = profit
+
+    try:
+        context['tile_total_profit_raw'] = float(profit)
+        context['tile_return_pct_raw'] = float(roi)
+    except:
+        pass
+
+    if chart_data:
+        context['timeline_dates'] = chart_data.get('dates', [])
+        context['timeline_total_value'] = chart_data.get('val_user', [])
+        context['timeline_invested'] = chart_data.get('val_inv', [])
+        context['timeline_deposit_points'] = chart_data.get('points', [])
+        context['timeline_pct_user'] = chart_data.get('pct_user', [])
+        context['timeline_pct_wig'] = chart_data.get('pct_wig', [])
+        context['timeline_pct_sp500'] = chart_data.get('pct_sp500', [])
+        context['timeline_pct_inflation'] = chart_data.get('pct_inf', [])
 
     if 'error' in context:
         return render(request, 'dashboard.html', {'error': context['error']})
     return render(request, 'dashboard.html', context)
 
 
+# ... reszta widoków (assets_list, upload itp.) bez zmian ...
 @login_required
 def assets_list_view(request):
     active_portfolio = get_active_portfolio(request)
     context = get_dashboard_context(request.user, portfolio_id=active_portfolio.id)
-
     context['all_portfolios'] = Portfolio.objects.filter(user=request.user)
     context['active_portfolio'] = active_portfolio
-
+    transactions = Transaction.objects.filter(portfolio=active_portfolio)
+    mwr, _, _, _, _ = _calculate_performance_metrics(transactions)
+    context['tile_mwr'] = mwr
     if 'error' in context:
         return render(request, 'dashboard.html', {'error': context['error']})
     return render(request, 'assets_list.html', context)
@@ -65,10 +172,7 @@ def assets_list_view(request):
 @login_required
 def dividends_view(request):
     active_portfolio = get_active_portfolio(request)
-
-    # --- ZMIANA: Przekazujemy ID aktywnego portfela ---
     context = get_dividend_context(request.user, portfolio_id=active_portfolio.id)
-
     context['all_portfolios'] = Portfolio.objects.filter(user=request.user)
     context['active_portfolio'] = active_portfolio
     return render(request, 'dividends.html', context)
@@ -77,26 +181,17 @@ def dividends_view(request):
 @login_required
 def asset_details_view(request, symbol):
     active_portfolio = get_active_portfolio(request)
-
-    # 1. Pobieramy dane finansowe (z portfolio.py)
     context = get_asset_details_context(request.user, symbol, portfolio_id=active_portfolio.id)
-
-    # Fallback przy błędzie
     if 'error' in context:
         return render(request, 'dashboard.html', {
             'error': context['error'],
             'all_portfolios': Portfolio.objects.filter(user=request.user),
             'active_portfolio': active_portfolio
         })
-
-    # 2. Pobieramy newsy
     asset_name = context.get('asset_name', '')
     context['news'] = get_asset_news(symbol, asset_name)
-
-    # Switcher
     context['all_portfolios'] = Portfolio.objects.filter(user=request.user)
     context['active_portfolio'] = active_portfolio
-
     return render(request, 'asset_details.html', context)
 
 
@@ -114,15 +209,12 @@ def upload_view(request):
                 messages.error(request, f"Error: {e}")
     else:
         form = UploadFileForm()
-
     return render(request, 'upload.html', {
         'form': form,
         'all_portfolios': Portfolio.objects.filter(user=request.user),
         'active_portfolio': active_portfolio
     })
 
-
-# --- ZARZĄDZANIE PORTFELAMI ---
 
 @login_required
 def switch_portfolio_view(request, portfolio_id):
@@ -165,12 +257,7 @@ def register_view(request):
 
 def taxes_view(request):
     active_portfolio = get_active_portfolio(request)
-
-    # Logika podatkowa
     context = get_taxes_context(request.user, portfolio_id=active_portfolio.id)
-
-    # Standardowe dane nawigacyjne
     context['all_portfolios'] = Portfolio.objects.filter(user=request.user)
     context['active_portfolio'] = active_portfolio
-
     return render(request, 'taxes.html', context)

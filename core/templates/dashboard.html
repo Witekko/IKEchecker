@@ -104,12 +104,24 @@
             </div>
 
             <div class="col-md-2 col-xl-2">
-                <div class="card h-100 shadow-sm border-secondary border-opacity-25">
-                    <div class="card-body py-3 text-center">
-                        <div class="text-muted small fw-bold text-uppercase mb-1">Avg. Annual</div>
-                        <h4 class="mb-0 fw-bold {% if tile_annual_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ tile_annual_pct_str }}%
+                <div class="card h-100 shadow-sm border-secondary border-opacity-25" style="cursor: pointer;" onclick="togglePerf()">
+                    <div class="card-body py-3 text-center position-relative">
+                        <div class="d-flex justify-content-center gap-2 mb-1">
+                            <span id="lbl-twr" class="small fw-bold text-white text-uppercase" style="border-bottom: 2px solid #0dcaf0;">TWR</span>
+                            <span class="text-muted small">|</span>
+                            <span id="lbl-mwr" class="small fw-bold text-muted text-uppercase">MWR</span>
+                        </div>
+
+                        <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">
+                            {{ tile_twr }}%
                         </h4>
+                        <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
+                            {{ tile_mwr }}%
+                        </h4>
+
+                        <div class="position-absolute top-0 end-0 p-1 opacity-25">
+                            <i class="fas fa-sync-alt small"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -166,6 +178,17 @@
                         <span class="fw-bold fs-5 text-white">{{ tile_losers }}</span>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center mb-4">
+            <div class="btn-group shadow-sm bg-dark rounded-pill p-1 border border-secondary border-opacity-25" role="group">
+                <a href="?range=1m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1m' %}btn-success{% else %}btn-dark text-muted{% endif %}">1M</a>
+                <a href="?range=3m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '3m' %}btn-success{% else %}btn-dark text-muted{% endif %}">3M</a>
+                <a href="?range=6m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '6m' %}btn-success{% else %}btn-dark text-muted{% endif %}">6M</a>
+                <a href="?range=ytd" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'ytd' %}btn-success{% else %}btn-dark text-muted{% endif %}">YTD</a>
+                <a href="?range=1y" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1y' %}btn-success{% else %}btn-dark text-muted{% endif %}">1Y</a>
+                <a href="?range=all" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'all' or not current_range %}btn-success{% else %}btn-dark text-muted{% endif %}">MAX</a>
             </div>
         </div>
 
@@ -320,6 +343,37 @@
         </style>
 
         <script>
+            // --- SCRIPT DO PRZEŁĄCZANIA MWR/TWR ---
+            // ZMIANA: showTwr = true na start (żeby TWR był widoczny domyślnie)
+            let showTwr = true;
+
+            function togglePerf() {
+                showTwr = !showTwr;
+                const vMwr = document.getElementById('val-mwr');
+                const vTwr = document.getElementById('val-twr');
+                const lMwr = document.getElementById('lbl-mwr');
+                const lTwr = document.getElementById('lbl-twr');
+
+                if (showTwr) {
+                    // Pokaż TWR
+                    vMwr.style.display = 'none';
+                    vTwr.style.display = 'block';
+                    lMwr.style.borderBottom = 'none'; lMwr.classList.replace('text-white', 'text-muted');
+                    lTwr.style.borderBottom = '2px solid #0dcaf0'; lTwr.classList.replace('text-muted', 'text-white');
+                } else {
+                    // Pokaż MWR
+                    vMwr.style.display = 'block';
+                    vTwr.style.display = 'none';
+                    lTwr.style.borderBottom = 'none'; lTwr.classList.replace('text-white', 'text-muted');
+                    lMwr.style.borderBottom = '2px solid #198754'; lMwr.classList.replace('text-muted', 'text-white');
+                }
+            }
+
+            // Inicjalizacja stanu (żeby JS zgodził się z HTML)
+            // Ponieważ w HTML ustawiliśmy TWR jako widoczne, ta funkcja tylko "potwierdza" stan
+            // lub naprawia jeśli coś się rozjechało.
+            // Ale uwaga: HTML ma style="display: block" dla TWR, więc jest OK.
+
             function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
             const NEW_GREEN = '#98FB98';
             const SOFT_RED = '#ef5350';

@@ -33,7 +33,7 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
                 processed_assets.append({
                     'is_closed': True,
                     'symbol': sym,
-                    'name': asset.name,  # Dodajemy nazwę dla tabeli zamkniętych
+                    'name': asset.name,
                     'realized_pln': data['realized'],
                     'currency': asset.currency
                 })
@@ -43,9 +43,11 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
         cost = data['cost']
         cur_price, prev_close = get_cached_price(asset)
 
+        is_fallback_price = False
         if cur_price <= 0:
             cur_price = (cost / qty) if qty > 0 else 0
             prev_close = cur_price
+            is_fallback_price = True
 
         multiplier = 1.0
         is_foreign = False
@@ -60,6 +62,9 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
             is_foreign = True
 
         if math.isnan(multiplier): multiplier = 1.0
+
+        if is_fallback_price:
+            multiplier = 1.0
 
         value_pln = (qty * cur_price) * multiplier
 
@@ -106,16 +111,10 @@ def analyze_holdings(transactions, eur_rate, usd_rate):
     total_profit = total_value - total_invested
 
     return {
-        'total_value': total_value,
-        'invested': total_invested,
-        'cash': cash,
-        'total_profit': total_profit,
-        'unrealized_profit': total_unrealized_pln,
-        'day_change_pln': total_day_change_pln,
-        'assets': processed_assets,
-        'gainers': gainers,
-        'losers': losers,
-        'first_date': calc.first_date
+        'total_value': total_value, 'invested': total_invested, 'cash': cash,
+        'total_profit': total_profit, 'unrealized_profit': total_unrealized_pln,
+        'day_change_pln': total_day_change_pln, 'assets': processed_assets,
+        'gainers': gainers, 'losers': losers, 'first_date': calc.first_date
     }
 
 
@@ -126,11 +125,13 @@ def analyze_history(transactions, eur_rate, usd_rate):
     if not transactions.exists():
         return {'dates': [], 'val_user': [], 'val_inv': [], 'last_date': 'N/A'}
 
-    sorted_trans = transactions.order_by('date')
-    start_date = sorted_trans.first().date.date()
+    # Sort transactions: by Date, then DEPOSIT first
+    trans_list = sorted(list(transactions), key=lambda x: (x.date, 0 if x.type == 'DEPOSIT' else 1))
+
+    start_date = trans_list[0].date.date()
     end_date = date.today()
 
-    user_tickers = list(set([t.asset.yahoo_ticker for t in transactions if t.asset]))
+    user_tickers = list(set([t.asset.yahoo_ticker for t in trans_list if t.asset]))
     hist_data = fetch_historical_data_for_timeline(user_tickers, start_date)
 
     last_market_date_str = "N/A"
@@ -158,7 +159,6 @@ def analyze_history(transactions, eur_rate, usd_rate):
         'last_market_date': last_market_date_str
     }
 
-    trans_list = list(sorted_trans)
     trans_idx = 0
     total_trans = len(trans_list)
     current_day = start_date
@@ -166,24 +166,43 @@ def analyze_history(transactions, eur_rate, usd_rate):
     while current_day <= end_date:
         is_deposit_day = False
         while trans_idx < total_trans and trans_list[trans_idx].date.date() <= current_day:
-            t = trans_list[trans_idx];
-            amt = float(t.amount);
+            t = trans_list[trans_idx]
+            amt = float(t.amount)
             qty = float(t.quantity)
 
             if t.type == 'DEPOSIT':
-                sim['cash'] += amt;
-                sim['invested'] += amt;
-                sim['inflation_capital'] += amt;
+                sim['cash'] += amt
+                sim['invested'] += amt
+
+                # --- FIX 2: ZABEZPIECZENIE RÓWNIEŻ DLA DEPOZYTÓW ---
+                # XTB potrafi zapisać wypłatę jako DEPOSIT ujemny (np. -500).
+                # To sprawia, że kapitał spada poniżej zera. Naprawiamy to tu:
+                if sim['invested'] < 0:
+                    sim['invested'] = 0.0
+                # ----------------------------------------------------
+
+                sim['inflation_capital'] += amt
+                if sim['inflation_capital'] < 0: sim['inflation_capital'] = 0.0
+
                 is_deposit_day = True
-                p_usd = get_price_ffill('USDPLN=X', current_day);
+                p_usd = get_price_ffill('USDPLN=X', current_day)
                 p_sp = get_price_ffill('^GSPC', current_day)
-                if p_usd > 0 and p_sp > 0: sim['sp500_units'] += (amt / p_usd) / p_sp
+                if p_usd > 0 and p_sp > 0:
+                    sim['sp500_units'] += (amt / p_usd) / p_sp
 
             elif t.type == 'WITHDRAWAL':
-                sim['cash'] -= abs(amt);
-                sim['invested'] -= abs(amt);
+                sim['cash'] -= abs(amt)
+                sim['invested'] -= abs(amt)
+
+                # --- FIX 1: ZABEZPIECZENIE DLA STANDARDOWYCH WYPŁAT ---
+                if sim['invested'] < 0:
+                    sim['invested'] = 0.0
+                # ------------------------------------------------------
+
                 sim['inflation_capital'] -= abs(amt)
-            elif t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX']:
+                if sim['inflation_capital'] < 0: sim['inflation_capital'] = 0.0
+
+            elif t.type in ['BUY', 'SELL', 'DIVIDEND', 'TAX', 'CLOSE']:
                 sim['cash'] += amt
 
             if t.asset:
@@ -198,6 +217,7 @@ def analyze_history(transactions, eur_rate, usd_rate):
         for tk, q in sim['holdings'].items():
             if q <= 0.0001: continue
             price = get_price_ffill(tk, current_day)
+
             if price > 0:
                 val = price * q
                 if '.DE' in tk:
@@ -208,29 +228,30 @@ def analyze_history(transactions, eur_rate, usd_rate):
                 user_val += val
 
         sp_val = 0.0
-        p_sp = get_price_ffill('^GSPC', current_day);
+        p_sp = get_price_ffill('^GSPC', current_day)
         p_usd = get_price_ffill('USDPLN=X', current_day)
-        if p_sp > 0 and p_usd > 0: sp_val = sim['sp500_units'] * p_sp * p_usd
+        if p_sp > 0 and p_usd > 0:
+            sp_val = sim['sp500_units'] * p_sp * p_usd
 
         sim['inflation_capital'] *= 1.06 ** (1 / 365)
 
         timeline['dates'].append(current_day.strftime("%Y-%m-%d"))
         timeline['points'].append(6 if is_deposit_day else 0)
-        timeline['val_user'].append(round(user_val, 2))
 
-        # --- FIX: ZABEZPIECZENIE PRZED MINUSEM NA WYKRESIE ---
-        # Jeśli wypłaciłeś więcej niż wpłaciłeś (czyli wypłaciłeś zyski),
-        # matematycznie kapitał jest ujemny, ale wizualnie ustawiamy 0.
+        timeline['val_user'].append(max(0.0, round(user_val, 2)))
         timeline['val_inv'].append(max(0.0, round(sim['invested'], 2)))
-        # -----------------------------------------------------
 
         timeline['val_sp'].append(round(sp_val, 2) if sp_val > 0 else round(sim['invested'], 2))
         timeline['val_inf'].append(round(sim['inflation_capital'], 2))
 
         base = sim['invested'] if sim['invested'] > 0 else 1.0
-        timeline['pct_user'].append(round((user_val - base) / base * 100, 2))
-        timeline['pct_sp'].append(round((sp_val - base) / base * 100 if sp_val > 0 else 0, 2))
-        timeline['pct_inf'].append(round((sim['inflation_capital'] - base) / base * 100, 2))
+
+        pct_user_val = 0.0
+        if base > 0: pct_user_val = round((user_val - base) / base * 100, 2)
+        timeline['pct_user'].append(pct_user_val)
+
+        timeline['pct_sp'].append(round((sp_val - base) / base * 100 if base > 0 and sp_val > 0 else 0, 2))
+        timeline['pct_inf'].append(round((sim['inflation_capital'] - base) / base * 100 if base > 0 else 0, 2))
 
         current_day += timedelta(days=1)
 
