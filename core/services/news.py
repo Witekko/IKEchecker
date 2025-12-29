@@ -4,7 +4,9 @@ import feedparser
 import urllib.parse
 import difflib
 from datetime import date, timedelta
+import logging
 
+logger = logging.getLogger('core')
 
 def get_asset_news(symbol, name):
     news_list = []
@@ -76,6 +78,6 @@ def get_asset_news(symbol, name):
         news_list.sort(key=lambda x: x['date_obj'], reverse=True)
         news_list = news_list[:6]
     except Exception as e:
-        print(f"News Error: {e}")
+        logger.error(f"News Error: {e}")
 
     return news_list

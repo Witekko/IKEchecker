@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -120,3 +121,53 @@ STATIC_URL = 'static/'
 LOGIN_REDIRECT_URL = 'dashboard'  # Po zalogowaniu idź do dashboard (name='dashboard')
 LOGOUT_REDIRECT_URL = 'login'     # Po wylogowaniu idź do logowania
 LOGIN_URL = 'login'               # Jeśli niezalogowany wejdzie na dashboard, wyślij go tu
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'debug.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'core': {  # Logger for your app
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+# Default Currency Rates (Fallback)
+DEFAULT_CURRENCY_RATES = {
+    'EUR': 4.30,
+    'USD': 4.00,
+    'GBP': 5.20,
+    'JPY': 2.60,
+    'AUD': 2.60
+}

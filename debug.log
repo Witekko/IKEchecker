@@ -1,0 +1,2 @@
+ERROR 2025-12-29 19:46:24,377 market Yahoo Timeline Download Error: expected string or bytes-like object, got 'NoneType'
+ERROR 2025-12-29 19:48:15,571 market Yahoo Timeline Download Error: expected string or bytes-like object, got 'NoneType'

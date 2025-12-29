@@ -5,8 +5,11 @@ import yfinance as yf
 import pandas as pd
 from datetime import date, timedelta
 from django.utils import timezone
+from django.conf import settings
+import logging
 from ..models import Asset
 
+logger = logging.getLogger('core')
 
 def get_current_currency_rates():
     """
@@ -14,7 +17,8 @@ def get_current_currency_rates():
     Odporna na błędy 'nan'.
     """
     tickers = ["EURPLN=X", "USDPLN=X", "GBPPLN=X", "JPYPLN=X", "AUDPLN=X"]
-    rates = {'EUR': 4.30, 'USD': 4.00, 'GBP': 5.20, 'JPY': 2.60, 'AUD': 2.60}
+    # Load defaults from settings
+    rates = settings.DEFAULT_CURRENCY_RATES.copy()
 
     try:
         data = yf.download(tickers, period="5d", group_by='ticker', progress=False)
@@ -49,7 +53,7 @@ def get_current_currency_rates():
         if r_jpy: rates['JPY'] = r_jpy * 100
 
     except Exception as e:
-        print(f"Currency Error: {e}")
+        logger.error(f"Currency Error: {e}")
 
     return {k: round(v, 2) for k, v in rates.items()}
 
@@ -84,7 +88,7 @@ def get_cached_price(asset: Asset):
                 asset.save()
                 return price, prev_close
     except Exception as e:
-        print(f"Market Error ({asset.symbol}): {e}")
+        logger.error(f"Market Error ({asset.symbol}): {e}")
 
     return float(asset.last_price), float(asset.previous_close)
 
@@ -115,5 +119,5 @@ def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -
         )
         return data
     except Exception as e:
-        print(f"Yahoo Timeline Download Error: {e}")
+        logger.error(f"Yahoo Timeline Download Error: {e}")
         return pd.DataFrame()
