@@ -285,7 +285,9 @@
                 <a href="{% url 'taxes' %}" class="nav-link {% if request.resolver_match.url_name == 'taxes' %}active{% endif %}">
                     <i class="fas fa-file-invoice-dollar"></i> <span class="link-text">Taxes</span>
                 </a>
-
+                <a href="{% url 'portfolio_settings' %}" class="nav-link {% if request.resolver_match.url_name == 'portfolio_settings' %}active{% endif %}">
+                    <i class="fas fa-cog"></i> <span class="link-text">Settings</span>
+                </a>
                 <a href="{% url 'upload' %}" class="nav-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}">
                     <i class="fas fa-file-excel"></i> <span class="link-text">Import XTB</span>
                 </a>

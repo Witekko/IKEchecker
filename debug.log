@@ -1,2 +1,15 @@
 ERROR 2025-12-29 19:46:24,377 market Yahoo Timeline Download Error: expected string or bytes-like object, got 'NoneType'
 ERROR 2025-12-29 19:48:15,571 market Yahoo Timeline Download Error: expected string or bytes-like object, got 'NoneType'
+ERROR 2026-01-03 22:40:30,128 log Internal Server Error: /portfolio/settings/
+Traceback (most recent call last):
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\core\views.py", line 304, in portfolio_settings_view
+    form = PortfolioSettingsForm(instance=active_portfolio)
+           ^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'PortfolioSettingsForm' is not defined. Did you mean: 'portfolio_settings_view'?
+ERROR 2026-01-03 22:40:30,129 log "GET /portfolio/settings/ HTTP/1.1" 500 71746

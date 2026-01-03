@@ -240,14 +240,43 @@ class XtbCsvImporter(BaseImporter):
         return None
 
 
-def process_xtb_file(uploaded_file, portfolio_obj):
+def process_xtb_file(uploaded_file, portfolio_obj, overwrite_manual=False):
     filename = uploaded_file.name.lower()
-    
+
     if filename.endswith(('.xlsx', '.xls')):
         importer = XtbExcelImporter(uploaded_file, portfolio_obj)
     elif filename.endswith('.csv'):
         importer = XtbCsvImporter(uploaded_file, portfolio_obj)
     else:
         raise ValueError("Nieobsługiwany format pliku. Użyj .xlsx lub .csv")
-    
+
+    # --- LOGIKA NADPISYWANIA (Checkox) ---
+    if overwrite_manual:
+        # 1. Wczytaj dane wstępnie, żeby poznać zakres dat
+        df = importer.load_dataframe()
+        if df is not None and not df.empty:
+            # Szukamy kolumny czasu (Time)
+            if 'Time' in df.columns:
+                try:
+                    # Konwersja na daty, ignorując błędy
+                    dates = pd.to_datetime(df['Time'], errors='coerce').dropna()
+                    if not dates.empty:
+                        min_date = dates.min()
+                        max_date = dates.max()
+
+                        # Usuwamy transakcje ręczne (MAN-) w tym zakresie dat
+                        # Używamy delete() co jest szybkie i skuteczne
+                        deleted_count, _ = Transaction.objects.filter(
+                            portfolio=portfolio_obj,
+                            xtb_id__startswith='MAN-',
+                            date__range=(min_date, max_date)
+                        ).delete()
+
+                        logger.info(f"Usunięto {deleted_count} ręcznych transakcji kolidujących z importem.")
+                except Exception as e:
+                    logger.warning(f"Nie udało się określić zakresu dat do czyszczenia manualnego: {e}")
+
+            # Resetujemy wskaźnik pliku, bo load_dataframe go przesunął
+            uploaded_file.seek(0)
+
     return importer.process()

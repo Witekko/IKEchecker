@@ -121,3 +121,53 @@ def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -
     except Exception as e:
         logger.error(f"Yahoo Timeline Download Error: {e}")
         return pd.DataFrame()
+
+
+# core/services/market.py
+
+def validate_ticker_and_price(symbol, date_obj, price_pln):
+    """
+    Sprawdza czy ticker istnieje w Yahoo i czy podana cena jest wiarygodna.
+    Zwraca: (True, None) lub (False, "Treść błędu").
+    """
+    import yfinance as yf
+    from datetime import timedelta
+
+    # 1. Walidacja Tickera
+    # Pobieramy 5 dni wokół daty, żeby mieć pewność że trafimy w dni sesyjne
+    start_d = date_obj.date() - timedelta(days=2)
+    end_d = date_obj.date() + timedelta(days=3)
+
+    try:
+        df = yf.download(symbol, start=start_d, end=end_d, progress=False)
+        if df.empty:
+            # Próba z sufiksem .PL lub .US jeśli użytkownik nie podał
+            return False, f"Nie znaleziono danych dla symbolu '{symbol}'. Sprawdź na Yahoo Finance (np. czy nie brakuje końcówki .PL lub .US)."
+    except Exception as e:
+        return False, f"Błąd połączenia z Yahoo Finance: {e}"
+
+    # 2. Walidacja Ceny (tylko jeśli to nie jest dzisiaj - bo dzisiaj cena jest płynna)
+    # Jeśli transakcja jest starsza niż 24h, sprawdzamy widełki.
+    if date_obj.date() < date.today():
+        # Znajdź najbliższy dzień sesyjny w pobranych danych
+        # index w df to daty (DatetimeIndex)
+        try:
+            # Szukamy wiersza dla konkretnej daty (lub najbliższej)
+            # Upraszczamy: bierzemy średnią z pobranego zakresu jako punkt odniesienia
+            # (Dokładne sprawdzanie dnia jest trudne przez strefy czasowe, to ma być sanity check)
+
+            high = float(df['High'].max())
+            low = float(df['Low'].min())
+
+            # Margines 30% (bezpieczny dla zmiennych spółek)
+            safe_high = high * 1.30
+            safe_low = low * 0.70
+
+            if not (safe_low <= price_pln <= safe_high):
+                return False, f"Podejrzana cena! W tym okresie notowania {symbol} były między {low:.2f} a {high:.2f}. Wpisałeś {price_pln:.2f}. Sprawdź czy to cena za sztukę."
+
+        except Exception as e:
+            # Jeśli nie uda się sprawdzić ceny, puszczamy (lepjej przepuścić błąd niż zablokować poprawne)
+            pass
+
+    return True, None

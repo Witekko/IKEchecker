@@ -9,8 +9,6 @@ urlpatterns = [
 
     # --- APLIKACJA (CORE) ---
     path('', views.dashboard_view, name='dashboard'),
-
-    # !!! TO JEST LINIA, KTÓREJ BRAKUJE LUB JEST BŁĘDNA !!!
     path('assets/', views.assets_list_view, name='assets_list'),
     # -----------------------------------------------------
 
@@ -21,6 +19,7 @@ urlpatterns = [
 # --- PORTFEL---
     path('portfolio/switch/<int:portfolio_id>/', views.switch_portfolio_view, name='switch_portfolio'),
     path('portfolio/create/', views.create_portfolio_view, name='create_portfolio'),
+    path('portfolio/settings/', views.portfolio_settings_view, name='portfolio_settings'),
     # --- AUTORYZACJA ---
     path('register/', views.register_view, name='register'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
