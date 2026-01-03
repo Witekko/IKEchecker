@@ -2,7 +2,9 @@
 
 {% block content %}
 
-    {% if invested == "0.00" and cash == "0.00" %}
+    {# --- FIX: Zamiast sprawdzać saldo, sprawdzamy czy fizycznie są transakcje --- #}
+    {% if not last_transactions %}
+
         <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
             <div class="text-center">
                 <div class="mb-4">
@@ -36,15 +38,15 @@
                 <div class="d-none d-md-flex align-items-center gap-3 text-muted small border-end border-secondary border-opacity-25 pe-4">
                     <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
                         <span class="fw-bold text-white">USD</span>
-                        <span>{{ rates.USD }}</span>
+                        <span>{{ rates.USD|default:"--" }}</span>
                     </div>
                     <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
                         <span class="fw-bold text-white">EUR</span>
-                        <span>{{ rates.EUR }}</span>
+                        <span>{{ rates.EUR|default:"--" }}</span>
                     </div>
                     <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
                         <span class="fw-bold text-white">GBP</span>
-                        <span>{{ rates.GBP }}</span>
+                        <span>{{ rates.GBP|default:"--" }}</span>
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
@@ -54,7 +56,7 @@
 
                     <div class="d-flex flex-column justify-content-center">
                         <div class="text-muted small text-uppercase fw-bold" style="font-size: 0.70rem; line-height: 1.1;">
-                            DATA: <span class="text-white">{{ last_market_date }}</span>
+                            DATA: <span class="text-white">{{ last_market_date|default:"N/A" }}</span>
                         </div>
                         <div class="text-secondary" style="font-size: 0.60rem; line-height: 1;">
                             CHECKED: {% now "H:i" %}
@@ -112,10 +114,10 @@
                             <span id="lbl-mwr" class="small fw-bold text-muted text-uppercase">MWR</span>
                         </div>
 
-                        <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">
+                        <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|stringformat:'s'|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">
                             {{ tile_twr }}%
                         </h4>
-                        <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
+                        <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|stringformat:'s'|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
                             {{ tile_mwr }}%
                         </h4>
 
@@ -344,7 +346,6 @@
 
         <script>
             // --- SCRIPT DO PRZEŁĄCZANIA MWR/TWR ---
-            // ZMIANA: showTwr = true na start (żeby TWR był widoczny domyślnie)
             let showTwr = true;
 
             function togglePerf() {
@@ -368,11 +369,6 @@
                     lMwr.style.borderBottom = '2px solid #198754'; lMwr.classList.replace('text-muted', 'text-white');
                 }
             }
-
-            // Inicjalizacja stanu (żeby JS zgodził się z HTML)
-            // Ponieważ w HTML ustawiliśmy TWR jako widoczne, ta funkcja tylko "potwierdza" stan
-            // lub naprawia jeśli coś się rozjechało.
-            // Ale uwaga: HTML ma style="display: block" dla TWR, więc jest OK.
 
             function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
             const NEW_GREEN = '#98FB98';
@@ -430,7 +426,7 @@
                 else { btnPct.classList.add('active', 'bg-primary', 'text-white'); btnPct.classList.remove('text-muted'); }
                 renderMainChart(mode);
             }
-            if(chartData.dates.length > 0) renderMainChart('value');
+            if(chartData.dates && chartData.dates.length > 0) renderMainChart('value');
 
             // --- ALLOCATION CHART ---
             const pieColors = [SOFT_BLUE, '#ab47bc', SOFT_RED, '#ffa726', '#ffca28', NEW_GREEN, '#5c6bc0', '#bdbdbd'];

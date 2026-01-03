@@ -60,7 +60,7 @@ class Transaction(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.SET_NULL, null=True, blank=True)
 
     # Unique ID from XTB prevents duplicates
-    xtb_id = models.CharField(max_length=50, unique=True, help_text="Unique operation ID from XTB")
+    xtb_id = models.CharField(max_length=50)
 
     date = models.DateTimeField()
     type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
