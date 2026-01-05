@@ -38,15 +38,17 @@
     </div>
 
     <div class="col-6 col-xl-3">
-        <div class="card h-100 border-secondary border-opacity-25 bg-dark shadow-sm operation-card">
-            <div class="card-body text-center d-flex flex-column align-items-center justify-content-center py-4">
-                <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center mb-3 icon-circle">
-                    <i class="fas fa-edit fa-2x text-warning"></i>
+        <a href="{% url 'manage_assets' %}" class="text-decoration-none">
+            <div class="card h-100 border-secondary border-opacity-25 bg-dark shadow-sm operation-card">
+                <div class="card-body text-center d-flex flex-column align-items-center justify-content-center py-4">
+                    <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center mb-3 icon-circle">
+                        <i class="fas fa-edit fa-2x text-warning"></i>
+                    </div>
+                    <h6 class="fw-bold text-white mb-1">Manage Assets</h6>
+                    <span class="text-muted small" style="font-size: 0.75rem;">Rename & Sectors</span>
                 </div>
-                <h6 class="fw-bold text-white mb-1">Manage Assets</h6>
-                <span class="text-muted small" style="font-size: 0.75rem;">Rename & Sectors</span>
             </div>
-        </div>
+        </a>
     </div>
 
     <div class="col-6 col-xl-3">

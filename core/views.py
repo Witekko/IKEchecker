@@ -8,7 +8,7 @@ from django.contrib.auth import login
 from django.utils import timezone
 
 # --- MODELE ---
-from .models import Portfolio, Transaction, Asset
+from .models import Portfolio, Transaction, Asset, AssetType, AssetSector
 from .forms import UploadFileForm, CustomUserCreationForm, PortfolioSettingsForm
 
 # --- SERWISY ---
@@ -322,3 +322,71 @@ def portfolio_settings_view(request):
         'all_portfolios': Portfolio.objects.filter(user=request.user)
     }
     return render(request, 'portfolio_settings.html', context)
+
+
+@login_required
+def manage_assets_view(request):
+    """
+    Bulk Editor dla aktywów. Pozwala szybko ustawić Sektor i Typ dla wielu spółek naraz.
+    """
+    active_portfolio = DashboardService.get_active_portfolio(request)
+
+    if request.method == 'POST':
+        try:
+            # Pobieramy wszystkie ID aktywów, które przyszły w formularzu
+            # Formularz wysyła dane jako: asset_1_sector, asset_1_type, asset_1_name
+
+            # Pobieramy wszystkie aktywa z bazy, żeby nie robić 100 selectów
+            all_assets = {str(a.id): a for a in Asset.objects.all()}
+
+            updated_count = 0
+
+            for key, value in request.POST.items():
+                if key.startswith('asset_') and key.endswith('_name'):
+                    # Parsujemy ID: asset_123_name -> 123
+                    parts = key.split('_')
+                    # parts = ['asset', '123', 'name']
+                    if len(parts) == 3:
+                        asset_id = parts[1]
+
+                        if asset_id in all_assets:
+                            asset = all_assets[asset_id]
+
+                            # Pobieramy nowe wartości z formularza
+                            new_name = value.strip()
+                            new_sector = request.POST.get(f'asset_{asset_id}_sector')
+                            new_type = request.POST.get(f'asset_{asset_id}_type')
+
+                            # Aktualizujemy tylko jeśli coś się zmieniło
+                            changed = False
+                            if asset.name != new_name:
+                                asset.name = new_name
+                                changed = True
+                            if asset.sector != new_sector:
+                                asset.sector = new_sector
+                                changed = True
+                            if asset.asset_type != new_type:
+                                asset.asset_type = new_type
+                                changed = True
+
+                            if changed:
+                                asset.save()
+                                updated_count += 1
+
+            messages.success(request, f"Successfully updated {updated_count} assets.")
+            return redirect('manage_assets')
+
+        except Exception as e:
+            messages.error(request, f"Error updating assets: {e}")
+
+    # GET Request
+    assets = Asset.objects.all().order_by('symbol')
+
+    context = {
+        'assets': assets,
+        'sector_choices': AssetSector.choices,
+        'type_choices': AssetType.choices,
+        'all_portfolios': Portfolio.objects.filter(user=request.user),
+        'active_portfolio': active_portfolio
+    }
+    return render(request, 'manage_assets.html', context)
