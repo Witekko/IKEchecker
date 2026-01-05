@@ -33,7 +33,36 @@ def get_dashboard_context(user, portfolio_id=None):
     charts = _prepare_dashboard_charts(stats['assets'], stats['cash'])
 
     annual_ret = _calculate_annual_return(stats['total_profit'], stats['invested'], stats['first_date'])
-    last_transactions = transactions.order_by('-date')[:10]
+
+    last_transactions = transactions.order_by('-date')[:20]
+
+    # --- TRADING PERFORMANCE CALCULATIONS ---
+    closed_assets = [a for a in stats['assets'] if a['is_closed']]
+    win_count = sum(1 for a in closed_assets if a['gain_pln'] > 0)
+    loss_count = sum(1 for a in closed_assets if a['gain_pln'] <= 0)
+    total_closed_count = len(closed_assets)
+
+    win_rate = (win_count / total_closed_count * 100) if total_closed_count > 0 else 0
+    total_realized_pln = sum(a['gain_pln'] for a in closed_assets)
+
+    best_trade = None
+    worst_trade = None
+
+    if closed_assets:
+        # ZMIANA: Sortujemy po stopie zwrotu (ROI), a nie kwocie
+        sorted_closed = sorted(closed_assets, key=lambda x: x['gain_percent'], reverse=True)
+        best_trade = sorted_closed[0]
+        worst_trade = sorted_closed[-1]
+
+        # Formatowanie: ROI + Kwota
+        if best_trade:
+            best_trade['gain_fmt'] = fmt_2(best_trade['gain_pln'])
+            best_trade['pct_fmt'] = fmt_2(best_trade['gain_percent'])
+        if worst_trade:
+            worst_trade['gain_fmt'] = fmt_2(worst_trade['gain_pln'])
+            worst_trade['pct_fmt'] = fmt_2(worst_trade['gain_percent'])
+
+    # ------------------------------------------------
 
     context = {
         'tile_value_str': fmt_2(stats['total_value']),
@@ -61,15 +90,30 @@ def get_dashboard_context(user, portfolio_id=None):
         'tile_annual_pct_str': fmt_2(annual_ret),
         'tile_annual_pct_raw': annual_ret,
 
-        # WYKRESY - używają teraz display_name z modelu
-        'chart_labels': charts['labels'],  # Pie Chart (Pełna Nazwa)
+        # Performance KPIs
+        'perf_win_rate': round(win_rate, 1),
+        'perf_win_count': win_count,
+        'perf_loss_count': loss_count,
+        'perf_total_realized': fmt_2(total_realized_pln),
+        'perf_total_realized_raw': total_realized_pln,
+        'perf_best_trade': best_trade,
+        'perf_worst_trade': worst_trade,
+        'perf_total_closed': total_closed_count,
+
+        # WYKRESY
+        'chart_labels': charts['labels'],
         'chart_allocation': charts['allocation'],
-        'chart_profit_labels': charts['profit_labels'],  # Bar Chart (Ticker - dla czytelności)
+        'chart_profit_labels': charts['profit_labels'],
         'chart_profit_values': charts['profit_values'],
+        'chart_sector_labels': charts['sector_labels'],
+        'chart_sector_values': charts['sector_values'],
+        'chart_type_labels': charts['type_labels'],
+        'chart_type_values': charts['type_values'],
 
         'closed_labels': charts['closed_labels'],
         'closed_values': charts['closed_values'],
         'closed_holdings': charts['closed_items_display'],
+
         'last_transactions': last_transactions,
         'timeline_dates': timeline['dates'],
         'timeline_total_value': timeline['val_user'],
@@ -85,7 +129,6 @@ def get_dashboard_context(user, portfolio_id=None):
         'cash': fmt_2(stats['cash']),
     }
 
-    # FORMATOWANIE TABELI
     enrich_assets_context(context, stats['assets'], stats['total_value'])
 
     return context
@@ -98,7 +141,6 @@ def get_dashboard_context(user, portfolio_id=None):
 def enrich_assets_context(context, assets, total_portfolio_value):
     """
     Przyjmuje surowe dane (float) z analytics i formatuje je (str) dla HTML.
-    Rozbija na grupy PLN/Foreign.
     """
     pln_items = []
     foreign_items = []
@@ -110,10 +152,10 @@ def enrich_assets_context(context, assets, total_portfolio_value):
             closed_items.append({
                 'symbol': a['symbol'],
                 'name': a['name'],
-                # Fallback dla bezpieczeństwa
                 'display_name': a.get('display_name', f"{a['name']} ({a['symbol']})"),
                 'gain_pln': fmt_2(a['gain_pln']),
-                'gain_pln_raw': a['gain_pln']
+                'gain_pln_raw': a['gain_pln'],
+                'asset_type': a.get('asset_type', 'STOCK')
             })
             continue
 
@@ -141,7 +183,6 @@ def enrich_assets_context(context, assets, total_portfolio_value):
             'day_change_pct': fmt_2(a['day_change_pct']),
             'share_pct': fmt_2(a['share_pct']),
 
-            # Pola Raw (Float) dla sortowania i kolorów w HTML
             'value_pln_raw': a['value_pln'],
             'gain_pln_raw': a['gain_pln'],
             'gain_percent_raw': a['gain_percent'],
@@ -288,23 +329,47 @@ def _get_empty_dashboard_context():
 
 
 def _prepare_dashboard_charts(assets, cash):
-    # assets to teraz lista słowników z FLOATAMI.
-    charts = {'labels': [], 'allocation': [], 'profit_labels': [], 'profit_values': [], 'closed_labels': [],
-              'closed_values': [], 'closed_items_display': []}
+    charts = {
+        'labels': [], 'allocation': [],
+        'profit_labels': [], 'profit_values': [],
+        'closed_labels': [], 'closed_values': [], 'closed_items_display': [],
+        'sector_labels': [], 'sector_values': [],
+        'type_labels': [], 'type_values': []
+    }
 
     sorted_assets = sorted([a for a in assets if not a['is_closed']], key=lambda x: x['value_pln'], reverse=True)
+
+    sectors = {}
+    types = {}
+
     for a in sorted_assets:
-        # --- ZMIANA: Etykieta dla koła (Pełna Nazwa - korzystamy z przekazanego display_name) ---
         charts['labels'].append(a['display_name'])
         charts['allocation'].append(a['value_pln'])
-
-        # --- ZMIANA: Etykieta dla słupków (Sam Ticker) ---
         charts['profit_labels'].append(a['symbol'])
         charts['profit_values'].append(a['gain_pln'])
+
+        sec = a.get('sector', 'Unknown')
+        typ = a.get('asset_type', 'Stock')
+        val = a['value_pln']
+
+        sectors[sec] = sectors.get(sec, 0.0) + val
+        types[typ] = types.get(typ, 0.0) + val
 
     if cash > 1:
         charts['labels'].append("CASH")
         charts['allocation'].append(cash)
+        sectors['Cash'] = sectors.get('Cash', 0.0) + cash
+        types['Cash'] = types.get('Cash', 0.0) + cash
+
+    sorted_sectors = sorted(sectors.items(), key=lambda item: item[1], reverse=True)
+    for k, v in sorted_sectors:
+        charts['sector_labels'].append(k)
+        charts['sector_values'].append(v)
+
+    sorted_types = sorted(types.items(), key=lambda item: item[1], reverse=True)
+    for k, v in sorted_types:
+        charts['type_labels'].append(k)
+        charts['type_values'].append(v)
 
     closed = [a for a in assets if a['is_closed']]
     for a in closed:

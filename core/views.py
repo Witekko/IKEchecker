@@ -18,7 +18,7 @@ from .services import (
 )
 from .services.taxes import get_taxes_context
 from .services.analytics import analyze_history, analyze_holdings
-from .services.market import get_current_currency_rates
+from .services.market import get_current_currency_rates, fetch_asset_metadata
 from .services.news import get_asset_news
 from .services.performance import PerformanceCalculator
 from .services.portfolio import enrich_assets_context
@@ -326,62 +326,88 @@ def portfolio_settings_view(request):
 
 @login_required
 def manage_assets_view(request):
-    """
-    Bulk Editor dla aktywów. Pozwala szybko ustawić Sektor i Typ dla wielu spółek naraz.
-    """
     active_portfolio = DashboardService.get_active_portfolio(request)
 
     if request.method == 'POST':
-        try:
-            # Pobieramy wszystkie ID aktywów, które przyszły w formularzu
-            # Formularz wysyła dane jako: asset_1_sector, asset_1_type, asset_1_name
+        # --- LOGIKA 1: ZAPIS RĘCZNY (To co już masz) ---
+        if 'save_changes' in request.POST:
+            try:
+                all_assets = {str(a.id): a for a in Asset.objects.all()}
+                updated_count = 0
+                for key, value in request.POST.items():
+                    if key.startswith('asset_') and key.endswith('_name'):
+                        parts = key.split('_')
+                        if len(parts) == 3:
+                            asset_id = parts[1]
+                            if asset_id in all_assets:
+                                asset = all_assets[asset_id]
+                                new_name = value.strip()
+                                new_sector = request.POST.get(f'asset_{asset_id}_sector')
+                                new_type = request.POST.get(f'asset_{asset_id}_type')
 
-            # Pobieramy wszystkie aktywa z bazy, żeby nie robić 100 selectów
-            all_assets = {str(a.id): a for a in Asset.objects.all()}
+                                changed = False
+                                if asset.name != new_name: asset.name = new_name; changed = True
+                                if asset.sector != new_sector: asset.sector = new_sector; changed = True
+                                if asset.asset_type != new_type: asset.asset_type = new_type; changed = True
 
-            updated_count = 0
+                                if changed:
+                                    asset.save()
+                                    updated_count += 1
+                messages.success(request, f"Saved changes for {updated_count} assets.")
+                return redirect('manage_assets')
+            except Exception as e:
+                messages.error(request, f"Error saving: {e}")
 
-            for key, value in request.POST.items():
-                if key.startswith('asset_') and key.endswith('_name'):
-                    # Parsujemy ID: asset_123_name -> 123
-                    parts = key.split('_')
-                    # parts = ['asset', '123', 'name']
-                    if len(parts) == 3:
-                        asset_id = parts[1]
+        # --- LOGIKA 2: AUTO-FILL Z YAHOO (Nowość) ---
+        elif 'sync_yahoo' in request.POST:
+            try:
+                assets = Asset.objects.all()
+                updated_count = 0
+                errors = 0
 
-                        if asset_id in all_assets:
-                            asset = all_assets[asset_id]
+                for asset in assets:
+                    # Pomijamy waluty (CASH), bo Yahoo ich nie sklasyfikuje sensownie
+                    if asset.symbol == 'CASH' or 'PLN' in asset.symbol and len(asset.symbol) == 3:
+                        continue
 
-                            # Pobieramy nowe wartości z formularza
-                            new_name = value.strip()
-                            new_sector = request.POST.get(f'asset_{asset_id}_sector')
-                            new_type = request.POST.get(f'asset_{asset_id}_type')
+                    # Pobieramy dane z Yahoo
+                    ticker = asset.yahoo_ticker if asset.yahoo_ticker else asset.symbol
+                    data = fetch_asset_metadata(ticker)
 
-                            # Aktualizujemy tylko jeśli coś się zmieniło
-                            changed = False
-                            if asset.name != new_name:
-                                asset.name = new_name
+                    if data['success']:
+                        # Aktualizujemy tylko jeśli mamy dane
+                        changed = False
+
+                        # Aktualizuj Sektor jeśli jest OTHER (nie nadpisuj ręcznych zmian na razie)
+                        if asset.sector == 'OTHER' and data['sector'] != 'OTHER':
+                            asset.sector = data['sector']
+                            changed = True
+
+                        # Aktualizuj Typ jeśli STOCK (domyślny) a wykryto co innego
+                        if asset.asset_type == 'STOCK' and data['asset_type'] != 'STOCK':
+                            asset.asset_type = data['asset_type']
+                            changed = True
+
+                        # Aktualizuj nazwę jeśli jest pusta lub to sam ticker
+                        if not asset.name or asset.name == asset.symbol:
+                            if data['name']:
+                                asset.name = data['name']
                                 changed = True
-                            if asset.sector != new_sector:
-                                asset.sector = new_sector
-                                changed = True
-                            if asset.asset_type != new_type:
-                                asset.asset_type = new_type
-                                changed = True
 
-                            if changed:
-                                asset.save()
-                                updated_count += 1
+                        if changed:
+                            asset.save()
+                            updated_count += 1
+                    else:
+                        errors += 1
 
-            messages.success(request, f"Successfully updated {updated_count} assets.")
-            return redirect('manage_assets')
+                messages.success(request, f"Auto-filled {updated_count} assets from Yahoo. (Errors/Skipped: {errors})")
+                return redirect('manage_assets')
 
-        except Exception as e:
-            messages.error(request, f"Error updating assets: {e}")
+            except Exception as e:
+                messages.error(request, f"Yahoo Sync Error: {e}")
 
-    # GET Request
+    # GET
     assets = Asset.objects.all().order_by('symbol')
-
     context = {
         'assets': assets,
         'sector_choices': AssetSector.choices,

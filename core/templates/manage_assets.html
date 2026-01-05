@@ -11,14 +11,25 @@
         <p class="text-muted mb-0">Bulk edit your asset details (Sectors, Types, Names).</p>
     </div>
     
-    <button type="submit" form="bulkForm" class="btn btn-success fw-bold px-4 shadow-sm">
-        <i class="fas fa-save me-2"></i>Save All Changes
-    </button>
+    <div class="d-flex gap-2">
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="sync_yahoo" value="1">
+            <button type="submit" class="btn btn-outline-info fw-bold px-3 shadow-sm" title="Fetch Sectors & Types from Yahoo Finance" onclick="return confirm('This may take up to 60 seconds. Confirm?');">
+                <i class="fas fa-magic me-2"></i>Auto-Fill
+            </button>
+        </form>
+
+        <button type="submit" form="bulkForm" name="save_changes" class="btn btn-success fw-bold px-4 shadow-sm">
+            <i class="fas fa-save me-2"></i>Save All
+        </button>
+    </div>
 </div>
 
 <form method="post" id="bulkForm">
     {% csrf_token %}
-    
+    <input type="hidden" name="save_changes" value="1">
+
     <div class="card border-secondary border-opacity-25 shadow-lg">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -39,13 +50,12 @@
                                 {{ asset.symbol }}
                                 <div class="text-muted small fw-normal" style="font-size: 0.7rem;">{{ asset.currency }}</div>
                             </td>
-                            
+
                             <td>
-                                <input type="text" name="asset_{{ asset.id }}_name" value="{{ asset.name }}" 
-                                       class="form-control bg-dark text-white border-secondary form-control-sm"
-                                       placeholder="Enter friendly name...">
+                                <input type="text" name="asset_{{ asset.id }}_name" value="{{ asset.name }}"
+                                       class="form-control bg-dark text-white border-secondary form-control-sm">
                             </td>
-                            
+
                             <td>
                                 <select name="asset_{{ asset.id }}_sector" class="form-select bg-dark text-white border-secondary form-select-sm">
                                     {% for code, label in sector_choices %}
@@ -55,7 +65,7 @@
                                     {% endfor %}
                                 </select>
                             </td>
-                            
+
                             <td>
                                 <select name="asset_{{ asset.id }}_type" class="form-select bg-dark text-white border-secondary form-select-sm">
                                     {% for code, label in type_choices %}
@@ -65,17 +75,11 @@
                                     {% endfor %}
                                 </select>
                             </td>
-                            
+
                             <td class="text-end pe-4">
-                                <a href="{% url 'asset_details' asset.symbol %}" class="btn btn-sm btn-outline-secondary" title="View Details">
+                                <a href="{% url 'asset_details' asset.symbol %}" class="btn btn-sm btn-outline-secondary">
                                     <i class="fas fa-chart-line"></i>
                                 </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
-                                No assets found. Import transactions first.
                             </td>
                         </tr>
                         {% endfor %}
@@ -84,30 +88,13 @@
             </div>
         </div>
     </div>
-
-    <div class="fixed-bottom p-4 d-flex justify-content-end pointer-events-none">
-        <button type="submit" class="btn btn-success btn-lg fw-bold shadow-lg rounded-pill px-5 pointer-events-auto" style="pointer-events: auto;">
-            <i class="fas fa-save me-2"></i> Save Changes
-        </button>
-    </div>
-
 </form>
 
 <style>
-    .pointer-events-none { pointer-events: none; }
-    .pointer-events-auto { pointer-events: auto; }
-
-    /* Inputy zlewające się z tłem - POPRAWIONE */
-    .table input.form-control, .table select.form-select {
-        border-color: transparent;
-    }
-
-    /* Po najechaniu lub kliknięciu - ciemnoszara ramka zamiast zmiennej Bootstrap */
+    .table input.form-control, .table select.form-select { border-color: transparent; }
     .table input.form-control:focus, .table select.form-select:focus,
     .table input.form-control:hover, .table select.form-select:hover {
-        border-color: #495057; /* <--- TU BYŁ BŁĄD, TERAZ JEST KONKRETNY KOLOR */
-        background-color: #2b2b2b !important;
-        box-shadow: none; /* Usuwa niebieską poświatę */
+        border-color: #495057; background-color: #2b2b2b !important; box-shadow: none;
     }
 </style>
 

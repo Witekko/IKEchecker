@@ -2,9 +2,7 @@
 
 {% block content %}
 
-    {# --- FIX: Zamiast sprawdzać saldo, sprawdzamy czy fizycznie są transakcje --- #}
     {% if not last_transactions %}
-
         <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
             <div class="text-center">
                 <div class="mb-4">
@@ -15,9 +13,8 @@
                 </div>
                 <h2 class="fw-bold text-white mb-3">Welcome to IKE Tracker!</h2>
                 <p class="text-muted mb-4" style="max-width: 500px; margin: 0 auto;">
-                    Your portfolio is currently empty. To see the magic of compound interest, upload your first XTB transaction history file.
+                    Your portfolio is currently empty. Upload your XTB file to start.
                 </p>
-
                 <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
                     <a href="{% url 'upload' %}" class="btn btn-success btn-lg px-5 rounded-pill fw-bold shadow-sm">
                         <i class="fas fa-file-upload me-2"></i> Import XTB Excel
@@ -25,7 +22,6 @@
                 </div>
             </div>
         </div>
-
     {% else %}
 
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -33,33 +29,20 @@
                 <h2 class="fw-bold mb-1 text-white">Market Dashboard</h2>
                 <p class="text-muted mb-0">Command Center. All values in PLN.</p>
             </div>
-
             <div class="d-flex align-items-center gap-4">
                 <div class="d-none d-md-flex align-items-center gap-3 text-muted small border-end border-secondary border-opacity-25 pe-4">
                     <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
-                        <span class="fw-bold text-white">USD</span>
-                        <span>{{ rates.USD|default:"--" }}</span>
+                        <span class="fw-bold text-white">USD</span><span>{{ rates.USD|default:"--" }}</span>
                     </div>
                     <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
-                        <span class="fw-bold text-white">EUR</span>
-                        <span>{{ rates.EUR|default:"--" }}</span>
-                    </div>
-                    <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
-                        <span class="fw-bold text-white">GBP</span>
-                        <span>{{ rates.GBP|default:"--" }}</span>
+                        <span class="fw-bold text-white">EUR</span><span>{{ rates.EUR|default:"--" }}</span>
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
-                    <div class="spinner-grow {% if '2025' in last_market_date %}text-success{% else %}text-warning{% endif %} me-2" role="status" style="width: 0.8rem; height: 0.8rem;">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-
+                    <div class="spinner-grow {% if '2025' in last_market_date %}text-success{% else %}text-warning{% endif %} me-2" role="status" style="width: 0.8rem; height: 0.8rem;"></div>
                     <div class="d-flex flex-column justify-content-center">
                         <div class="text-muted small text-uppercase fw-bold" style="font-size: 0.70rem; line-height: 1.1;">
                             DATA: <span class="text-white">{{ last_market_date|default:"N/A" }}</span>
-                        </div>
-                        <div class="text-secondary" style="font-size: 0.60rem; line-height: 1;">
-                            CHECKED: {% now "H:i" %}
                         </div>
                     </div>
                 </div>
@@ -78,7 +61,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="col-md-4 col-xl-3">
                 <div class="card h-100 shadow-sm border-secondary border-opacity-25">
                     <div class="card-body py-3">
@@ -93,7 +75,6 @@
                     </div>
                 </div>
             </div>
-
              <div class="col-md-2 col-xl-2">
                 <div class="card h-100 shadow-sm border-secondary border-opacity-25">
                     <div class="card-body py-3 text-center">
@@ -104,7 +85,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="col-md-2 col-xl-2">
                 <div class="card h-100 shadow-sm border-secondary border-opacity-25" style="cursor: pointer;" onclick="togglePerf()">
                     <div class="card-body py-3 text-center position-relative">
@@ -113,21 +93,11 @@
                             <span class="text-muted small">|</span>
                             <span id="lbl-mwr" class="small fw-bold text-muted text-uppercase">MWR</span>
                         </div>
-
-                        <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|stringformat:'s'|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">
-                            {{ tile_twr }}%
-                        </h4>
-                        <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|stringformat:'s'|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
-                            {{ tile_mwr }}%
-                        </h4>
-
-                        <div class="position-absolute top-0 end-0 p-1 opacity-25">
-                            <i class="fas fa-sync-alt small"></i>
-                        </div>
+                        <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|stringformat:'s'|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">{{ tile_twr }}%</h4>
+                        <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|stringformat:'s'|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">{{ tile_mwr }}%</h4>
                     </div>
                 </div>
             </div>
-
              <div class="col-md-12 col-xl-2">
                 <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
                     <div class="card-body py-3 text-end">
@@ -141,46 +111,10 @@
         </div>
 
         <div class="row g-3 mb-5">
-            <div class="col-md-3">
-                <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
-                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small text-uppercase">1D Change</span>
-                        <span class="fw-bold fs-5 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {% if tile_day_pct_raw > 0 %}<i class="fas fa-caret-up me-1"></i>{% else %}<i class="fas fa-caret-down me-1"></i>{% endif %}
-                            {{ tile_day_pct_str }}%
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                 <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
-                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small text-uppercase">1D Gain</span>
-                        <span class="fw-bold fs-5 {% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ tile_day_pln_str }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                 <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
-                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small text-uppercase"><i class="fas fa-arrow-up text-success me-1"></i>Gainers</span>
-                        <span class="fw-bold fs-5 text-white">{{ tile_gainers }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                 <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
-                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small text-uppercase"><i class="fas fa-arrow-down text-danger me-1"></i>Losers</span>
-                        <span class="fw-bold fs-5 text-white">{{ tile_losers }}</span>
-                    </div>
-                </div>
-            </div>
+             <div class="col-md-3"><div class="card h-100 border-secondary border-opacity-10 bg-transparent"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span class="text-muted small text-uppercase">1D Change</span><span class="fw-bold fs-5 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{% if tile_day_pct_raw > 0 %}<i class="fas fa-caret-up me-1"></i>{% else %}<i class="fas fa-caret-down me-1"></i>{% endif %} {{ tile_day_pct_str }}%</span></div></div></div>
+             <div class="col-md-3"><div class="card h-100 border-secondary border-opacity-10 bg-transparent"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span class="text-muted small text-uppercase">1D Gain</span><span class="fw-bold fs-5 {% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ tile_day_pln_str }}</span></div></div></div>
+             <div class="col-md-3"><div class="card h-100 border-secondary border-opacity-10 bg-transparent"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span class="text-muted small text-uppercase"><i class="fas fa-arrow-up text-success me-1"></i>Gainers</span><span class="fw-bold fs-5 text-white">{{ tile_gainers }}</span></div></div></div>
+             <div class="col-md-3"><div class="card h-100 border-secondary border-opacity-10 bg-transparent"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span class="text-muted small text-uppercase"><i class="fas fa-arrow-down text-danger me-1"></i>Losers</span><span class="fw-bold fs-5 text-white">{{ tile_losers }}</span></div></div></div>
         </div>
 
         <div class="d-flex justify-content-center mb-4">
@@ -193,7 +127,6 @@
                 <a href="?range=all" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'all' or not current_range %}btn-success{% else %}btn-dark text-muted{% endif %}">MAX</a>
             </div>
         </div>
-
         <div class="card mb-5">
             <div class="card-header d-flex justify-content-between align-items-center border-0 pb-0 pt-4 px-4">
                 <span class="text-muted text-uppercase fw-bold ls-1">Portfolio History</span>
@@ -212,7 +145,14 @@
         <div class="row mb-5 g-4">
             <div class="col-md-6">
                 <div class="card h-100">
-                    <div class="card-header border-0 pt-4 px-4 text-muted text-uppercase fw-bold ls-1">Asset Allocation</div>
+                    <div class="card-header border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                        <span class="text-muted text-uppercase fw-bold ls-1">Allocation</span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" onclick="switchAlloc('asset', this)">Asset</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="switchAlloc('sector', this)">Sector</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="switchAlloc('type', this)">Type</button>
+                        </div>
+                    </div>
                     <div class="card-body">
                         <div class="chart-container">
                             <canvas id="allocationChart"></canvas>
@@ -232,98 +172,159 @@
             </div>
         </div>
 
-        {% if closed_holdings %}
-        <div class="d-flex align-items-center mb-3 mt-5">
-            <i class="fas fa-history me-2 text-muted fs-4"></i>
-            <h4 class="mb-0 fw-bold text-white">Closed Positions (History)</h4>
-        </div>
+        <div class="row g-4">
 
-        <div class="card border-secondary border-opacity-25 mb-5">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-dark text-muted text-uppercase small">
-                            <tr>
-                                <th class="ps-4 py-3">Asset</th>
-                                <th class="text-end pe-4">Realized Profit (PLN)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in closed_holdings %}
-                            <tr>
-                                {# --- FIX: Używamy display_name z analytics.py jeśli dostępne, fallback na symbol --- #}
-                                <td class="ps-4 fw-bold text-white">{{ item.display_name|default:item.symbol }}</td>
-                                <td class="text-end pe-4">
-                                    <span class="fw-bold {% if item.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                        {% if item.gain_pln_raw > 0 %}+{% endif %}{{ item.gain_pln }} PLN
-                                    </span>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            <div class="col-xl-4">
+                <div class="card h-100 border-secondary border-opacity-25">
+                    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+                        <h5 class="fw-bold text-white mb-0"><i class="fas fa-trophy text-warning me-2"></i>Trading Performance</h5>
+                        <p class="text-muted small mb-0">Closed positions statistics</p>
+                    </div>
+                    <div class="card-body p-4 d-flex flex-column">
+
+                        {% if perf_total_closed > 0 %}
+                            <div class="d-flex align-items-center justify-content-center mb-4 position-relative" style="height: 180px;">
+                                <canvas id="winRateChart"></canvas>
+                                <div class="position-absolute text-center" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                    <div class="h3 fw-bold text-white mb-0">{{ perf_win_rate }}%</div>
+                                    <div class="small text-muted text-uppercase" style="font-size: 0.6rem;">Win Rate</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 text-center">
+                                        <div class="small text-muted text-uppercase mb-1">Realized P&L</div>
+                                        <div class="fw-bold {% if perf_total_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                            {{ perf_total_realized }} PLN
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 text-center">
+                                        <div class="small text-muted text-uppercase mb-1">Trades</div>
+                                        <div class="fw-bold text-white">
+                                            <span class="text-success">{{ perf_win_count }}W</span> - <span class="text-danger">{{ perf_loss_count }}L</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                                        <div class="text-start">
+                                            <div class="small text-muted text-uppercase">Best Trade</div>
+                                            <div class="fw-bold text-success">{{ perf_best_trade.symbol }}</div>
+                                        </div>
+                                        <div class="text-end fw-bold text-success">
+                                            +{{ perf_best_trade.pct_fmt }}% <span class="small opacity-75">({{ perf_best_trade.gain_fmt }} PLN)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                                        <div class="text-start">
+                                            <div class="small text-muted text-uppercase">Worst Trade</div>
+                                            <div class="fw-bold {% if perf_worst_trade.gain_pln >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {{ perf_worst_trade.symbol }}
+                                            </div>
+                                        </div>
+                                        <div class="text-end fw-bold {% if perf_worst_trade.gain_pln >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                            {% if perf_worst_trade.gain_pln > 0 %}+{% endif %}{{ perf_worst_trade.pct_fmt }}% <span class="small opacity-75">({{ perf_worst_trade.gain_fmt }} PLN)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5 my-auto">
+                                <i class="fas fa-ghost fa-3x text-muted opacity-25 mb-3"></i>
+                                <p class="text-muted">No closed positions yet.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-8">
+                <div class="card h-100 border-secondary border-opacity-25">
+                    <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold text-white mb-0"><i class="fas fa-history text-info me-2"></i>Recent Activity</h5>
+                            <p class="text-muted small mb-0">Last 20 transactions</p>
+                        </div>
+                        <ul class="nav nav-pills card-header-pills bg-dark rounded-pill p-1 border border-secondary border-opacity-25" id="txFilters">
+                            <li class="nav-item">
+                                <button class="nav-link active rounded-pill py-1 px-3 small fw-bold" onclick="filterTx('ALL', this)">All</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link rounded-pill py-1 px-3 small fw-bold text-muted" onclick="filterTx('BUY', this)">Buys</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link rounded-pill py-1 px-3 small fw-bold text-muted" onclick="filterTx('SELL', this)">Sells</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link rounded-pill py-1 px-3 small fw-bold text-muted" onclick="filterTx('DIVIDEND', this)">Divs</button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0" id="txTable">
+                                <thead class="bg-dark text-muted text-uppercase small sticky-top">
+                                    <tr>
+                                        <th class="ps-4 py-3">Date</th>
+                                        <th>Type</th>
+                                        <th>Asset</th>
+                                        <th class="text-end pe-4">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for t in last_transactions %}
+                                    <tr data-type="{{ t.type }}">
+                                        <td class="ps-4 text-white small" style="white-space: nowrap;">{{ t.date|date:"Y-m-d" }}</td>
+                                        <td>
+                                            {% if t.type == 'DEPOSIT' %}<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">DEPOSIT</span>
+                                            {% elif t.type == 'WITHDRAWAL' %}<span class="badge bg-secondary">WITHDRAWAL</span>
+                                            {% elif t.type == 'BUY' %}<span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">BUY</span>
+                                            {% elif t.type == 'SELL' %}<span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-25">SELL</span>
+                                            {% elif t.type == 'CLOSE' %}<span class="badge bg-success bg-opacity-25 text-success">CLOSE</span>
+                                            {% elif t.type == 'DIVIDEND' %}<span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25">DIVIDEND</span>
+                                            {% elif t.type == 'TAX' %}<span class="badge bg-danger bg-opacity-25 text-danger">TAX</span>
+                                            {% else %}<span class="badge bg-secondary">{{ t.type }}</span>{% endif %}
+                                        </td>
+                                        <td class="text-white">
+                                            {% if t.asset %}
+                                                {{ t.asset.display_name }}
+                                            {% else %}
+                                                <span class="text-muted fst-italic">--</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end pe-4 fw-bold {% if t.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                                            {{ t.amount }}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-5">No recent transactions found.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        {% endif %}
 
-        <div class="d-flex align-items-center mb-3 mt-5">
-            <span class="fs-4 me-2">📋</span> <h4 class="mb-0 fw-bold">Recent Transactions</h4>
-        </div>
-
-        <div class="card border-secondary border-opacity-25 mb-5">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-dark text-muted text-uppercase small" style="font-size: 0.75rem;">
-                            <tr>
-                                <th class="ps-4 py-3">Date</th>
-                                <th>Type</th>
-                                <th>Instrument</th>
-                                <th class="text-end pe-4">Amount (PLN)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for t in last_transactions %}
-                            <tr>
-                                <td class="ps-4 text-white small">{{ t.date|date:"Y-m-d" }}</td>
-                                <td>
-                                    {% if t.type == 'DEPOSIT' %}<span class="badge bg-success bg-opacity-25 text-success">DEPOSIT</span>
-                                    {% elif t.type == 'WITHDRAWAL' %}<span class="badge bg-secondary">WITHDRAWAL</span>
-                                    {% elif t.type == 'BUY' %}<span class="badge bg-info bg-opacity-25 text-info">BUY</span>
-                                    {% elif t.type == 'SELL' %}<span class="badge bg-warning bg-opacity-25 text-warning">SELL</span>
-                                    {% elif t.type == 'CLOSE' %}<span class="badge bg-success bg-opacity-25 text-success">CLOSE (PROFIT)</span>
-                                    {% elif t.type == 'DIVIDEND' %}<span class="badge bg-primary bg-opacity-25 text-primary">DIVIDEND</span>
-                                    {% elif t.type == 'TAX' %}<span class="badge bg-danger bg-opacity-25 text-danger">TAX</span>
-                                    {% else %}<span class="badge bg-secondary">{{ t.type }}</span>{% endif %}
-                                </td>
-                                <td class="text-white">
-                                    {% if t.asset %}
-                                        {# --- FIX: Wyświetlamy Nazwa (Symbol) --- #}
-                                        {{ t.asset.name }} <span class="text-muted small">({{ t.asset.symbol }})</span>
-                                    {% else %}
-                                        <span class="text-muted fst-italic">--</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end pe-4 fw-bold {% if t.amount > 0 %}text-success{% else %}text-danger{% endif %}">
-                                    {{ t.amount }}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-4">No recent transactions found.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-
-        {{ chart_labels|json_script:"l-alloc" }} {{ chart_allocation|json_script:"d-alloc" }}
-        {{ chart_profit_labels|json_script:"l-prof" }} {{ chart_profit_values|json_script:"d-prof" }}
-        {{ closed_labels|json_script:"l-closed" }} {{ closed_values|json_script:"d-closed" }}
+        {{ chart_labels|json_script:"l-alloc" }}
+        {{ chart_allocation|json_script:"d-alloc" }}
+        {{ chart_sector_labels|json_script:"l-sec" }}
+        {{ chart_sector_values|json_script:"d-sec" }}
+        {{ chart_type_labels|json_script:"l-typ" }}
+        {{ chart_type_values|json_script:"d-typ" }}
+        {{ chart_profit_labels|json_script:"l-prof" }}
+        {{ chart_profit_values|json_script:"d-prof" }}
+        {{ closed_labels|json_script:"l-closed" }}
+        {{ closed_values|json_script:"d-closed" }}
         {{ timeline_dates|json_script:"t-dates" }}
         {{ timeline_total_value|json_script:"t-user" }}
         {{ timeline_invested|json_script:"t-inv" }}
@@ -332,50 +333,78 @@
         {{ timeline_pct_wig|json_script:"p-wig" }}
         {{ timeline_pct_sp500|json_script:"p-sp500" }}
         {{ timeline_pct_inflation|json_script:"p-inf" }}
+        {{ perf_win_count|json_script:"p-wins" }}
+        {{ perf_loss_count|json_script:"p-losses" }}
 
         <style>
             .ls-1 { letter-spacing: 1px; }
-
-            /* WYŻSZE WYKRESY DLA LEPSZEJ CZYTELNOŚCI */
             .chart-container-wide { position: relative; height: 500px; width: 100%; }
             .chart-container { position: relative; height: 350px; width: 100%; }
-
             @media (max-width: 768px) {
                 .chart-container-wide { height: 350px; }
                 .chart-container { height: 300px; }
             }
+            .btn-group .btn.active {
+                background-color: var(--accent-green);
+                color: #121212 !important;
+                border-color: var(--accent-green);
+                font-weight: bold;
+            }
+            #txFilters .nav-link { color: #aaa; transition: all 0.2s; }
+            #txFilters .nav-link.active { background-color: var(--accent-green); color: #121212 !important; }
+            #txFilters .nav-link:hover:not(.active) { color: #fff; background-color: rgba(255,255,255,0.1); }
         </style>
 
         <script>
-            // --- SCRIPT DO PRZEŁĄCZANIA MWR/TWR ---
-            let showTwr = true;
-
-            function togglePerf() {
-                showTwr = !showTwr;
-                const vMwr = document.getElementById('val-mwr');
-                const vTwr = document.getElementById('val-twr');
-                const lMwr = document.getElementById('lbl-mwr');
-                const lTwr = document.getElementById('lbl-twr');
-
-                if (showTwr) {
-                    // Pokaż TWR
-                    vMwr.style.display = 'none';
-                    vTwr.style.display = 'block';
-                    lMwr.style.borderBottom = 'none'; lMwr.classList.replace('text-white', 'text-muted');
-                    lTwr.style.borderBottom = '2px solid #0dcaf0'; lTwr.classList.replace('text-muted', 'text-white');
-                } else {
-                    // Pokaż MWR
-                    vMwr.style.display = 'block';
-                    vTwr.style.display = 'none';
-                    lTwr.style.borderBottom = 'none'; lTwr.classList.replace('text-white', 'text-muted');
-                    lMwr.style.borderBottom = '2px solid #198754'; lMwr.classList.replace('text-muted', 'text-white');
-                }
-            }
-
             function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
+
             const NEW_GREEN = '#98FB98';
             const SOFT_RED = '#ef5350';
             const SOFT_BLUE = '#42a5f5';
+
+            const pieColors = [
+                SOFT_BLUE, '#ab47bc', SOFT_RED, '#ffa726', '#ffca28', NEW_GREEN,
+                '#5c6bc0', '#26a69a', '#ec407a', '#78909c', '#8d6e63', '#d4e157'
+            ];
+
+            function filterTx(type, btn) {
+                document.querySelectorAll('#txFilters .nav-link').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const rows = document.querySelectorAll('#txTable tbody tr');
+                rows.forEach(row => {
+                    const rowType = row.getAttribute('data-type');
+                    if (type === 'ALL') { row.style.display = ''; }
+                    else if (type === 'BUY' && (rowType === 'BUY' || rowType === 'OPEN BUY')) { row.style.display = ''; }
+                    else if (type === 'SELL' && (rowType === 'SELL' || rowType === 'CLOSE' || rowType === 'CLOSE SELL')) { row.style.display = ''; }
+                    else if (type === 'DIVIDEND' && rowType === 'DIVIDEND') { row.style.display = ''; }
+                    else { row.style.display = 'none'; }
+                });
+            }
+
+            const wins = gd('p-wins');
+            const losses = gd('p-losses');
+            const ctxWin = document.getElementById('winRateChart');
+
+            if (ctxWin && (wins + losses > 0)) {
+                new Chart(ctxWin, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Wins', 'Losses'],
+                        datasets: [{
+                            data: [wins, losses],
+                            backgroundColor: [NEW_GREEN, SOFT_RED],
+                            borderWidth: 0,
+                            hoverOffset: 5
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        cutout: '80%',
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
             let mainChartInstance = null;
             const chartData = {
                 dates: gd('t-dates'),
@@ -430,19 +459,55 @@
             }
             if(chartData.dates && chartData.dates.length > 0) renderMainChart('value');
 
-            // --- ALLOCATION CHART ---
-            const pieColors = [SOFT_BLUE, '#ab47bc', SOFT_RED, '#ffa726', '#ffca28', NEW_GREEN, '#5c6bc0', '#bdbdbd'];
-            const lAl = gd('l-alloc'); const dAl = gd('d-alloc');
-            if(lAl.length > 0) {
-                const totalPortfolio = dAl.reduce((a, b) => a + b, 0);
-                const labelsWithPercent = lAl.map((label, index) => {
-                    const value = dAl[index]; const percent = totalPortfolio > 0 ? ((value / totalPortfolio) * 100).toFixed(1) : 0;
+            let allocChartInstance = null;
+            const allocData = {
+                asset: { labels: gd('l-alloc'), values: gd('d-alloc') },
+                sector: { labels: gd('l-sec'), values: gd('d-sec') },
+                type: { labels: gd('l-typ'), values: gd('d-typ') }
+            };
+
+            function renderAllocChart(mode) {
+                const ctx = document.getElementById('allocationChart');
+                if (allocChartInstance) allocChartInstance.destroy();
+
+                const d = allocData[mode];
+                if (!d.values || d.values.length === 0) return;
+
+                const totalPortfolio = d.values.reduce((a, b) => a + b, 0);
+                const labelsWithPercent = d.labels.map((label, index) => {
+                    const value = d.values[index];
+                    const percent = totalPortfolio > 0 ? ((value / totalPortfolio) * 100).toFixed(1) : 0;
                     return `${label} (${percent}%)`;
                 });
-                new Chart(document.getElementById('allocationChart'), { type:'doughnut', data:{ labels: labelsWithPercent, datasets:[{ data: dAl, backgroundColor: pieColors, borderWidth: 0, hoverOffset: 10 }] }, options:{ maintainAspectRatio:false, cutout: '70%', plugins: { legend: { position: 'right', labels: { color: '#e0e0e0', usePointStyle: true } } } } });
+
+                allocChartInstance = new Chart(ctx, {
+                    type:'doughnut',
+                    data:{
+                        labels: labelsWithPercent,
+                        datasets:[{
+                            data: d.values,
+                            backgroundColor: pieColors,
+                            borderWidth: 0,
+                            hoverOffset: 10
+                        }]
+                    },
+                    options:{
+                        maintainAspectRatio:false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: { position: 'right', labels: { color: '#e0e0e0', usePointStyle: true, boxWidth: 10 } }
+                        }
+                    }
+                });
             }
 
-            // --- PROFIT CHART ---
+            function switchAlloc(mode, btn) {
+                btn.parentNode.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderAllocChart(mode);
+            }
+            renderAllocChart('asset');
+
             const barOptions = { maintainAspectRatio:false, scales: { x: { grid: { display: false }, ticks: { color: '#a0a0a0' } }, y: { grid: { color: '#333' }, ticks: { color: '#a0a0a0' } } }, plugins: { legend: { display: false } } };
             const lPr = gd('l-prof');
             if(lPr.length>0) {

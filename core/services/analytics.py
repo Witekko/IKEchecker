@@ -14,7 +14,7 @@ logger = logging.getLogger('core')
 def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
     """
     Analizuje stan posiadania.
-    Zwraca SUROWE DANE LICZBOWE (float). Formatowanie odbywa się w portfolio.py.
+    Zwraca SUROWE DANE LICZBOWE (float) oraz DANE OPISOWE z Modelu.
     """
     # 1. Obliczenia standardowe (STAN NA DZIŚ)
     calc = PortfolioCalculator(transactions).process()
@@ -84,21 +84,42 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
         qty = data['qty']
         asset = data['asset']  # To jest obiekt modelu Asset
 
-        # --- NOWOŚĆ: Pobieramy dane z modelu ---
-        # Dzięki temu analytics nie formatuje tekstu, tylko przekazuje gotowca z modelu
+        # --- EXTRACTOR: Pobieramy gotowe dane opisowe z modelu ---
         final_display_name = asset.display_name
-        final_sector = asset.sector
-        final_type = asset.asset_type
 
-        # --- POZYCJE ZAMKNIĘTE ---
+        # ZMIANA: Używamy get_X_display() dla ładnych etykiet (np. "Financial Services")
+        final_sector = asset.get_sector_display()
+        final_type = asset.get_asset_type_display()
+
+        # --- POZYCJE ZAMKNIĘTE (FIX ROI) ---
         if qty <= 0.0001:
             if abs(data['realized']) > 0.01:
                 is_foreign = asset.currency != 'PLN'
+
+                realized_pln = float(data['realized'])
+
+                # 1. Obliczamy Przychód (Suma sprzedaży) z historii transakcji
+                # Sumujemy amount dla SELL/CLOSE (one są dodatnie w bazie cashflow, ale tu sprawdzamy logikę)
+                # W Transaction amount dla SELL jest na plus (+), BUY na minus (-).
+
+                revenue = 0.0
+                for t in data['trades']:
+                    if t['type'] in ['SELL', 'CLOSE', 'CLOSE SELL']:
+                        revenue += float(t['amount'])  # Amount w bazie to cashflow (PLN)
+
+                # 2. Obliczamy Koszt (Przychód - Zysk = Koszt)
+                cost_basis = revenue - realized_pln
+
+                # 3. Obliczamy ROI %
+                roi_pct = 0.0
+                if cost_basis > 0.01:
+                    roi_pct = (realized_pln / cost_basis) * 100
+
                 processed_assets.append({
                     'is_closed': True,
                     'symbol': sym,
                     'name': asset.name,
-                    # Przekazujemy nowe pola
+                    # Dane opisowe
                     'display_name': final_display_name,
                     'sector': final_sector,
                     'asset_type': final_type,
@@ -106,13 +127,13 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
                     'currency': asset.currency,
                     'is_foreign': is_foreign,
 
-                    # Surowe liczby
-                    'realized_pln': float(data['realized']),
-                    'gain_pln': float(data['realized']),
+                    # Wyniki
+                    'realized_pln': realized_pln,
+                    'gain_pln': realized_pln,
+                    'gain_percent': roi_pct,  # <--- TU BYŁO ZERO, TERAZ JEST WYLICZONE
 
-                    # Bezpieczniki (zera w float)
+                    # Zera (dla spójności struktury)
                     'value_pln': 0.0,
-                    'gain_percent': 0.0,
                     'day_change_pct': 0.0,
                     'cost_pln': 0.0,
                     'avg_price': 0.0,
@@ -187,12 +208,12 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
 
         avg_price = (cost / qty) if qty > 0 else 0
 
-        # Wszystko jako FLOAT
+        # Wszystko jako FLOAT + Dane z Modelu
         processed_assets.append({
             'is_closed': False,
             'symbol': sym,
             'name': asset.name,
-            # Przekazujemy nowe pola
+            # Nowe pola z modelu
             'display_name': final_display_name,
             'sector': final_sector,
             'asset_type': final_type,
@@ -227,7 +248,7 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
         'total_value': total_value, 'invested': total_invested, 'cash': cash,
         'total_profit': total_profit, 'unrealized_profit': total_unrealized_pln,
         'day_change_pln': total_day_change_pln,
-        'assets': processed_assets,  # Lista słowników z floatami
+        'assets': processed_assets,
         'gainers': gainers, 'losers': losers, 'first_date': calc.first_date
     }
 
@@ -235,7 +256,7 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
 # analyze_history zostawiamy bez zmian
 def analyze_history(transactions, eur_rate, usd_rate):
     """
-    Generuje dane do wykresu historycznego (Optimized with Pandas + Cache).
+    Generuje dane do wykresu historycznego.
     """
     if not transactions.exists():
         return {'dates': [], 'val_user': [], 'val_inv': [], 'last_date': 'N/A'}

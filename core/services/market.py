@@ -7,9 +7,11 @@ from datetime import date, timedelta
 from django.utils import timezone
 from django.conf import settings
 import logging
-from ..models import Asset
+# --- ZMIANA: Dodano import AssetType i AssetSector do mapowania ---
+from ..models import Asset, AssetType, AssetSector
 
 logger = logging.getLogger('core')
+
 
 def get_current_currency_rates():
     """
@@ -123,8 +125,6 @@ def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -
         return pd.DataFrame()
 
 
-# core/services/market.py
-
 def validate_ticker_and_price(symbol, date_obj, price_pln):
     """
     Sprawdza czy ticker istnieje w Yahoo i czy podana cena jest wiarygodna.
@@ -149,13 +149,7 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
     # 2. Walidacja Ceny (tylko jeśli to nie jest dzisiaj - bo dzisiaj cena jest płynna)
     # Jeśli transakcja jest starsza niż 24h, sprawdzamy widełki.
     if date_obj.date() < date.today():
-        # Znajdź najbliższy dzień sesyjny w pobranych danych
-        # index w df to daty (DatetimeIndex)
         try:
-            # Szukamy wiersza dla konkretnej daty (lub najbliższej)
-            # Upraszczamy: bierzemy średnią z pobranego zakresu jako punkt odniesienia
-            # (Dokładne sprawdzanie dnia jest trudne przez strefy czasowe, to ma być sanity check)
-
             high = float(df['High'].max())
             low = float(df['Low'].min())
 
@@ -167,7 +161,71 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
                 return False, f"Podejrzana cena! W tym okresie notowania {symbol} były między {low:.2f} a {high:.2f}. Wpisałeś {price_pln:.2f}. Sprawdź czy to cena za sztukę."
 
         except Exception as e:
-            # Jeśli nie uda się sprawdzić ceny, puszczamy (lepjej przepuścić błąd niż zablokować poprawne)
             pass
 
     return True, None
+
+
+# --- NOWA FUNKCJA: AUTOMATYCZNE UZUPEŁNIANIE DANYCH ---
+
+def fetch_asset_metadata(yahoo_ticker):
+    """
+    Pobiera metadane z Yahoo Finance (Sektor, Typ, Nazwa)
+    i mapuje je na formaty naszego Modelu.
+    """
+    try:
+        ticker = yf.Ticker(yahoo_ticker)
+        info = ticker.info
+
+        # 1. Mapowanie Typu (QuoteType -> AssetType)
+        # Yahoo zwraca: 'EQUITY', 'ETF', 'CRYPTOCURRENCY', 'CURRENCY'
+        q_type = info.get('quoteType', '').upper()
+        asset_type = AssetType.OTHER
+
+        if q_type == 'EQUITY':
+            asset_type = AssetType.STOCK
+        elif q_type == 'ETF':
+            asset_type = AssetType.ETF
+        elif q_type == 'CRYPTOCURRENCY':
+            asset_type = AssetType.CRYPTO
+        elif q_type == 'CURRENCY':
+            asset_type = AssetType.CURRENCY
+
+        # 2. Mapowanie Sektora (Sector -> AssetSector)
+        y_sector = info.get('sector', '').lower()
+        asset_sector = AssetSector.OTHER
+
+        # Heurystyka mapowania
+        if 'technology' in y_sector:
+            asset_sector = AssetSector.TECHNOLOGY
+        elif 'financial' in y_sector:
+            asset_sector = AssetSector.FINANCE
+        elif 'energy' in y_sector or 'oil' in y_sector:
+            asset_sector = AssetSector.ENERGY
+        elif 'healthcare' in y_sector or 'pharmaceutical' in y_sector:
+            asset_sector = AssetSector.HEALTHCARE
+        elif 'consumer' in y_sector:
+            asset_sector = AssetSector.CONSUMER
+        elif 'industrial' in y_sector:
+            asset_sector = AssetSector.INDUSTRIAL
+        elif 'real estate' in y_sector:
+            asset_sector = AssetSector.REAL_ESTATE
+        elif 'basic materials' in y_sector:
+            asset_sector = AssetSector.MATERIALS
+        elif 'communication' in y_sector or 'telecom' in y_sector:
+            asset_sector = AssetSector.TELECOM
+
+        # Specjalny przypadek: Gaming
+        y_industry = info.get('industry', '').lower()
+        if 'games' in y_industry or 'gaming' in y_industry:
+            asset_sector = AssetSector.GAMING
+
+        return {
+            'name': info.get('longName') or info.get('shortName'),
+            'asset_type': asset_type,
+            'sector': asset_sector,
+            'success': True
+        }
+
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
