@@ -44,7 +44,6 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
             flows_in_period = df_period.groupby('asset__symbol')['amount'].sum()
 
             # Cena na start
-            # --- FIX: Dodano .dropna() aby usunąć None (z wpłat/wypłat) ---
             tickers = df['asset__yahoo_ticker'].dropna().unique().tolist()
 
             # Pobieramy ceny (z marginesem błędu 5 dni wstecz)
@@ -83,7 +82,13 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
 
     for sym, data in holdings_data.items():
         qty = data['qty']
-        asset = data['asset']
+        asset = data['asset']  # To jest obiekt modelu Asset
+
+        # --- NOWOŚĆ: Pobieramy dane z modelu ---
+        # Dzięki temu analytics nie formatuje tekstu, tylko przekazuje gotowca z modelu
+        final_display_name = asset.display_name
+        final_sector = asset.sector
+        final_type = asset.asset_type
 
         # --- POZYCJE ZAMKNIĘTE ---
         if qty <= 0.0001:
@@ -93,6 +98,11 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
                     'is_closed': True,
                     'symbol': sym,
                     'name': asset.name,
+                    # Przekazujemy nowe pola
+                    'display_name': final_display_name,
+                    'sector': final_sector,
+                    'asset_type': final_type,
+
                     'currency': asset.currency,
                     'is_foreign': is_foreign,
 
@@ -182,12 +192,17 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
             'is_closed': False,
             'symbol': sym,
             'name': asset.name,
+            # Przekazujemy nowe pola
+            'display_name': final_display_name,
+            'sector': final_sector,
+            'asset_type': final_type,
+
             'quantity': float(qty),
             'avg_price': float(avg_price),
             'cur_price': float(cur_price),
             'value_pln': float(value_pln),
             'cost_pln': float(cost),
-            'gain_pln': float(display_profit_pln),  # Total Gain (Okres/Lifetime)
+            'gain_pln': float(display_profit_pln),
             'gain_percent': float(display_return_pct),
             'realized_pln': float(data['realized']),
             'day_change_pct': float(day_change_pct),
@@ -217,7 +232,7 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
     }
 
 
-# analyze_history zostawiamy bez zmian (już działa z Cachem i ma dropna())
+# analyze_history zostawiamy bez zmian
 def analyze_history(transactions, eur_rate, usd_rate):
     """
     Generuje dane do wykresu historycznego (Optimized with Pandas + Cache).

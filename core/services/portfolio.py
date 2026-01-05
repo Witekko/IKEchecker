@@ -25,11 +25,11 @@ def get_dashboard_context(user, portfolio_id=None):
     eur_rate = rates.get('EUR', 4.30)
     usd_rate = rates.get('USD', 4.00)
 
-    # Analytics zwraca teraz FLOATY
+    # Analytics zwraca teraz FLOATY + display_name/sector
     stats = analyze_holdings(transactions, eur_rate, usd_rate)
     timeline = analyze_history(transactions, eur_rate, usd_rate)
 
-    # Wykresy (działają na floatach, więc OK)
+    # Wykresy (działają na floatach)
     charts = _prepare_dashboard_charts(stats['assets'], stats['cash'])
 
     annual_ret = _calculate_annual_return(stats['total_profit'], stats['invested'], stats['first_date'])
@@ -60,10 +60,13 @@ def get_dashboard_context(user, portfolio_id=None):
         'tile_losers': stats['losers'],
         'tile_annual_pct_str': fmt_2(annual_ret),
         'tile_annual_pct_raw': annual_ret,
-        'chart_labels': charts['labels'],
+
+        # WYKRESY - używają teraz display_name z modelu
+        'chart_labels': charts['labels'],  # Pie Chart (Pełna Nazwa)
         'chart_allocation': charts['allocation'],
-        'chart_profit_labels': charts['profit_labels'],
+        'chart_profit_labels': charts['profit_labels'],  # Bar Chart (Ticker - dla czytelności)
         'chart_profit_values': charts['profit_values'],
+
         'closed_labels': charts['closed_labels'],
         'closed_values': charts['closed_values'],
         'closed_holdings': charts['closed_items_display'],
@@ -82,7 +85,7 @@ def get_dashboard_context(user, portfolio_id=None):
         'cash': fmt_2(stats['cash']),
     }
 
-    # FORMATOWANIE TABELI (Używamy funkcji publicznej)
+    # FORMATOWANIE TABELI
     enrich_assets_context(context, stats['assets'], stats['total_value'])
 
     return context
@@ -107,8 +110,10 @@ def enrich_assets_context(context, assets, total_portfolio_value):
             closed_items.append({
                 'symbol': a['symbol'],
                 'name': a['name'],
-                'gain_pln': fmt_2(a['gain_pln']),  # Formatowanie float -> str
-                'gain_pln_raw': a['gain_pln']  # Zachowanie float
+                # Fallback dla bezpieczeństwa
+                'display_name': a.get('display_name', f"{a['name']} ({a['symbol']})"),
+                'gain_pln': fmt_2(a['gain_pln']),
+                'gain_pln_raw': a['gain_pln']
             })
             continue
 
@@ -121,7 +126,12 @@ def enrich_assets_context(context, assets, total_portfolio_value):
 
         # Tworzymy obiekt dla widoku (ViewModel)
         item = {
-            'symbol': a['symbol'], 'name': a['name'],
+            'symbol': a['symbol'],
+            'name': a['name'],
+            'display_name': a.get('display_name', f"{a['name']} ({a['symbol']})"),
+            'sector': a.get('sector', 'OTHER'),
+            'asset_type': a.get('asset_type', 'STOCK'),
+
             'quantity': fmt_4(a['quantity']),
             'avg_price_pln': fmt_2(a['avg_price']),
             'current_price_fmt': fmt_2(a['cur_price']) + " " + a['currency'],
@@ -185,10 +195,6 @@ def enrich_assets_context(context, assets, total_portfolio_value):
 # =========================================================
 
 def get_asset_details_context(user, symbol, portfolio_id=None):
-    # ... (kod identyczny jak w poprzednim pliku, nie zmieniamy go) ...
-    # Dla skrócenia odpowiedzi tutaj go nie wklejam całego,
-    # ale w Twoim pliku ma być cały kod get_asset_details_context jak wcześniej.
-    # Upewnij się, że nie skasujesz tej funkcji.
     portfolio = get_portfolio_by_id(user, portfolio_id)
     asset = get_asset_by_symbol(symbol)
     if not portfolio or not asset: return {'symbol': symbol, 'error': 'Asset not found.'}
@@ -288,10 +294,13 @@ def _prepare_dashboard_charts(assets, cash):
 
     sorted_assets = sorted([a for a in assets if not a['is_closed']], key=lambda x: x['value_pln'], reverse=True)
     for a in sorted_assets:
-        charts['labels'].append(a['symbol'])
-        charts['allocation'].append(a['value_pln'])  # Float
+        # --- ZMIANA: Etykieta dla koła (Pełna Nazwa - korzystamy z przekazanego display_name) ---
+        charts['labels'].append(a['display_name'])
+        charts['allocation'].append(a['value_pln'])
+
+        # --- ZMIANA: Etykieta dla słupków (Sam Ticker) ---
         charts['profit_labels'].append(a['symbol'])
-        charts['profit_values'].append(a['gain_pln'])  # Float
+        charts['profit_values'].append(a['gain_pln'])
 
     if cash > 1:
         charts['labels'].append("CASH")
@@ -300,7 +309,7 @@ def _prepare_dashboard_charts(assets, cash):
     closed = [a for a in assets if a['is_closed']]
     for a in closed:
         charts['closed_labels'].append(a['symbol'])
-        charts['closed_values'].append(round(a['gain_pln'], 2))  # Float -> round działa
+        charts['closed_values'].append(round(a['gain_pln'], 2))
         charts['closed_items_display'].append(
             {'symbol': a['symbol'], 'gain_pln': fmt_2(a['gain_pln']), 'gain_pln_raw': a['gain_pln']})
 

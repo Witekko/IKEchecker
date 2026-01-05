@@ -84,8 +84,10 @@
                     {% for asset in pln_items %}
                     <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
                         <td class="ps-4">
-                            <div class="fw-bold text-white">{{ asset.symbol }}</div>
-                            <div class="small text-muted">{{ asset.name|truncatechars:20 }}</div>
+                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
+                            <div class="small text-muted" style="font-size: 0.7rem;">
+                                {{ asset.sector }} &bull; {{ asset.asset_type }}
+                            </div>
                         </td>
                         <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                             {{ asset.day_change_pct }}%
@@ -160,8 +162,10 @@
                     {% for asset in foreign_items %}
                     <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
                         <td class="ps-4">
-                            <div class="fw-bold text-white">{{ asset.symbol }}</div>
-                            <div class="small text-muted">{{ asset.name|truncatechars:20 }}</div>
+                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
+                            <div class="small text-muted" style="font-size: 0.7rem;">
+                                {{ asset.sector }} &bull; {{ asset.asset_type }}
+                            </div>
                         </td>
                         <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                             {{ asset.day_change_pct }}%
@@ -228,8 +232,8 @@
                     {% for asset in closed_items %}
                     <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
                         <td class="ps-4">
-                            <div class="fw-bold text-white">{{ asset.symbol }}</div>
-                            <div class="small text-muted">{{ asset.name|truncatechars:30 }}</div>
+                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
+                            <div class="small text-muted">{{ asset.asset_type }}</div>
                         </td>
                         <td class="text-end">
                             <span class="badge bg-secondary">SOLD</span>
@@ -249,7 +253,7 @@
 {% endif %}
 
 <script>
-    // JS do przełączania TWR/MWR (Wklejony z powrotem, bo jest niezbędny)
+    // JS do przełączania TWR/MWR
     let showTwr = true;
 
     function togglePerf() {
@@ -272,7 +276,6 @@
         }
     }
 
-    // Inicjalizacja Tooltipów (dla TWR/MWR - ze starego kodu)
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl)

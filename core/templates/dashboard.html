@@ -251,7 +251,8 @@
                         <tbody>
                             {% for item in closed_holdings %}
                             <tr>
-                                <td class="ps-4 fw-bold text-white">{{ item.symbol }}</td>
+                                {# --- FIX: Używamy display_name z analytics.py jeśli dostępne, fallback na symbol --- #}
+                                <td class="ps-4 fw-bold text-white">{{ item.display_name|default:item.symbol }}</td>
                                 <td class="text-end pe-4">
                                     <span class="fw-bold {% if item.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                                         {% if item.gain_pln_raw > 0 %}+{% endif %}{{ item.gain_pln }} PLN
@@ -298,7 +299,8 @@
                                 </td>
                                 <td class="text-white">
                                     {% if t.asset %}
-                                        {{ t.asset.symbol }}
+                                        {# --- FIX: Wyświetlamy Nazwa (Symbol) --- #}
+                                        {{ t.asset.name }} <span class="text-muted small">({{ t.asset.symbol }})</span>
                                     {% else %}
                                         <span class="text-muted fst-italic">--</span>
                                     {% endif %}
