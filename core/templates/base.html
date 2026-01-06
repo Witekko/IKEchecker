@@ -132,9 +132,9 @@
         .sidebar-desktop:hover .user-info { display: block; }
 
         /* --- LAYOUT & CENTERING --- */
-        .main-content { width: 100%; transition: margin-left 0.3s ease; }
+        .main-content { width: 100%; transition: margin-left 0.3s ease; display: flex; flex-direction: column; min-height: 100vh; }
 
-        .content-wrapper { width: 100%; margin: 0 auto; }
+        .content-wrapper { width: 100%; margin: 0 auto; flex: 1; }
 
         @media (max-width: 767px) {
             .content-wrapper { padding: 0 10px; }
@@ -149,12 +149,13 @@
                 margin-left: var(--sidebar-collapsed);
                 width: calc(100% - var(--sidebar-collapsed));
                 padding-top: 2rem;
-                padding-bottom: 2rem;
+                padding-bottom: 0;
             }
 
             .content-wrapper {
                 width: 85%;
                 max-width: 1600px;
+                padding-bottom: 2rem;
             }
         }
 
@@ -178,6 +179,9 @@
 
         .ls-1 { letter-spacing: 1px; }
         .animate-pulse { animation: pulse 2s infinite; }
+
+        /* Efekt hover dla linku w stopce */
+        .hover-effect:hover { color: #0dcaf0 !important; transition: color 0.3s ease; text-decoration: underline !important; }
 
         /* --- SIDEBAR FIXES (NAPRAWA ZWINIĘTEGO MENU) --- */
         @media (min-width: 768px) {
@@ -355,30 +359,53 @@
 
             {% block content %}{% endblock %}
         </div>
-    </div>
+
+        <footer class="mt-auto py-4 text-center border-top border-secondary border-opacity-10">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-12 text-muted small">
+                        <span class="opacity-50">&copy; {% now "Y" %} IKE Tracker</span>
+                        <span class="mx-2 text-secondary opacity-25">|</span>
+                        <span class="opacity-50">Designed & Built by</span>
+                        <a href="https://witekko.github.io/Portfolio-site/" target="_blank" class="text-decoration-none text-success fw-bold ms-1 hover-effect">
+                            WitekKo
+                        </a>
+                    </div>
+                    <div class="col-12 mt-1">
+                        <small class="text-muted opacity-25" style="font-size: 0.6rem;">
+                            Not financial advice. Data provided by Yahoo Finance.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        </div>
 
     <nav class="bottom-nav d-flex d-md-none">
         {% if user.is_authenticated %}
             <a href="{% url 'dashboard' %}" class="bottom-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="fas fa-home"></i><span>Dash</span>
+                <i class="fas fa-chart-pie"></i><span>Dash</span>
             </a>
+
+            <a href="{% url 'assets_list' %}" class="bottom-link {% if request.resolver_match.url_name == 'assets_list' %}active{% endif %}">
+                <i class="fas fa-list-ul"></i><span>Assets</span>
+            </a>
+
             <a href="{% url 'dividends' %}" class="bottom-link {% if request.resolver_match.url_name == 'dividends' %}active{% endif %}">
                 <i class="fas fa-coins"></i><span>Divs</span>
             </a>
-            <a href="{% url 'upload' %}" class="bottom-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}">
-                <i class="fas fa-plus-circle" style="font-size: 1.8rem;"></i>
+
+            <a href="{% url 'taxes' %}" class="bottom-link {% if request.resolver_match.url_name == 'taxes' %}active{% endif %}">
+                <i class="fas fa-file-invoice-dollar"></i><span>Taxes</span>
             </a>
-            {% if user.is_superuser %}
-            <a href="/admin/" class="bottom-link text-warning"><i class="fas fa-crown"></i><span>Admin</span></a>
-            {% endif %}
-            <form action="{% url 'logout' %}" method="post" class="h-100 flex-grow-1">
-                 {% csrf_token %}
-                 <button type="submit" class="bottom-link w-100 border-0 bg-transparent">
-                    <i class="fas fa-sign-out-alt"></i><span>Exit</span>
-                 </button>
-            </form>
+
+            <a href="{% url 'portfolio_settings' %}" class="bottom-link {% if request.resolver_match.url_name == 'portfolio_settings' %}active{% endif %}">
+                <i class="fas fa-cog"></i><span>Setts</span>
+            </a>
         {% else %}
-            <a href="{% url 'login' %}" class="bottom-link text-success"><i class="fas fa-sign-in-alt"></i><span>Login</span></a>
+            <a href="{% url 'login' %}" class="bottom-link text-success w-100 flex-row gap-2">
+                <i class="fas fa-sign-in-alt"></i><span>Log in to Tracker</span>
+            </a>
         {% endif %}
     </nav>
 

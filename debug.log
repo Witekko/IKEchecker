@@ -212,3 +212,55 @@ Traceback (most recent call last):
     raise new from exc
 django.template.exceptions.TemplateDoesNotExist: includes/dashboard/tiles.html
 ERROR 2026-01-06 19:52:44,693 log "GET / HTTP/1.1" 500 301531
+ERROR 2026-01-06 21:25:24,195 log Internal Server Error: /
+Traceback (most recent call last):
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\ops\array_ops.py", line 218, in _na_arithmetic_op
+    result = func(left, right)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\computation\expressions.py", line 242, in evaluate
+    return _evaluate(op, op_str, a, b)  # type: ignore[misc]
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\computation\expressions.py", line 73, in _evaluate_standard
+    return op(a, b)
+TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\core\views.py", line 116, in dashboard_view
+    context = get_dashboard_context(request.user, portfolio_id=active_portfolio.id)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\core\services\portfolio.py", line 30, in get_dashboard_context
+    timeline = analyze_history(transactions, eur_rate, usd_rate)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\core\services\analytics.py", line 355, in analyze_history
+    stock_val_df = daily_qty[common_cols] * price_df[common_cols] * mult_df[common_cols]
+                   ~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\ops\common.py", line 76, in new_method
+    return method(self, other)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\arraylike.py", line 202, in __mul__
+    return self._arith_method(other, operator.mul)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\frame.py", line 7935, in _arith_method
+    new_data = self._dispatch_frame_op(other, op, axis=axis)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\frame.py", line 7978, in _dispatch_frame_op
+    bm = self._mgr.operate_blockwise(
+        # error: Argument 1 to "operate_blockwise" of "ArrayManager" has
+    ...<6 lines>...
+        array_op,
+    )
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\internals\managers.py", line 1530, in operate_blockwise
+    return operate_blockwise(self, other, array_op)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\internals\ops.py", line 65, in operate_blockwise
+    res_values = array_op(lvals, rvals)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\ops\array_ops.py", line 283, in arithmetic_op
+    res_values = _na_arithmetic_op(left, right, op)  # type: ignore[arg-type]
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\ops\array_ops.py", line 227, in _na_arithmetic_op
+    result = _masked_arith_op(left, right, op)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\pandas\core\ops\array_ops.py", line 163, in _masked_arith_op
+    result[mask] = op(xrav[mask], yrav[mask])
+                   ~~^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unsupported operand type(s) for *: 'decimal.Decimal' and 'float'
+ERROR 2026-01-06 21:25:24,200 log "GET / HTTP/1.1" 500 219069
