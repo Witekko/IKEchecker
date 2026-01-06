@@ -113,9 +113,9 @@
     </div>
 
     <script>
-        // Pobieramy dane z backendu (liczby)
-        const currentValue = {{ js_current_value }};
-        const costBasis = {{ js_cost_basis }};
+        // --- LOGIKA JS DLA KALKULATORA IKE ---
+        const currentValue = parseFloat("{{ js_current_value }}");
+        const costBasis = parseFloat("{{ js_cost_basis }}");
 
         // Obliczamy % zysku w całym portfelu (Współczynnik zyskowności)
         let profitRatio = 0;
@@ -139,7 +139,7 @@
 
             // Aktualizacja obu inputów
             slider.value = amount;
-            manualInput.value = amount.toFixed(2); // Input pokazuje 2 miejsca po przecinku
+            manualInput.value = amount.toFixed(2);
 
             // Obliczenia
             valGross.innerText = amount.toFixed(2);
@@ -148,7 +148,6 @@
             let taxablePart = amount * profitRatio;
 
             // Zaokrąglenie podatku do pełnych groszy (standardowe)
-            // Math.round(X * 100) / 100 to standardowe zaokrąglanie
             let tax = Math.round((taxablePart * 0.19) * 100) / 100;
 
             let net = amount - tax;
@@ -157,21 +156,14 @@
             valNet.innerText = net.toFixed(2);
         }
 
-        // Event Listeners (Synchronizacja)
         slider.addEventListener('input', function() {
             updateCalculator(this.value);
         });
 
         manualInput.addEventListener('input', function() {
-            // Tu nie aktualizujemy od razu slidera przy każdym znaku, bo to irytujące
-            // Ale zrobimy przeliczenie live
             let val = parseFloat(this.value);
             if (!isNaN(val)) {
-                 // Sprawdzamy limit tylko do obliczeń, ale pozwalamy wpisać co chce,
-                 // dopiero przy 'change' (enter/blur) utniemy do limitu.
                  if (val > currentValue) val = currentValue;
-
-                 // Kopiujemy logikę obliczeń bez zmiany wartości inputa (żeby kursor nie skakał)
                  let taxablePart = val * profitRatio;
                  let tax = Math.round((taxablePart * 0.19) * 100) / 100;
                  let net = val - tax;
@@ -183,46 +175,67 @@
             }
         });
 
-        // Walidacja końcowa po wyjściu z pola
         manualInput.addEventListener('change', function() {
              updateCalculator(this.value);
         });
-
     </script>
 
     {% else %}
     <div class="card border-secondary border-opacity-25">
         <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-dark text-muted text-uppercase small">
-                    <tr>
-                        <th class="ps-4 py-3">Tax Year</th>
-                        <th class="text-end">Stock Income</th>
-                        <th class="text-end text-danger">Stock Tax (19%)</th>
-                        <th class="text-end">Div. Gross</th>
-                        <th class="text-end">Div. Tax Paid</th>
-                        <th class="text-end text-warning">Div. Top-up</th>
-                        <th class="text-end pe-4 fw-bold">TOTAL DUE</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in report %}
-                    <tr>
-                        <td class="ps-4 text-white fw-bold">{{ row.year }}</td>
-                        <td class="text-end text-white">{{ row.stock_result }}</td>
-                        <td class="text-end text-danger">{{ row.stock_tax }}</td>
-                        <td class="text-end text-muted">{{ row.div_gross }}</td>
-                        <td class="text-end text-muted">{{ row.div_tax_paid }}</td>
-                        <td class="text-end text-warning">{{ row.div_tax_topup }}</td>
-                        <td class="text-end pe-4 fw-bold text-white">{{ row.total_tax_due }} PLN</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">No taxable events found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-dark text-muted text-uppercase small">
+                        <tr>
+                            <th class="ps-4 py-3">Tax Year</th>
+                            <th class="text-end">Raw P&L</th>
+                            <th class="text-end text-success">Loss Ded.</th>
+                            <th class="text-end fw-bold">Tax Base</th>
+
+                            <th class="text-end text-danger">Tax (19%)</th>
+                            <th class="text-end border-start border-secondary border-opacity-25">Div. Tax Due</th>
+                            <th class="text-end pe-4 fw-bold">TOTAL DUE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report %}
+                        <tr>
+                            <td class="ps-4 text-white fw-bold">{{ row.year }}</td>
+
+                            <td class="text-end">
+                                <span class="{% if '-' in row.stock_result %}text-danger{% else %}text-success{% endif %}">
+                                    {{ row.stock_result }}
+                                </span>
+                            </td>
+
+                            <td class="text-end text-success small">
+                                {% if row.loss_deducted != "0.00" %}
+                                    -{{ row.loss_deducted }}
+                                {% else %}
+                                    <span class="text-muted opacity-25">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end fw-bold text-white">{{ row.tax_base }}</td>
+
+                            <td class="text-end text-danger">{{ row.stock_tax }}</td>
+
+                            <td class="text-end text-warning border-start border-secondary border-opacity-25">
+                                {{ row.div_tax_topup }}
+                            </td>
+
+                            <td class="text-end pe-4 fw-bold fs-6 text-white bg-dark bg-opacity-50">
+                                {{ row.total_tax_due }} <small class="text-muted fw-normal">PLN</small>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">No taxable events found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     {% endif %}

@@ -127,44 +127,95 @@ def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -
 
 def validate_ticker_and_price(symbol, date_obj, price_pln):
     """
-    Sprawdza czy ticker istnieje w Yahoo i czy podana cena jest wiarygodna.
-    Zwraca: (True, None) lub (False, "Treść błędu").
+    Sprawdza ticker w kolejności: Symbol -> Symbol.PL -> Symbol.US.
+    Zwraca (True, TICKER_KTÓRY_ZADZIAŁAŁ) tylko jeśli znajdzie PRAWIDŁOWE CENY (nie NaN).
     """
     import yfinance as yf
     from datetime import timedelta
 
-    # 1. Walidacja Tickera
-    # Pobieramy 5 dni wokół daty, żeby mieć pewność że trafimy w dni sesyjne
-    start_d = date_obj.date() - timedelta(days=2)
-    end_d = date_obj.date() + timedelta(days=3)
+    check_date_start = date_obj.date() - timedelta(days=5)
+    check_date_end = date_obj.date() + timedelta(days=1)
 
-    try:
-        df = yf.download(symbol, start=start_d, end=end_d, progress=False)
-        if df.empty:
-            # Próba z sufiksem .PL lub .US jeśli użytkownik nie podał
-            return False, f"Nie znaleziono danych dla symbolu '{symbol}'. Sprawdź na Yahoo Finance (np. czy nie brakuje końcówki .PL lub .US)."
-    except Exception as e:
-        return False, f"Błąd połączenia z Yahoo Finance: {e}"
+    # Lista kandydatów do sprawdzenia
+    # Jeśli user wpisał już z kropką (np. CDR.PL), to sprawdzamy to priorytetowo.
+    # Jeśli bez (np. PKN), to sprawdzamy PKN, potem PKN.PL, potem PKN.US
+    candidates = []
+    if "." in symbol:
+        candidates = [symbol]  # User wie co robi
+    else:
+        candidates = [symbol, symbol + ".PL", symbol + ".US"]
 
-    # 2. Walidacja Ceny (tylko jeśli to nie jest dzisiaj - bo dzisiaj cena jest płynna)
-    # Jeśli transakcja jest starsza niż 24h, sprawdzamy widełki.
-    if date_obj.date() < date.today():
+    best_df = None
+    found_ticker = None
+
+    # KROK 1: Szukanie danych (Pętla po kandydatach)
+    for ticker in candidates:
         try:
-            high = float(df['High'].max())
-            low = float(df['Low'].min())
+            df = yf.download(ticker, start=check_date_start, end=check_date_end, progress=False)
 
-            # Margines 30% (bezpieczny dla zmiennych spółek)
-            safe_high = high * 1.30
-            safe_low = low * 0.70
+            if df.empty:
+                continue  # Pusto, szukamy dalej
 
-            if not (safe_low <= price_pln <= safe_high):
-                return False, f"Podejrzana cena! W tym okresie notowania {symbol} były między {low:.2f} a {high:.2f}. Wpisałeś {price_pln:.2f}. Sprawdź czy to cena za sztukę."
+            # Sprawdzamy czy są jakiekolwiek liczby (nie same NaN)
+            # Uwaga na MultiIndex w nowych wersjach yfinance
+            if isinstance(df.columns, pd.MultiIndex):
+                # df['Close'][ticker] lub df[ticker]['Close'] zależnie od wersji
+                # Najbezpieczniej sprawdzić czy w całym DF są wartości non-NA
+                if df.isna().all().all():
+                    continue  # Same śmieci (NaN), szukamy dalej
+            else:
+                if df['Close'].isna().all():
+                    continue
 
-        except Exception as e:
-            pass
+            # Jeśli dotarliśmy tutaj, to mamy dane!
+            best_df = df
+            found_ticker = ticker
+            break  # Przerywamy pętlę, bo znaleźliśmy działający ticker (np. PKN.PL)
 
-    return True, None
+        except Exception:
+            continue
 
+    if not found_ticker or best_df is None:
+        # Nie znaleźliśmy nic sensownego dla żadnego wariantu
+        return False, f"Nie znaleziono notowań dla '{symbol}' (sprawdzono warianty: {', '.join(candidates)}). Sprawdź symbol lub datę."
+
+    # KROK 2: Walidacja Ceny
+    try:
+        # Wyciągamy High/Low bezpiecznie
+        if isinstance(best_df.columns, pd.MultiIndex):
+            # Jeśli ticker jest w kolumnach
+            if found_ticker in best_df.columns.levels[0]:
+                high_s = best_df[found_ticker]['High']
+                low_s = best_df[found_ticker]['Low']
+            else:
+                # Czasami struktura jest inna (Price, Ticker)
+                high_s = best_df['High'][found_ticker]
+                low_s = best_df['Low'][found_ticker]
+        else:
+            high_s = best_df['High']
+            low_s = best_df['Low']
+
+        max_price = float(high_s.max())
+        min_price = float(low_s.min())
+
+        if math.isnan(max_price) or math.isnan(min_price):
+            return True, found_ticker  # Dziwny przypadek, mamy ticker ale brak cen min/max
+
+        # Widełki 50%
+        safe_high = max_price * 1.50
+        safe_low = min_price * 0.50
+        price_val = float(price_pln)
+
+        if not (safe_low <= price_val <= safe_high):
+            return False, f"Cena podejrzana! Dla {found_ticker} notowania były w zakresie {min_price:.2f}-{max_price:.2f}. Ty wpisałeś {price_val:.2f}."
+
+        # SUKCES! Zwracamy True oraz ticker, który faktycznie zadziałał (np. PKN.PL zamiast PKN)
+        return True, found_ticker
+
+    except Exception as e:
+        logger.error(f"Validation Math Error: {e}")
+        # Jeśli matematyka zawiedzie, ale ticker znaleźliśmy, to puszczamy (lepjej przepuścić niż blokować błędem kodu)
+        return True, found_ticker
 
 # --- NOWA FUNKCJA: AUTOMATYCZNE UZUPEŁNIANIE DANYCH ---
 

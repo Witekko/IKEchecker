@@ -24,7 +24,7 @@ urlpatterns = [
     path('portfolio/switch/<int:portfolio_id>/', views.switch_portfolio_view, name='switch_portfolio'),
     path('portfolio/create/', views.create_portfolio_view, name='create_portfolio'),
     path('portfolio/settings/', views.portfolio_settings_view, name='portfolio_settings'),
-
+    path('settings/delete-transaction/<int:transaction_id>/', views.delete_transaction_view, name='delete_transaction'),
     # --- AUTORYZACJA ---
     path('register/', views.register_view, name='register'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),

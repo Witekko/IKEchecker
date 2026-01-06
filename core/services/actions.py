@@ -11,75 +11,71 @@ from .calculator import PortfolioCalculator
 
 
 def add_manual_transaction(portfolio, data):
-    """
-    Obsługuje logikę dodawania transakcji:
-    1. Mapowanie XTB -> Yahoo (Asset Resolution).
-    2. Walidację ceny w Yahoo (ZAWSZE - dla nowych i starych).
-    3. Auto-Deposit (jeśli brakuje gotówki).
-    4. Zapis do bazy.
-    Rzuca wyjątki (ValueError) z komunikatami dla użytkownika.
-    """
     t_type = data.get('type')
-    date_obj = data.get('date_obj')  # datetime aware
+    date_obj = data.get('date_obj')
     symbol = data.get('symbol', '').upper().strip()
     qty = float(data.get('quantity', 0.0))
     price = float(data.get('price', 0.0))
-    amount = float(data.get('amount', 0.0))  # Total Value
+    amount = float(data.get('amount', 0.0))
     auto_deposit = data.get('auto_deposit')
 
     # 1. ASSET RESOLUTION & VALIDATION
     asset_obj = None
     if t_type in ['BUY', 'SELL', 'DIVIDEND'] and symbol:
 
-        # A. Szukamy dokładnie w bazie
+        # A. Szukamy w bazie (PKN)
         asset_obj = Asset.objects.filter(symbol__iexact=symbol).first()
 
-        # B. Szukamy z domyślnym sufiksem (jeśli user zapomniał .PL)
+        # B. Fallback: Szukamy po początku (PKN.PL)
         if not asset_obj:
             potential = Asset.objects.filter(symbol__startswith=symbol + ".")
             if potential.exists():
                 asset_obj = potential.first()
 
-        # Ustal ticker do sprawdzenia w Yahoo
+        # Ustal ticker do sprawdzenia
         yahoo_ticker_to_validate = None
 
         if asset_obj:
-            # Jeśli mamy asset, używamy jego zapisanego tickera Yahoo
             yahoo_ticker_to_validate = asset_obj.yahoo_ticker
         else:
-            # Jeśli nie mamy, musimy go wyliczyć (Mapowanie)
+            # Próba zgadywania sufiksu
             base_ticker, ext = os.path.splitext(symbol)
             ext = ext.upper()
-
             if ext in SUFFIX_MAP:
                 mapping = SUFFIX_MAP[ext]
-                yahoo_suffix = mapping.get('yahoo_suffix', '')
-                if yahoo_suffix is None: yahoo_suffix = ''
+                yahoo_suffix = mapping.get('yahoo_suffix', '') or ''
                 yahoo_ticker_to_validate = base_ticker + yahoo_suffix
             else:
-                if not ext:
-                    raise ValueError(f"Symbol '{symbol}' jest niejednoznaczny. Dodaj końcówkę kraju, np. .PL, .US")
-                # Jeśli jest nieznany sufiks, zakładamy że to ticker Yahoo (fallback)
+                # Brak rozszerzenia? Zakładamy, że to surowy ticker (np. PKN)
                 yahoo_ticker_to_validate = symbol
 
-        # --- C. WALIDACJA (TERAZ DZIAŁA ZAWSZE) ---
-        # Sprawdzamy cenę niezależnie czy asset jest nowy czy stary
+        # --- C. WALIDACJA ---
         check_price = price if t_type != 'DIVIDEND' else amount
 
-        # Wywołujemy walidator z market.py
-        is_valid, error_msg = validate_ticker_and_price(yahoo_ticker_to_validate, date_obj, check_price)
+        # Walidacja zwraca (True/False, "POPRAWNY_TICKER" lub "KOMUNIKAT")
+        is_valid, result_or_msg = validate_ticker_and_price(yahoo_ticker_to_validate, date_obj, check_price)
 
         if not is_valid:
-            # Dodajemy kontekst do błędu
-            raise ValueError(f"Błąd weryfikacji ceny dla '{symbol}' ({yahoo_ticker_to_validate}): {error_msg}")
+            raise ValueError(f"Błąd walidacji: {result_or_msg}")
 
-        # D. Tworzymy nowy asset TYLKO jeśli go nie było i walidacja przeszła
+        # Jeśli walidacja przeszła, result_or_msg to ticker, który ZADZIAŁAŁ (np. "PKN.PL")
+        # Aktualizujemy naszą zmienną, żeby zapisać w bazie działający ticker!
+        if result_or_msg:
+            yahoo_ticker_to_validate = result_or_msg
+
+        # D. Tworzenie lub Aktualizacja Assetu
         if not asset_obj:
+            # Tworzymy nowy
             asset_obj = Asset.objects.create(
                 symbol=symbol,
-                yahoo_ticker=yahoo_ticker_to_validate,
+                yahoo_ticker=yahoo_ticker_to_validate,  # Zapisujemy ten, który zadziałał (PKN.PL)
                 name=symbol
             )
+        else:
+            # Opcjonalnie: Naprawiamy istniejący, jeśli był zły (np. miał PKN a działa PKN.PL)
+            if asset_obj.yahoo_ticker != yahoo_ticker_to_validate:
+                asset_obj.yahoo_ticker = yahoo_ticker_to_validate
+                asset_obj.save()
 
     # 2. AUTO DEPOSIT LOGIC
     if t_type == 'BUY' and auto_deposit:
@@ -90,7 +86,6 @@ def add_manual_transaction(portfolio, data):
         cost = abs(amount)
         if current_cash < cost:
             missing = cost - current_cash
-            # Depozyt 1 sek wcześniej
             dep_date = date_obj - timedelta(seconds=1)
             dep_id = f"MAN-DEP-{dep_date.strftime('%Y%m%d%H%M%S')}-{random.randint(100, 999)}"
 
@@ -100,12 +95,11 @@ def add_manual_transaction(portfolio, data):
                 date=dep_date,
                 type='DEPOSIT',
                 amount=missing,
-                comment="Auto-Deposit for Manual Transaction"
+                comment="Auto-Deposit"
             )
 
-    # 3. CREATE TRANSACTION
+    # 3. SAVE TRANSACTION
     man_id = f"MAN-{date_obj.strftime('%Y%m%d%H%M')}-{t_type}-{random.randint(1000, 9999)}"
-
     final_amount = abs(amount)
     if t_type in ['BUY', 'WITHDRAWAL', 'TAX']:
         final_amount = -final_amount
@@ -121,4 +115,4 @@ def add_manual_transaction(portfolio, data):
         comment="Manual Entry"
     )
 
-    return f"Transaction {t_type} {symbol} added successfully."
+    return f"Transaction {t_type} {symbol} added."

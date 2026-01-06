@@ -261,6 +261,18 @@ def taxes_view(request):
 
 
 @login_required
+def delete_transaction_view(request, transaction_id):
+    # Pobieramy transakcję, ale TYLKO jeśli należy do usera (Security!)
+    transaction = get_object_or_404(Transaction, id=transaction_id, portfolio__user=request.user)
+
+    # Usuwamy
+    transaction.delete()
+
+    messages.success(request, "Transaction deleted successfully.")
+    # Wracamy do ustawień
+    return redirect('portfolio_settings')
+
+@login_required
 def portfolio_settings_view(request):
     active_portfolio = DashboardService.get_active_portfolio(request)
 
@@ -315,11 +327,14 @@ def portfolio_settings_view(request):
             return redirect('dashboard')
     else:
         form = PortfolioSettingsForm(instance=active_portfolio)
+    recent_transactions = Transaction.objects.filter(portfolio=active_portfolio).order_by('-date', '-id')[:20]
 
     context = {
         'form': form,
         'active_portfolio': active_portfolio,
-        'all_portfolios': Portfolio.objects.filter(user=request.user)
+        'all_portfolios': Portfolio.objects.filter(user=request.user),
+        # Przekazujemy zmienną do HTML:
+        'recent_transactions': recent_transactions
     }
     return render(request, 'portfolio_settings.html', context)
 

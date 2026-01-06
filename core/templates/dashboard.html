@@ -2,7 +2,9 @@
 
 {% block content %}
 
+    {# --- FIX: Zamiast sprawdzać saldo, sprawdzamy czy fizycznie są transakcje --- #}
     {% if not last_transactions %}
+
         <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
             <div class="text-center">
                 <div class="mb-4">
@@ -13,8 +15,9 @@
                 </div>
                 <h2 class="fw-bold text-white mb-3">Welcome to IKE Tracker!</h2>
                 <p class="text-muted mb-4" style="max-width: 500px; margin: 0 auto;">
-                    Your portfolio is currently empty. Upload your XTB file to start.
+                    Your portfolio is currently empty. To see the magic of compound interest, upload your first XTB transaction history file.
                 </p>
+
                 <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
                     <a href="{% url 'upload' %}" class="btn btn-success btn-lg px-5 rounded-pill fw-bold shadow-sm">
                         <i class="fas fa-file-upload me-2"></i> Import XTB Excel
@@ -22,6 +25,7 @@
                 </div>
             </div>
         </div>
+
     {% else %}
 
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -29,20 +33,33 @@
                 <h2 class="fw-bold mb-1 text-white">Market Dashboard</h2>
                 <p class="text-muted mb-0">Command Center. All values in PLN.</p>
             </div>
+
             <div class="d-flex align-items-center gap-4">
                 <div class="d-none d-md-flex align-items-center gap-3 text-muted small border-end border-secondary border-opacity-25 pe-4">
                     <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
-                        <span class="fw-bold text-white">USD</span><span>{{ rates.USD|default:"--" }}</span>
+                        <span class="fw-bold text-white">USD</span>
+                        <span>{{ rates.USD|default:"--" }}</span>
                     </div>
                     <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
-                        <span class="fw-bold text-white">EUR</span><span>{{ rates.EUR|default:"--" }}</span>
+                        <span class="fw-bold text-white">EUR</span>
+                        <span>{{ rates.EUR|default:"--" }}</span>
+                    </div>
+                    <div class="d-flex flex-column align-items-end" style="line-height: 1.1;">
+                        <span class="fw-bold text-white">GBP</span>
+                        <span>{{ rates.GBP|default:"--" }}</span>
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
-                    <div class="spinner-grow {% if '2025' in last_market_date %}text-success{% else %}text-warning{% endif %} me-2" role="status" style="width: 0.8rem; height: 0.8rem;"></div>
+                    <div class="spinner-grow {% if '2025' in last_market_date %}text-success{% else %}text-warning{% endif %} me-2" role="status" style="width: 0.8rem; height: 0.8rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+
                     <div class="d-flex flex-column justify-content-center">
                         <div class="text-muted small text-uppercase fw-bold" style="font-size: 0.70rem; line-height: 1.1;">
                             DATA: <span class="text-white">{{ last_market_date|default:"N/A" }}</span>
+                        </div>
+                        <div class="text-secondary" style="font-size: 0.60rem; line-height: 1;">
+                            CHECKED: {% now "H:i" %}
                         </div>
                     </div>
                 </div>
@@ -61,6 +78,7 @@
                     </div>
                 </div>
             </div>
+
             <div class="col-md-4 col-xl-3">
                 <div class="card h-100 shadow-sm border-secondary border-opacity-25">
                     <div class="card-body py-3">
@@ -75,6 +93,7 @@
                     </div>
                 </div>
             </div>
+
              <div class="col-md-2 col-xl-2">
                 <div class="card h-100 shadow-sm border-secondary border-opacity-25">
                     <div class="card-body py-3 text-center">
@@ -85,6 +104,7 @@
                     </div>
                 </div>
             </div>
+
             <div class="col-md-2 col-xl-2">
                 <div class="card h-100 shadow-sm border-secondary border-opacity-25" style="cursor: pointer;" onclick="togglePerf()">
                     <div class="card-body py-3 text-center position-relative">
@@ -93,11 +113,21 @@
                             <span class="text-muted small">|</span>
                             <span id="lbl-mwr" class="small fw-bold text-muted text-uppercase">MWR</span>
                         </div>
-                        <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|stringformat:'s'|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">{{ tile_twr }}%</h4>
-                        <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|stringformat:'s'|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">{{ tile_mwr }}%</h4>
+
+                        <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|stringformat:'s'|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">
+                            {{ tile_twr }}%
+                        </h4>
+                        <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|stringformat:'s'|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
+                            {{ tile_mwr }}%
+                        </h4>
+
+                        <div class="position-absolute top-0 end-0 p-1 opacity-25">
+                            <i class="fas fa-sync-alt small"></i>
+                        </div>
                     </div>
                 </div>
             </div>
+
              <div class="col-md-12 col-xl-2">
                 <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
                     <div class="card-body py-3 text-end">
@@ -111,10 +141,46 @@
         </div>
 
         <div class="row g-3 mb-5">
-             <div class="col-md-3"><div class="card h-100 border-secondary border-opacity-10 bg-transparent"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span class="text-muted small text-uppercase">1D Change</span><span class="fw-bold fs-5 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{% if tile_day_pct_raw > 0 %}<i class="fas fa-caret-up me-1"></i>{% else %}<i class="fas fa-caret-down me-1"></i>{% endif %} {{ tile_day_pct_str }}%</span></div></div></div>
-             <div class="col-md-3"><div class="card h-100 border-secondary border-opacity-10 bg-transparent"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span class="text-muted small text-uppercase">1D Gain</span><span class="fw-bold fs-5 {% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ tile_day_pln_str }}</span></div></div></div>
-             <div class="col-md-3"><div class="card h-100 border-secondary border-opacity-10 bg-transparent"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span class="text-muted small text-uppercase"><i class="fas fa-arrow-up text-success me-1"></i>Gainers</span><span class="fw-bold fs-5 text-white">{{ tile_gainers }}</span></div></div></div>
-             <div class="col-md-3"><div class="card h-100 border-secondary border-opacity-10 bg-transparent"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center"><span class="text-muted small text-uppercase"><i class="fas fa-arrow-down text-danger me-1"></i>Losers</span><span class="fw-bold fs-5 text-white">{{ tile_losers }}</span></div></div></div>
+            <div class="col-md-3">
+                <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
+                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted small text-uppercase">1D Change</span>
+                        <span class="fw-bold fs-5 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if tile_day_pct_raw > 0 %}<i class="fas fa-caret-up me-1"></i>{% else %}<i class="fas fa-caret-down me-1"></i>{% endif %}
+                            {{ tile_day_pct_str }}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                 <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
+                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted small text-uppercase">1D Gain</span>
+                        <span class="fw-bold fs-5 {% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ tile_day_pln_str }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                 <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
+                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted small text-uppercase"><i class="fas fa-arrow-up text-success me-1"></i>Gainers</span>
+                        <span class="fw-bold fs-5 text-white">{{ tile_gainers }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                 <div class="card h-100 border-secondary border-opacity-10 bg-transparent">
+                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted small text-uppercase"><i class="fas fa-arrow-down text-danger me-1"></i>Losers</span>
+                        <span class="fw-bold fs-5 text-white">{{ tile_losers }}</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="d-flex justify-content-center mb-4">
@@ -127,6 +193,7 @@
                 <a href="?range=all" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'all' or not current_range %}btn-success{% else %}btn-dark text-muted{% endif %}">MAX</a>
             </div>
         </div>
+
         <div class="card mb-5">
             <div class="card-header d-flex justify-content-between align-items-center border-0 pb-0 pt-4 px-4">
                 <span class="text-muted text-uppercase fw-bold ls-1">Portfolio History</span>
@@ -356,6 +423,29 @@
         </style>
 
         <script>
+            // --- FIX: PRZYWRÓCONA FUNKCJA PRZEŁĄCZANIA TWR/MWR ---
+            let showTwr = true;
+
+            function togglePerf() {
+                showTwr = !showTwr;
+                const vMwr = document.getElementById('val-mwr');
+                const vTwr = document.getElementById('val-twr');
+                const lMwr = document.getElementById('lbl-mwr');
+                const lTwr = document.getElementById('lbl-twr');
+
+                if (showTwr) {
+                    vMwr.style.display = 'none';
+                    vTwr.style.display = 'block';
+                    lMwr.style.borderBottom = 'none'; lMwr.classList.replace('text-white', 'text-muted');
+                    lTwr.style.borderBottom = '2px solid #0dcaf0'; lTwr.classList.replace('text-muted', 'text-white');
+                } else {
+                    vMwr.style.display = 'block';
+                    vTwr.style.display = 'none';
+                    lTwr.style.borderBottom = 'none'; lTwr.classList.replace('text-white', 'text-muted');
+                    lMwr.style.borderBottom = '2px solid #198754'; lMwr.classList.replace('text-muted', 'text-white');
+                }
+            }
+
             function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
 
             const NEW_GREEN = '#98FB98';
