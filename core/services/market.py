@@ -7,7 +7,6 @@ from datetime import date, timedelta
 from django.utils import timezone
 from django.conf import settings
 import logging
-# --- ZMIANA: Dodano import AssetType i AssetSector do mapowania ---
 from ..models import Asset, AssetType, AssetSector
 
 logger = logging.getLogger('core')
@@ -19,7 +18,6 @@ def get_current_currency_rates():
     Odporna na błędy 'nan'.
     """
     tickers = ["EURPLN=X", "USDPLN=X", "GBPPLN=X", "JPYPLN=X", "AUDPLN=X"]
-    # Load defaults from settings
     rates = settings.DEFAULT_CURRENCY_RATES.copy()
 
     try:
@@ -50,7 +48,7 @@ def get_current_currency_rates():
         r_aud = get_safe_rate('AUDPLN=X');
         if r_aud: rates['AUD'] = r_aud
 
-        # JPY specyfika
+        # JPY specyfika (dzielimy, bo często podawany jest za 100 JPY lub odwrotnie, tu zakładamy standard)
         r_jpy = get_safe_rate('JPYPLN=X');
         if r_jpy: rates['JPY'] = r_jpy * 100
 
@@ -97,38 +95,63 @@ def get_cached_price(asset: Asset):
 
 def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -> pd.DataFrame:
     """
-    Pobiera dane historyczne dla listy tickerów + benchmarków.
-    Zabezpiecza przed datami z przyszłości (cofa start o 2 lata).
+    Pobiera dane historyczne w trybie bezpiecznym (osobne zapytania dla benchmarków).
+    Gwarantuje, że błąd jednego tickera nie wysadzi całego wykresu.
     """
     end_date = date.today()
     safe_download_start = start_date - timedelta(days=730)
 
-    benchmarks = ['^GSPC', 'USDPLN=X']
-    all_tickers = list(set(assets_tickers + benchmarks))
+    # 1. Lista Benchmarków (Kluczowe dla wykresu)
+    benchmarks = ['^GSPC', 'USDPLN=X', 'WIG.WA']
 
-    if not all_tickers:
-        return pd.DataFrame()
+    # 2. Lista Aktywów Użytkownika (Unikalne)
+    user_tickers = list(set(assets_tickers))
 
+    # Wynikowy DataFrame
+    combined_df = pd.DataFrame()
+
+    # --- KROK A: Pobieramy Benchmarki (PRIORYTET) ---
+    # Pobieramy je razem, bo to standardowe tickery Yahoo i rzadko robią problemy
     try:
-        # threads=False dla stabilności
-        data = yf.download(
-            all_tickers,
+        bench_data = yf.download(
+            benchmarks,
             start=safe_download_start,
             end=end_date + timedelta(days=1),
             group_by='ticker',
             progress=False,
             threads=False
         )
-        return data
+        if not bench_data.empty:
+            combined_df = pd.concat([combined_df, bench_data], axis=1)
     except Exception as e:
-        logger.error(f"Yahoo Timeline Download Error: {e}")
-        return pd.DataFrame()
+        logger.error(f"Benchmarks Download Error: {e}")
+
+    # --- KROK B: Pobieramy Aktywa Użytkownika ---
+    if user_tickers:
+        try:
+            # Tu może wystąpić błąd, jeśli user ma dziwny ticker
+            user_data = yf.download(
+                user_tickers,
+                start=safe_download_start,
+                end=end_date + timedelta(days=1),
+                group_by='ticker',
+                progress=False,
+                threads=False
+            )
+            if not user_data.empty:
+                # Łączymy kolumny (axis=1), ignorując duplikaty
+                combined_df = pd.concat([combined_df, user_data], axis=1)
+        except Exception as e:
+            logger.error(f"User Assets Download Error: {e}")
+            # Nawet jak to padnie, benchmarki z Kroku A zostają!
+
+    return combined_df
 
 
 def validate_ticker_and_price(symbol, date_obj, price_pln):
     """
-    Sprawdza ticker w kolejności: Symbol -> Symbol.PL -> Symbol.US.
-    Zwraca (True, TICKER_KTÓRY_ZADZIAŁAŁ) tylko jeśli znajdzie PRAWIDŁOWE CENY (nie NaN).
+    Sprawdza ticker w kolejności: Symbol -> Symbol.WA (Polska) -> Symbol.US.
+    Zwraca (True, TICKER_KTÓRY_ZADZIAŁAŁ) tylko jeśli znajdzie PRAWIDŁOWE CENY.
     """
     import yfinance as yf
     from datetime import timedelta
@@ -136,59 +159,52 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
     check_date_start = date_obj.date() - timedelta(days=5)
     check_date_end = date_obj.date() + timedelta(days=1)
 
-    # Lista kandydatów do sprawdzenia
-    # Jeśli user wpisał już z kropką (np. CDR.PL), to sprawdzamy to priorytetowo.
-    # Jeśli bez (np. PKN), to sprawdzamy PKN, potem PKN.PL, potem PKN.US
+    # --- POPRAWKA LISTY KANDYDATÓW ---
+    # Yahoo Finance używa '.WA' dla GPW (Warsaw), a nie '.PL'!
     candidates = []
     if "." in symbol:
-        candidates = [symbol]  # User wie co robi
+        candidates = [symbol]
     else:
-        candidates = [symbol, symbol + ".PL", symbol + ".US"]
+        # Priorytet: Czysty symbol (np. BTC-USD), Polska (.WA), USA (.US)
+        candidates = [symbol, symbol + ".WA", symbol + ".US"]
 
     best_df = None
     found_ticker = None
 
-    # KROK 1: Szukanie danych (Pętla po kandydatach)
+    # KROK 1: Szukanie danych
     for ticker in candidates:
         try:
             df = yf.download(ticker, start=check_date_start, end=check_date_end, progress=False)
 
             if df.empty:
-                continue  # Pusto, szukamy dalej
+                continue
 
-            # Sprawdzamy czy są jakiekolwiek liczby (nie same NaN)
-            # Uwaga na MultiIndex w nowych wersjach yfinance
+                # Sprawdzamy czy są jakiekolwiek liczby
             if isinstance(df.columns, pd.MultiIndex):
-                # df['Close'][ticker] lub df[ticker]['Close'] zależnie od wersji
-                # Najbezpieczniej sprawdzić czy w całym DF są wartości non-NA
                 if df.isna().all().all():
-                    continue  # Same śmieci (NaN), szukamy dalej
+                    continue
             else:
                 if df['Close'].isna().all():
                     continue
 
-            # Jeśli dotarliśmy tutaj, to mamy dane!
             best_df = df
             found_ticker = ticker
-            break  # Przerywamy pętlę, bo znaleźliśmy działający ticker (np. PKN.PL)
+            break
 
         except Exception:
             continue
 
     if not found_ticker or best_df is None:
-        # Nie znaleźliśmy nic sensownego dla żadnego wariantu
-        return False, f"Nie znaleziono notowań dla '{symbol}' (sprawdzono warianty: {', '.join(candidates)}). Sprawdź symbol lub datę."
+        return False, f"Nie znaleziono notowań dla '{symbol}'. Sprawdzono warianty: {', '.join(candidates)}."
 
     # KROK 2: Walidacja Ceny
     try:
-        # Wyciągamy High/Low bezpiecznie
         if isinstance(best_df.columns, pd.MultiIndex):
-            # Jeśli ticker jest w kolumnach
             if found_ticker in best_df.columns.levels[0]:
                 high_s = best_df[found_ticker]['High']
                 low_s = best_df[found_ticker]['Low']
             else:
-                # Czasami struktura jest inna (Price, Ticker)
+                # Fallback dla innej struktury
                 high_s = best_df['High'][found_ticker]
                 low_s = best_df['Low'][found_ticker]
         else:
@@ -199,37 +215,31 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
         min_price = float(low_s.min())
 
         if math.isnan(max_price) or math.isnan(min_price):
-            return True, found_ticker  # Dziwny przypadek, mamy ticker ale brak cen min/max
+            return True, found_ticker
 
-        # Widełki 50%
+            # Widełki 50%
         safe_high = max_price * 1.50
         safe_low = min_price * 0.50
         price_val = float(price_pln)
 
         if not (safe_low <= price_val <= safe_high):
-            return False, f"Cena podejrzana! Dla {found_ticker} notowania były w zakresie {min_price:.2f}-{max_price:.2f}. Ty wpisałeś {price_val:.2f}."
+            return False, f"Cena podejrzana! Dla {found_ticker} zakres to {min_price:.2f}-{max_price:.2f}. Ty wpisałeś {price_val:.2f}."
 
-        # SUKCES! Zwracamy True oraz ticker, który faktycznie zadziałał (np. PKN.PL zamiast PKN)
         return True, found_ticker
 
     except Exception as e:
         logger.error(f"Validation Math Error: {e}")
-        # Jeśli matematyka zawiedzie, ale ticker znaleźliśmy, to puszczamy (lepjej przepuścić niż blokować błędem kodu)
         return True, found_ticker
 
-# --- NOWA FUNKCJA: AUTOMATYCZNE UZUPEŁNIANIE DANYCH ---
 
 def fetch_asset_metadata(yahoo_ticker):
     """
-    Pobiera metadane z Yahoo Finance (Sektor, Typ, Nazwa)
-    i mapuje je na formaty naszego Modelu.
+    Pobiera metadane z Yahoo Finance.
     """
     try:
         ticker = yf.Ticker(yahoo_ticker)
         info = ticker.info
 
-        # 1. Mapowanie Typu (QuoteType -> AssetType)
-        # Yahoo zwraca: 'EQUITY', 'ETF', 'CRYPTOCURRENCY', 'CURRENCY'
         q_type = info.get('quoteType', '').upper()
         asset_type = AssetType.OTHER
 
@@ -242,11 +252,9 @@ def fetch_asset_metadata(yahoo_ticker):
         elif q_type == 'CURRENCY':
             asset_type = AssetType.CURRENCY
 
-        # 2. Mapowanie Sektora (Sector -> AssetSector)
         y_sector = info.get('sector', '').lower()
         asset_sector = AssetSector.OTHER
 
-        # Heurystyka mapowania
         if 'technology' in y_sector:
             asset_sector = AssetSector.TECHNOLOGY
         elif 'financial' in y_sector:
@@ -266,7 +274,6 @@ def fetch_asset_metadata(yahoo_ticker):
         elif 'communication' in y_sector or 'telecom' in y_sector:
             asset_sector = AssetSector.TELECOM
 
-        # Specjalny przypadek: Gaming
         y_industry = info.get('industry', '').lower()
         if 'games' in y_industry or 'gaming' in y_industry:
             asset_sector = AssetSector.GAMING

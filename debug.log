@@ -137,3 +137,78 @@ django.template.exceptions.TemplateSyntaxError: Template: C:\Users\wajci\Pycharm
 ERROR 2026-01-06 14:39:53,635 log "GET /portfolio/settings/ HTTP/1.1" 500 178246
 ERROR 2026-01-06 14:47:31,952 market Price validation math error: 'PKN.WA'
 ERROR 2026-01-06 14:51:58,725 market Price validation math error: 'PKN.WA'
+ERROR 2026-01-06 19:52:44,687 log Internal Server Error: /
+Traceback (most recent call last):
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\backends\django.py", line 107, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 174, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 166, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 1052, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\loader_tags.py", line 160, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 166, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 1052, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\loader_tags.py", line 66, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 1052, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\defaulttags.py", line 333, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 1091, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\base.py", line 1052, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\loader_tags.py", line 200, in render
+    template = context.template.engine.select_template(template_name)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\engine.py", line 234, in select_template
+    raise TemplateDoesNotExist(", ".join(not_found))
+django.template.exceptions.TemplateDoesNotExist: includes/dashboard/tiles.html
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\core\views.py", line 140, in dashboard_view
+    return render(request, 'dashboard.html', context)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\backends\django.py", line 109, in render
+    reraise(exc, self.backend)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wajci\PycharmProjects\IKEchecker\.venv\Lib\site-packages\django\template\backends\django.py", line 130, in reraise
+    raise new from exc
+django.template.exceptions.TemplateDoesNotExist: includes/dashboard/tiles.html
+ERROR 2026-01-06 19:52:44,693 log "GET / HTTP/1.1" 500 301531

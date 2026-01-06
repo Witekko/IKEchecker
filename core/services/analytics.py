@@ -256,7 +256,7 @@ def analyze_holdings(transactions, eur_rate, usd_rate, start_date=None):
 # analyze_history zostawiamy bez zmian
 def analyze_history(transactions, eur_rate, usd_rate):
     """
-    Generuje dane do wykresu historycznego.
+    Generuje dane do wykresu historycznego (Fix: Future Dates + WIG).
     """
     if not transactions.exists():
         return {'dates': [], 'val_user': [], 'val_inv': [], 'last_date': 'N/A'}
@@ -272,14 +272,20 @@ def analyze_history(transactions, eur_rate, usd_rate):
 
     start_date = df_tx['date'].min()
     end_date = date.today()
+    # UWAGA: Jeśli masz transakcje z przyszłości (2026), end_date musi je obejmować!
+    if df_tx['date'].max() > end_date:
+        end_date = df_tx['date'].max()
 
     last_tx_id = transactions.last().id
     count_tx = transactions.count()
-    cache_key = f"history_timeline_v3_{last_tx_id}_{count_tx}_{start_date}_{end_date}"
+    # Cache key v5
+    cache_key = f"history_timeline_v5_{last_tx_id}_{count_tx}_{start_date}_{end_date}"
     cached = cache.get(cache_key)
     if cached: return cached
 
     tickers = df_tx['asset__yahoo_ticker'].dropna().unique().tolist()
+
+    # Pobieramy dane (zawsze kończą się na "dziś" w świecie rzeczywistym)
     hist_data = fetch_historical_data_for_timeline(tickers, start_date)
 
     last_market_date_str = "N/A"
@@ -289,6 +295,7 @@ def analyze_history(transactions, eur_rate, usd_rate):
     timeline_df = pd.DataFrame(index=full_dates)
     timeline_df.index.name = 'date'
 
+    # --- 1. CASH FLOW & INVESTED ---
     daily_cash = df_tx.groupby('date')['amount'].sum()
     timeline_df['cash_flow'] = daily_cash
     timeline_df['cash_flow'] = timeline_df['cash_flow'].fillna(0)
@@ -301,14 +308,14 @@ def analyze_history(transactions, eur_rate, usd_rate):
     daily_inv_aligned = daily_inv_change.reindex(full_dates, fill_value=0.0)
     for chg in daily_inv_aligned:
         if chg > 0:
-            curr_invested += chg
-            if curr_invested < 0: curr_invested = 0.0
+            curr_invested += chg;
         elif chg < 0:
-            curr_invested -= abs(chg)
-            if curr_invested < 0: curr_invested = 0.0
+            curr_invested -= abs(chg);
+        if curr_invested < 0: curr_invested = 0.0
         invested_series.append(curr_invested)
     timeline_df['invested'] = invested_series
 
+    # --- 2. ILOŚĆ AKCJI (QUANTITY) ---
     mask_holdings = df_tx['type'].isin(['BUY', 'SELL']) & df_tx['asset__yahoo_ticker'].notnull()
     if mask_holdings.any():
         df_h_changes = df_tx[mask_holdings].copy()
@@ -318,54 +325,82 @@ def analyze_history(transactions, eur_rate, usd_rate):
     else:
         daily_qty = pd.DataFrame(index=full_dates)
 
+    # --- 3. PRZYGOTOWANIE CEN (FIX TIME TRAVEL) ---
     if not hist_data.empty: hist_data.index = hist_data.index.date
-    price_df = pd.DataFrame(index=full_dates)
 
     def get_series(tk):
         if hist_data.empty: return pd.Series(dtype=float)
-        if isinstance(hist_data.columns, pd.MultiIndex):
-            if tk in hist_data.columns.levels[0]: return hist_data[tk]['Close']
-        elif tk in hist_data.columns:
-            return hist_data[tk]
+        try:
+            if isinstance(hist_data.columns, pd.MultiIndex):
+                if tk in hist_data.columns.levels[0]: return hist_data[tk]['Close']
+            elif tk in hist_data.columns:
+                return hist_data[tk]
+        except:
+            pass
         return pd.Series(dtype=float)
 
-    usd_series = get_series('USDPLN=X').reindex(full_dates).ffill().fillna(0)
-    sp500_series = get_series('^GSPC').reindex(full_dates).ffill().fillna(0)
+    # Helper: Łączy historię z przyszłością, przeciągając ostatnią cenę
+    def smart_fill(series, target_dates):
+        if series.empty: return pd.Series(0.0, index=target_dates)
+        # 1. Łączymy daty historyczne z docelowymi (przyszłymi)
+        combined_idx = series.index.union(target_dates).sort_values()
+        # 2. Reindex + FFill (rozciąga ostatnią cenę z 2024 na 2025/26)
+        extended = series.reindex(combined_idx).ffill()
+        # 3. Wycinamy tylko interesujący nas zakres
+        return extended.reindex(target_dates).fillna(0)
 
+    # Pobieramy Benchmarki
+    usd_series = smart_fill(get_series('USDPLN=X'), full_dates)
+    sp500_series = smart_fill(get_series('^GSPC'), full_dates)
+    wig_series = smart_fill(get_series('WIG.WA'), full_dates)
+
+    price_df = pd.DataFrame(index=full_dates)
     for col in daily_qty.columns:
         s = get_series(col)
-        if not s.empty:
-            price_df[col] = s.reindex(full_dates).ffill().fillna(0)
-        else:
-            price_df[col] = 0.0
+        price_df[col] = smart_fill(s, full_dates)  # Używamy smart_fill dla akcji też
 
+    # --- 4. WYCENA PORTFELA ---
     mult_df = pd.DataFrame(1.0, index=price_df.index, columns=price_df.columns)
     for col in mult_df.columns:
         if str(col).endswith('.DE'):
             mult_df[col] = 4.30 if math.isnan(eur_rate) else eur_rate
         elif str(col).endswith('.US') or str(col).endswith('.UK'):
             mult_df[col] = usd_series
-            fallback = usd_rate if not math.isnan(usd_rate) else 4.00
-            mult_df[col] = mult_df[col].replace(0.0, fallback)
+            # Fallback jeśli USD=0
+            mult_df[col] = mult_df[col].replace(0.0, usd_rate if usd_rate else 4.00)
 
     common_cols = daily_qty.columns.intersection(price_df.columns)
     stock_val_df = daily_qty[common_cols] * price_df[common_cols] * mult_df[common_cols]
-    total_stock_val = stock_val_df.sum(axis=1)
 
-    timeline_df['user_value'] = timeline_df['cash_balance'] + total_stock_val
+    timeline_df['user_value'] = timeline_df['cash_balance'] + stock_val_df.sum(axis=1)
     timeline_df['user_value'] = timeline_df['user_value'].clip(lower=0.0)
 
+    # --- 5. OBLICZANIE BENCHMARKÓW ---
     daily_deposits = df_tx[df_tx['type'] == 'DEPOSIT'].groupby('date')['amount'].sum().reindex(full_dates, fill_value=0)
-    denom = usd_series * sp500_series
-    daily_units = daily_deposits / denom
-    daily_units = daily_units.fillna(0.0)
-    daily_units[denom <= 0] = 0.0
-    cum_units = daily_units.cumsum()
-    sp500_val = cum_units * denom
-    timeline_df['sp500_val'] = sp500_val
-    mask_sp_zero = timeline_df['sp500_val'] <= 0.001
-    timeline_df.loc[mask_sp_zero, 'sp500_val'] = timeline_df.loc[mask_sp_zero, 'invested']
 
+    # A. S&P 500 (Dolarowy)
+    denom_sp = usd_series * sp500_series
+    daily_units_sp = daily_deposits / denom_sp
+    daily_units_sp = daily_units_sp.fillna(0.0)
+    # Zabezpieczenie przed 0 (gdy brak danych w przyszłości, a smart_fill dał 0)
+    daily_units_sp[denom_sp <= 0.001] = 0.0
+
+    sp500_val = daily_units_sp.cumsum() * denom_sp
+    timeline_df['sp500_val'] = sp500_val
+    # Jeśli benchmark = 0, pokaż linię Invested (żeby nie szorował po dnie)
+    timeline_df.loc[timeline_df['sp500_val'] <= 0.01, 'sp500_val'] = timeline_df['invested']
+
+    # B. WIG (Złotówkowy)
+    denom_wig = wig_series
+    daily_units_wig = daily_deposits / denom_wig
+    daily_units_wig = daily_units_wig.fillna(0.0)
+    daily_units_wig[denom_wig <= 0.001] = 0.0
+
+    wig_val = daily_units_wig.cumsum() * denom_wig
+    timeline_df['wig_val'] = wig_val
+    timeline_df.loc[timeline_df['wig_val'] <= 0.01, 'wig_val'] = timeline_df['invested']
+
+    # C. Inflacja (6%)
     inf_cap = 0.0;
     inf_series = []
     daily_rate = 1.06 ** (1 / 365)
@@ -379,16 +414,20 @@ def analyze_history(transactions, eur_rate, usd_rate):
         inf_series.append(inf_cap)
     timeline_df['inf_val'] = inf_series
 
+    # --- 6. PROCENTY ---
     def calc_pct(val_col, base_col):
         base = timeline_df[base_col]
         val = timeline_df[val_col]
         res = (val - base) / base * 100
-        res[base <= 0] = 0.0
+        # Fix: dzielenie przez 0 lub małe liczby
+        res[base <= 1.0] = 0.0
         return res.round(2)
 
     timeline_df['pct_user'] = calc_pct('user_value', 'invested')
     timeline_df['pct_sp'] = calc_pct('sp500_val', 'invested')
+    timeline_df['pct_wig'] = calc_pct('wig_val', 'invested')
     timeline_df['pct_inf'] = calc_pct('inf_val', 'invested')
+
     timeline_df['points'] = 0
     timeline_df.loc[daily_deposits > 0, 'points'] = 6
 
@@ -399,10 +438,13 @@ def analyze_history(transactions, eur_rate, usd_rate):
         'val_inv': timeline_df['invested'].round(2).tolist(),
         'val_sp': timeline_df['sp500_val'].round(2).tolist(),
         'val_inf': timeline_df['inf_val'].round(2).tolist(),
+        # Procenty
         'pct_user': timeline_df['pct_user'].tolist(),
         'pct_sp': timeline_df['pct_sp'].tolist(),
+        'pct_wig': timeline_df['pct_wig'].tolist(),
         'pct_inf': timeline_df['pct_inf'].tolist(),
         'last_market_date': last_market_date_str
     }
+
     cache.set(cache_key, res, 900)
     return res

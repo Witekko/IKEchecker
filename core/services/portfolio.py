@@ -120,7 +120,7 @@ def get_dashboard_context(user, portfolio_id=None):
         'timeline_invested': timeline['val_inv'],
         'timeline_deposit_points': timeline['points'],
         'timeline_pct_user': timeline['pct_user'],
-        'timeline_pct_wig': [],
+        'timeline_pct_wig': timeline.get('pct_wig', []),
         'timeline_pct_sp500': timeline['pct_sp'],
         'timeline_pct_inflation': timeline['pct_inf'],
         'last_market_date': timeline['last_market_date'],
