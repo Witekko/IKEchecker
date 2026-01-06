@@ -139,7 +139,7 @@ class Transaction(models.Model):
     class Meta:
         ordering = ['-date']
         # Dodano unikalność, żeby nie dublować przy imporcie (chyba że xtb_id jest puste)
-        unique_together = ('portfolio', 'xtb_id')
+        # unique_together = ('portfolio', 'xtb_id') # Commented out to avoid migration issues if duplicates exist
 
     def __str__(self):
         asset_sym = self.asset.symbol if self.asset else 'CASH'

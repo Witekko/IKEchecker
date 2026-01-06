@@ -7,6 +7,7 @@ from datetime import datetime
 from django.utils import timezone
 from ..models import Transaction, Asset
 from .config import SUFFIX_MAP
+from .market import fetch_asset_metadata
 import logging
 from abc import ABC, abstractmethod
 
@@ -110,6 +111,10 @@ class BaseImporter(ABC):
         yahoo_ticker = xtb_symbol
         currency = 'PLN'
         name = xtb_symbol
+        
+        # Default values for new fields
+        asset_type = 'STOCK'
+        sector = 'OTHER'
 
         found_rule = False
         for suffix, rule in SUFFIX_MAP.items():
@@ -122,19 +127,29 @@ class BaseImporter(ABC):
                 break
 
         if found_rule:
-            try:
-                info = yf.Ticker(yahoo_ticker).info
-                if 'currency' in info: currency = info['currency']
-                if 'shortName' in info: name = info['shortName']
-                elif 'longName' in info: name = info['longName']
-            except:
-                pass
+            # Use the new metadata fetcher
+            meta = fetch_asset_metadata(yahoo_ticker)
+            if meta['success']:
+                if meta['name']: name = meta['name']
+                asset_type = meta['asset_type']
+                sector = meta['sector']
+            else:
+                # Fallback to basic info if metadata fetch fails
+                try:
+                    info = yf.Ticker(yahoo_ticker).info
+                    if 'currency' in info: currency = info['currency']
+                    if 'shortName' in info: name = info['shortName']
+                    elif 'longName' in info: name = info['longName']
+                except:
+                    pass
 
         return Asset.objects.create(
             symbol=xtb_symbol,
             yahoo_ticker=yahoo_ticker,
             currency=currency,
-            name=name
+            name=name,
+            asset_type=asset_type,
+            sector=sector
         ), True
 
     def _parse_transaction_type(self, raw_type):
