@@ -26,7 +26,7 @@
             background-color: var(--bg-dark);
             color: #e0e0e0;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding-bottom: calc(var(--bottom-nav-height) + 10px);
+            padding-bottom: 0;
             overflow-x: hidden;
         }
 
@@ -35,7 +35,7 @@
         .table { --bs-table-bg: transparent; --bs-table-color: #e0e0e0; --bs-table-hover-bg: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
         h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 
-        /* Formularze i Inputy - ZIELONY FOCUS */
+        /* Formularze i Inputy */
         .form-control, .form-select { background-color: #2c2c2c !important; border-color: #444 !important; color: #fff !important; }
         .form-control:focus, .form-select:focus {
             background-color: #333 !important;
@@ -43,38 +43,27 @@
             box-shadow: 0 0 0 0.25rem rgba(0, 255, 127, 0.25) !important;
         }
 
-        /* --- DROPDOWN & FOCUS OVERRIDES (NAPRAWA NIEBIESKIEGO) --- */
+        /* --- DROPDOWN & FOCUS OVERRIDES --- */
         .dropdown-menu-dark {
             background-color: #252525;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        /* Aktywny element na liście (zamiast niebieskiego tła) */
         .dropdown-item.active, .dropdown-item:active {
             background-color: rgba(0, 255, 127, 0.15) !important;
             color: var(--accent-green) !important;
             font-weight: 600;
         }
-        /* Hover elementu */
         .dropdown-item:hover, .dropdown-item:focus {
             background-color: rgba(255,255,255,0.08) !important;
             color: #fff;
         }
-        /* Usunięcie niebieskiej poświaty focusa przycisków */
         .btn-outline-secondary:focus, .btn-outline-secondary:active:focus {
             box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1) !important;
         }
 
-        /* --- CHART DEFAULTS (GLOBALNE WYMIARY WYKRESÓW) --- */
-        .chart-container-wide {
-            position: relative;
-            width: 100%;
-            height: 450px;
-        }
-        .chart-container {
-            position: relative;
-            width: 100%;
-            height: 350px;
-        }
+        /* --- CHART DEFAULTS --- */
+        .chart-container-wide { position: relative; width: 100%; height: 450px; }
+        .chart-container { position: relative; width: 100%; height: 350px; }
 
         @media (max-width: 768px) {
             .chart-container-wide { height: 300px; }
@@ -106,38 +95,120 @@
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
             box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+            white-space: nowrap !important;
         }
         .sidebar-desktop:hover { width: var(--sidebar-width); align-items: flex-start; }
 
+        /* --- NAV LINKS --- */
         .nav-link {
             color: var(--text-gray); border-radius: 10px; padding: 12px 15px; margin-bottom: 8px;
-            transition: all 0.2s; display: flex; align-items: center; white-space: nowrap; width: 100%;
+            transition: all 0.2s; display: flex; align-items: center; width: 100%;
+            height: 48px; /* Sztywna wysokość */
         }
         .nav-link:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
         .nav-link.active { background-color: rgba(0, 255, 127, 0.1); color: var(--accent-green); font-weight: bold; }
-        .nav-link i { width: 30px; text-align: center; margin-right: 15px; font-size: 1.2rem; flex-shrink: 0; transition: transform 0.2s; }
+
+        .nav-link i {
+            width: 30px; text-align: center; margin-right: 15px; font-size: 1.2rem; flex-shrink: 0;
+            transition: transform 0.2s;
+        }
         .nav-link:hover i { transform: scale(1.1); }
 
-        .link-text { opacity: 0; visibility: hidden; transition: opacity 0.2s ease-in-out; }
-        .sidebar-desktop:hover .link-text { opacity: 1; visibility: visible; transition-delay: 0.1s; }
+        /* --- TEKSTY W LINKACH --- */
+        .link-text {
+            opacity: 1;
+            max-width: 200px;
+            transition: opacity 0.2s ease, max-width 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .sidebar-desktop:not(:hover) .link-text {
+            opacity: 0;
+            max-width: 0;
+        }
 
-        .brand-logo { transition: all 0.3s; justify-content: center; }
-        .sidebar-desktop:hover .brand-logo { justify-content: flex-start; }
-        .brand-text { display: none; }
-        .sidebar-desktop:hover .brand-text { display: block; }
+        /* --- LOGO I PROFIL UŻYTKOWNIKA (FIX ZNIKANIA) --- */
+        .brand-logo, .user-profile {
+            display: flex; align-items: center;
+            width: 100%;
+            transition: all 0.3s;
+            /* Domyślnie (zwarte): centrujemy */
+            justify-content: center;
+            padding-left: 0 !important;
+        }
 
-        .user-profile { justify-content: center; }
-        .sidebar-desktop:hover .user-profile { justify-content: flex-start; }
-        .user-info { display: none; }
-        .sidebar-desktop:hover .user-info { display: block; }
+        .sidebar-desktop:hover .brand-logo,
+        .sidebar-desktop:hover .user-profile {
+            justify-content: flex-start;
+            padding-left: 10px !important;
+        }
 
-        /* --- LAYOUT & CENTERING --- */
+        /* Teksty w logo i profilu */
+        .brand-text, .user-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            white-space: nowrap;
+            /* Klucz do animacji */
+            transition: max-width 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
+            max-width: 200px; /* Pełna szerokość */
+            opacity: 1;
+            margin-left: 15px;
+        }
+
+        /* Ukrywanie tekstów w stanie zwiniętym */
+        .sidebar-desktop:not(:hover) .brand-text,
+        .sidebar-desktop:not(:hover) .user-info {
+            max-width: 0;
+            opacity: 0;
+            margin-left: 0; /* Usuwamy margines, żeby nie przesuwał ikony */
+        }
+
+        /* --- PORTFOLIO BUTTON (FIX SKAKANIA) --- */
+        .portfolio-btn {
+            height: 56px !important;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 0 15px !important;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-desktop:not(:hover) .portfolio-btn {
+            justify-content: center !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border-color: transparent !important;
+        }
+
+        .portfolio-text-wrapper {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: max-width 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
+            max-width: 200px;
+            opacity: 1;
+            margin-left: 10px;
+        }
+
+        .sidebar-desktop:not(:hover) .portfolio-text-wrapper {
+            max-width: 0;
+            opacity: 0;
+            margin-left: 0;
+        }
+
+        /* --- LAYOUT --- */
         .main-content { width: 100%; transition: margin-left 0.3s ease; display: flex; flex-direction: column; min-height: 100vh; }
-
         .content-wrapper { width: 100%; margin: 0 auto; flex: 1; }
 
         @media (max-width: 767px) {
             .content-wrapper { padding: 0 10px; }
+            /* Stopka mobilna */
+            body { padding-bottom: calc(var(--bottom-nav-height) + 20px); }
         }
 
         @media (min-width: 768px) {
@@ -178,12 +249,17 @@
         .bottom-link.active { color: var(--accent-green); }
 
         .ls-1 { letter-spacing: 1px; }
-        .animate-pulse { animation: pulse 2s infinite; }
-
-        /* Efekt hover dla linku w stopce */
         .hover-effect:hover { color: #0dcaf0 !important; transition: color 0.3s ease; text-decoration: underline !important; }
 
-        /* --- SIDEBAR FIXES (NAPRAWA ZWINIĘTEGO MENU) --- */
+        footer {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        @media (max-width: 767px) {
+            footer { margin-bottom: var(--bottom-nav-height); }
+        }
+
+        /* --- SIDEBAR DROPDOWN FIX --- */
         @media (min-width: 768px) {
             .sidebar-desktop:not(:hover) .dropdown-toggle {
                 border-color: transparent !important;
@@ -193,20 +269,11 @@
                 width: 100% !important;
                 box-shadow: none !important;
             }
-
             .sidebar-desktop:not(:hover) .dropdown-toggle::after { display: none !important; }
 
-            .sidebar-desktop:not(:hover) .dropdown-toggle .text-start,
-            .sidebar-desktop:not(:hover) .dropdown-toggle .text-truncate,
-            .sidebar-desktop:not(:hover) .dropdown-toggle .small,
-            .sidebar-desktop:not(:hover) .dropdown-toggle div:not(:first-child) {
-                display: none !important;
-            }
-
-            .sidebar-desktop:not(:hover) .dropdown-toggle i {
-                margin-right: 0 !important;
-                font-size: 1.4rem !important;
-                color: #ffca28 !important;
+            /* Ukrywamy strzałki i dodatkowe elementy w stanie zwiniętym */
+            .sidebar-desktop:not(:hover) .dropdown-toggle i:not(:first-child) {
+               display: none !important;
             }
         }
     </style>
@@ -219,8 +286,8 @@
     </div>
 
     <nav class="sidebar-desktop d-none d-md-flex">
-        <a href="/" class="d-flex align-items-center mb-4 text-white text-decoration-none brand-logo px-1">
-            <div class="rounded-circle bg-success d-flex align-items-center justify-content-center me-0 me-md-3 shadow-lg flex-shrink-0"
+        <a href="/" class="text-white text-decoration-none brand-logo mb-4">
+            <div class="rounded-circle bg-success d-flex align-items-center justify-content-center flex-shrink-0 shadow-lg"
                  style="width: 40px; height: 40px; background: linear-gradient(135deg, #00ff7f, #00b359);">
                 <i class="fas fa-chart-pie text-dark"></i>
             </div>
@@ -231,32 +298,32 @@
         </a>
 
         {% if user.is_authenticated %}
-        <div class="px-3 mb-4 w-100">
+        <div class="px-2 mb-4 w-100">
             <div class="dropdown w-100">
-                <button class="btn btn-outline-secondary border-opacity-25 w-100 d-flex justify-content-between align-items-center dropdown-toggle text-white"
-                        type="button" data-bs-toggle="dropdown" style="background: rgba(255,255,255,0.05);">
-                    <div class="d-flex align-items-center overflow-hidden">
-                        <i class="fas fa-wallet me-2 text-warning"></i>
-                        <div class="text-start text-truncate">
-                            <div class="small text-muted" style="font-size: 0.65rem; line-height: 1;">PORTFOLIO</div>
-                            <div class="fw-bold" style="font-size: 0.85rem;">{{ active_portfolio.name }}</div>
-                        </div>
+                <button class="btn btn-outline-secondary portfolio-btn dropdown-toggle text-white"
+                        type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-wallet text-warning flex-shrink-0" style="font-size: 1.2rem;"></i>
+
+                    <div class="portfolio-text-wrapper text-start">
+                        <div class="small text-muted" style="font-size: 0.65rem; line-height: 1;">PORTFOLIO</div>
+                        <div class="fw-bold text-truncate" style="font-size: 0.85rem;">{{ active_portfolio.name }}</div>
                     </div>
                 </button>
+
                 <ul class="dropdown-menu dropdown-menu-dark w-100 shadow-lg">
                     <li class="px-3 py-2 text-muted small text-uppercase fw-bold">Switch Portfolio</li>
                     {% for p in all_portfolios %}
                     <li>
                         <a class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}"
                            href="{% url 'switch_portfolio' p.id %}">
-                           <span>
+                           <span class="text-truncate me-2">
                                <i class="fas {% if p.portfolio_type == 'IKE' %}fa-shield-alt{% else %}fa-briefcase{% endif %} me-2 opacity-50"></i>
                                {{ p.name }}
                            </span>
                            {% if p.portfolio_type == 'IKE' %}
-                           <span class="badge bg-success bg-opacity-25 text-success" style="font-size: 0.6rem;">IKE</span>
+                           <span class="badge bg-success bg-opacity-25 text-success flex-shrink-0" style="font-size: 0.6rem;">IKE</span>
                            {% else %}
-                           <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.6rem;">STD</span>
+                           <span class="badge bg-secondary bg-opacity-25 text-secondary flex-shrink-0" style="font-size: 0.6rem;">STD</span>
                            {% endif %}
                         </a>
                     </li>
@@ -313,12 +380,12 @@
         {% if user.is_authenticated %}
         <div class="mt-auto border-top border-secondary border-opacity-25 pt-3 w-100">
             <div class="dropdown w-100">
-                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle user-profile px-1" data-bs-toggle="dropdown">
+                <a href="#" class="text-white text-decoration-none dropdown-toggle user-profile px-1" data-bs-toggle="dropdown">
                     <div class="rounded-circle bg-dark border border-secondary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
                         {{ user.username|slice:":1"|upper }}
                     </div>
-                    <div class="user-info ms-3">
-                        <div class="fw-bold small">{{ user.username }}</div>
+                    <div class="user-info">
+                        <div class="fw-bold small text-truncate">{{ user.username }}</div>
                     </div>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
@@ -379,7 +446,7 @@
                 </div>
             </div>
         </footer>
-        </div>
+    </div>
 
     <nav class="bottom-nav d-flex d-md-none">
         {% if user.is_authenticated %}
@@ -459,14 +526,12 @@
                 form.addEventListener('submit', function() { loader.style.display = 'flex'; });
             });
 
-            // --- NOWOŚĆ: NAPRAWA MENU PRZY ZWIJANIU ---
-            // Gdy myszka opuszcza pasek boczny (co go zwija), zamykamy wszystkie otwarte dropdowny
+            // FIX: Zamykanie dropdownów przy zwijaniu sidebaru
             const sidebar = document.querySelector('.sidebar-desktop');
             if (sidebar) {
                 sidebar.addEventListener('mouseleave', function() {
                     const openDropdowns = sidebar.querySelectorAll('.dropdown-toggle.show');
                     openDropdowns.forEach(dropdownToggle => {
-                        // Używamy Bootstrap API do zamknięcia
                         const dropdownInstance = bootstrap.Dropdown.getInstance(dropdownToggle);
                         if(dropdownInstance) dropdownInstance.hide();
                     });

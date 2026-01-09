@@ -11,7 +11,7 @@ SUFFIX_MAP = {
     '.PL': {'yahoo_suffix': '.WA', 'default_currency': 'PLN'}, # Polska
     '.US': {'yahoo_suffix': '',    'default_currency': 'USD'}, # USA (AAPL.US -> AAPL)
     '.DE': {'yahoo_suffix': '.DE', 'default_currency': 'EUR'}, # Niemcy
-    '.UK': {'yahoo_suffix': '.L',  'default_currency': 'USD'}, # UK
+    '.UK': {'yahoo_suffix': '.L',  'default_currency': 'EUR'}, # UK
     '.FR': {'yahoo_suffix': '.PA', 'default_currency': 'EUR'}, # Francja
     '.NL': {'yahoo_suffix': '.AS', 'default_currency': 'EUR'}, # Holandia
     '.ES': {'yahoo_suffix': '.MC', 'default_currency': 'EUR'}, # Hiszpania

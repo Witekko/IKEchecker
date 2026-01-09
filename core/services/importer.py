@@ -109,44 +109,51 @@ class BaseImporter(ABC):
         if existing: return existing, False
 
         yahoo_ticker = xtb_symbol
-        currency = 'PLN'
+        currency = 'PLN'  # Domyślna, bezpieczna
         name = xtb_symbol
-        
-        # Default values for new fields
+
         asset_type = 'STOCK'
         sector = 'OTHER'
 
+        # 1. Najpierw zgadujemy po sufiksie (z config.py)
         found_rule = False
         for suffix, rule in SUFFIX_MAP.items():
             if xtb_symbol.endswith(suffix):
                 base = xtb_symbol.replace(suffix, '')
                 yahoo_suf = rule['yahoo_suffix'] if rule['yahoo_suffix'] is not None else ''
                 yahoo_ticker = f"{base}{yahoo_suf}"
-                currency = rule['default_currency']
+                currency = rule['default_currency']  # Np. GBP dla .UK (popraw config!)
                 found_rule = True
                 break
 
-        if found_rule:
-            # Use the new metadata fetcher
+        # 2. Pytamy Yahoo o prawdę (i nadpisujemy walutę, jeśli trzeba)
+        if found_rule or True:  # Zawsze warto sprawdzić Yahoo
             meta = fetch_asset_metadata(yahoo_ticker)
             if meta['success']:
-                if meta['name']: name = meta['name']
-                asset_type = meta['asset_type']
-                sector = meta['sector']
+                if meta.get('name'): name = meta['name']
+                if meta.get('asset_type'): asset_type = meta['asset_type']
+                if meta.get('sector'): sector = meta['sector']
+
+                # KLUCZOWA ZMIANA: Nadpisz walutę, jeśli Yahoo ją podało
+                if meta.get('currency'):
+                    currency = meta['currency']
             else:
-                # Fallback to basic info if metadata fetch fails
+                # Fallback (stara metoda yf.Ticker.info)
                 try:
                     info = yf.Ticker(yahoo_ticker).info
                     if 'currency' in info: currency = info['currency']
-                    if 'shortName' in info: name = info['shortName']
-                    elif 'longName' in info: name = info['longName']
+                    if 'shortName' in info:
+                        name = info['shortName']
+                    elif 'longName' in info:
+                        name = info['longName']
                 except:
                     pass
 
+        # Tworzymy Asset z potwierdzoną walutą
         return Asset.objects.create(
             symbol=xtb_symbol,
             yahoo_ticker=yahoo_ticker,
-            currency=currency,
+            currency=currency,  # Tu trafi USD dla ISAC.L, a GBP dla SHELL.L
             name=name,
             asset_type=asset_type,
             sector=sector

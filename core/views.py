@@ -91,8 +91,8 @@ class DashboardService:
         rates = get_current_currency_rates()
         eur = rates.get('EUR', 4.30);
         usd = rates.get('USD', 4.00)
-        full_timeline = analyze_history(transactions, eur, usd)
-        stats = analyze_holdings(transactions, eur, usd)
+        full_timeline = analyze_history(transactions, rates)
+        stats = analyze_holdings(transactions, rates)
         current_val = stats['total_value']
         perf = PerformanceCalculator(transactions)
         metrics = perf.calculate_metrics(timeline_data=full_timeline, start_date=start_date,
@@ -162,7 +162,7 @@ def assets_list_view(request):
     rates = get_current_currency_rates()
     eur = rates.get('EUR', 4.30);
     usd = rates.get('USD', 4.00)
-    dynamic_stats = analyze_holdings(transactions, eur, usd, start_date=start_date)
+    dynamic_stats = analyze_holdings(transactions, rates, start_date=start_date)
     enrich_assets_context(context, dynamic_stats['assets'], dynamic_stats['total_value'])
     if 'error' in context: return render(request, 'dashboard.html', {'error': context['error']})
     return render(request, 'assets_list.html', context)

@@ -15,30 +15,22 @@ logger = logging.getLogger('core')
 def get_current_currency_rates():
     """
     Pobiera aktualne kursy: EUR, USD, GBP, JPY, AUD.
-    Odporna na błędy 'nan'.
     """
     tickers = ["EURPLN=X", "USDPLN=X", "GBPPLN=X", "JPYPLN=X", "AUDPLN=X"]
-    rates = settings.DEFAULT_CURRENCY_RATES.copy()
+    rates = getattr(settings, 'DEFAULT_CURRENCY_RATES', {}).copy()
 
     try:
         data = yf.download(tickers, period="5d", group_by='ticker', progress=False)
 
         def get_safe_rate(ticker_name):
             try:
-                # Sprawdzamy czy ticker jest w kolumnach (MultiIndex)
                 if ticker_name not in data.columns.levels[0]: return None
-
                 series = data[ticker_name]['Close']
-                val = float(series.iloc[-1])
-
-                if math.isnan(val):
-                    val = float(series.iloc[-2])  # Próbujemy wczoraj
-                    if math.isnan(val): return None
+                val = float(series.dropna().iloc[-1])
                 return val
             except:
                 return None
 
-        # Aktualizacja
         r_eur = get_safe_rate('EURPLN=X');
         if r_eur: rates['EUR'] = r_eur
         r_usd = get_safe_rate('USDPLN=X');
@@ -47,8 +39,6 @@ def get_current_currency_rates():
         if r_gbp: rates['GBP'] = r_gbp
         r_aud = get_safe_rate('AUDPLN=X');
         if r_aud: rates['AUD'] = r_aud
-
-        # JPY specyfika (dzielimy, bo często podawany jest za 100 JPY lub odwrotnie, tu zakładamy standard)
         r_jpy = get_safe_rate('JPYPLN=X');
         if r_jpy: rates['JPY'] = r_jpy * 100
 
@@ -60,33 +50,42 @@ def get_current_currency_rates():
 
 def get_cached_price(asset: Asset):
     """
-    Pobiera cenę jednego aktywa (z cache lub Yahoo).
+    Pobiera cenę jednego aktywa.
+    FIX: Dodano fallback do ticker.info, naprawia 'Unrealized 0.00'.
     """
     now = timezone.now()
     if asset.last_updated and asset.last_price > 0:
         diff = now - asset.last_updated
-        if diff.total_seconds() < 900:  # 15 min cache
+        if diff.total_seconds() < 900:
             return float(asset.last_price), float(asset.previous_close)
 
     try:
         ticker = yf.Ticker(asset.yahoo_ticker)
-        # 1 miesiąc historii, żeby ominąć dziury
-        data = ticker.history(period='1mo')
+        price = 0.0
+        prev_close = 0.0
 
-        if not data.empty:
+        # 1. Próba z historią
+        data = ticker.history(period='5d')
+        if not data.empty and 'Close' in data.columns:
             valid = data['Close'].dropna()
             if not valid.empty:
                 price = float(valid.iloc[-1])
+                prev_close = float(valid.iloc[-2]) if len(valid) >= 2 else price
 
-                prev_close = price
-                if len(valid) >= 2:
-                    prev_close = float(valid.iloc[-2])
+        # 2. Fallback: Jeśli historia pusta, bierzemy aktualną wycenę (Quote)
+        if price <= 0:
+            info = ticker.info
+            # Różne pola, w których Yahoo może ukryć cenę
+            price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('price') or 0.0
+            prev_close = info.get('regularMarketPreviousClose') or price
 
-                asset.last_price = price
-                asset.previous_close = prev_close
-                asset.last_updated = now
-                asset.save()
-                return price, prev_close
+        if price > 0:
+            asset.last_price = price
+            asset.previous_close = prev_close
+            asset.last_updated = now
+            asset.save()
+            return price, prev_close
+
     except Exception as e:
         logger.error(f"Market Error ({asset.symbol}): {e}")
 
@@ -95,63 +94,71 @@ def get_cached_price(asset: Asset):
 
 def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -> pd.DataFrame:
     """
-    Pobiera dane historyczne w trybie bezpiecznym (osobne zapytania dla benchmarków).
-    Gwarantuje, że błąd jednego tickera nie wysadzi całego wykresu.
+    Pobiera dane historyczne.
+    GWARANCJA: Indeks to zawsze obiekty datetime.date. Kolumny to zawsze MultiIndex (Ticker, Pole).
     """
     end_date = date.today()
     safe_download_start = start_date - timedelta(days=730)
 
-    # 1. Lista Benchmarków (Kluczowe dla wykresu)
-    benchmarks = ['^GSPC', 'USDPLN=X', 'WIG.WA']
+    benchmarks = ['^GSPC', 'USDPLN=X', 'EURPLN=X', 'GBPPLN=X', 'WIG.WA']
 
-    # 2. Lista Aktywów Użytkownika (Unikalne)
+    # Unikalne tickery usera bez benchmarków
     user_tickers = list(set(assets_tickers))
+    user_tickers = [t for t in user_tickers if t not in benchmarks]
 
-    # Wynikowy DataFrame
     combined_df = pd.DataFrame()
 
-    # --- KROK A: Pobieramy Benchmarki (PRIORYTET) ---
-    # Pobieramy je razem, bo to standardowe tickery Yahoo i rzadko robią problemy
-    try:
-        bench_data = yf.download(
-            benchmarks,
-            start=safe_download_start,
-            end=end_date + timedelta(days=1),
-            group_by='ticker',
-            progress=False,
-            threads=False
-        )
-        if not bench_data.empty:
-            combined_df = pd.concat([combined_df, bench_data], axis=1)
-    except Exception as e:
-        logger.error(f"Benchmarks Download Error: {e}")
-
-    # --- KROK B: Pobieramy Aktywa Użytkownika ---
-    if user_tickers:
+    def process_download(tickers_list):
+        if not tickers_list: return pd.DataFrame()
         try:
-            # Tu może wystąpić błąd, jeśli user ma dziwny ticker
-            user_data = yf.download(
-                user_tickers,
+            df = yf.download(
+                tickers_list,
                 start=safe_download_start,
                 end=end_date + timedelta(days=1),
                 group_by='ticker',
                 progress=False,
                 threads=False
             )
-            if not user_data.empty:
-                # Łączymy kolumny (axis=1), ignorując duplikaty
-                combined_df = pd.concat([combined_df, user_data], axis=1)
+            if df.empty: return pd.DataFrame()
+
+            # 1. STANDARYZACJA INDEKSU (Na datetime.date)
+            # Najpierw konwersja na datetime (usuwa śmieci), potem tz_localize(None), potem date
+            df.index = pd.to_datetime(df.index)
+            if df.index.tz is not None:
+                df.index = df.index.tz_localize(None)
+            df.index = df.index.date
+
+            # 2. STANDARYZACJA KOLUMN (Zawsze MultiIndex)
+            # Jeśli pobraliśmy 1 ticker, yfinance daje Flat Index. Naprawiamy to.
+            if len(tickers_list) == 1 and not isinstance(df.columns, pd.MultiIndex):
+                df.columns = pd.MultiIndex.from_product([tickers_list, df.columns])
+
+            return df
         except Exception as e:
-            logger.error(f"User Assets Download Error: {e}")
-            # Nawet jak to padnie, benchmarki z Kroku A zostają!
+            logger.error(f"Download Error for {tickers_list}: {e}")
+            return pd.DataFrame()
+
+    # A. Benchmarki
+    bench_df = process_download(benchmarks)
+    if not bench_df.empty:
+        combined_df = pd.concat([combined_df, bench_df], axis=1)
+
+    # B. User Assets
+    if user_tickers:
+        user_df = process_download(user_tickers)
+        if not user_df.empty:
+            combined_df = pd.concat([combined_df, user_df], axis=1)
+
+    # Sprzątanie
+    combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
+    combined_df.sort_index(inplace=True)
 
     return combined_df
 
 
 def validate_ticker_and_price(symbol, date_obj, price_pln):
     """
-    Sprawdza ticker w kolejności: Symbol -> Symbol.WA (Polska) -> Symbol.US.
-    Zwraca (True, TICKER_KTÓRY_ZADZIAŁAŁ) tylko jeśli znajdzie PRAWIDŁOWE CENY.
+    Sprawdza ticker w kolejności: Symbol -> Symbol.WA -> Symbol.US.
     """
     import yfinance as yf
     from datetime import timedelta
@@ -159,13 +166,10 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
     check_date_start = date_obj.date() - timedelta(days=5)
     check_date_end = date_obj.date() + timedelta(days=1)
 
-    # --- POPRAWKA LISTY KANDYDATÓW ---
-    # Yahoo Finance używa '.WA' dla GPW (Warsaw), a nie '.PL'!
     candidates = []
     if "." in symbol:
         candidates = [symbol]
     else:
-        # Priorytet: Czysty symbol (np. BTC-USD), Polska (.WA), USA (.US)
         candidates = [symbol, symbol + ".WA", symbol + ".US"]
 
     best_df = None
@@ -176,35 +180,32 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
         try:
             df = yf.download(ticker, start=check_date_start, end=check_date_end, progress=False)
 
-            if df.empty:
-                continue
+            if df.empty: continue
 
-                # Sprawdzamy czy są jakiekolwiek liczby
+            # Sprawdzamy czy są liczby (nie same NaN)
             if isinstance(df.columns, pd.MultiIndex):
-                if df.isna().all().all():
-                    continue
+                if df.isna().all().all(): continue
             else:
-                if df['Close'].isna().all():
-                    continue
+                if df['Close'].isna().all(): continue
 
             best_df = df
             found_ticker = ticker
             break
-
         except Exception:
             continue
 
     if not found_ticker or best_df is None:
-        return False, f"Nie znaleziono notowań dla '{symbol}'. Sprawdzono warianty: {', '.join(candidates)}."
+        return False, f"Nie znaleziono notowań dla '{symbol}'. Sprawdzono: {', '.join(candidates)}."
 
     # KROK 2: Walidacja Ceny
     try:
+        # Wyciągamy High/Low zależnie od struktury (MultiIndex lub nie)
         if isinstance(best_df.columns, pd.MultiIndex):
             if found_ticker in best_df.columns.levels[0]:
                 high_s = best_df[found_ticker]['High']
                 low_s = best_df[found_ticker]['Low']
             else:
-                # Fallback dla innej struktury
+                # Fallback
                 high_s = best_df['High'][found_ticker]
                 low_s = best_df['Low'][found_ticker]
         else:
@@ -217,7 +218,7 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
         if math.isnan(max_price) or math.isnan(min_price):
             return True, found_ticker
 
-            # Widełki 50%
+        # Widełki 50%
         safe_high = max_price * 1.50
         safe_low = min_price * 0.50
         price_val = float(price_pln)
@@ -255,34 +256,33 @@ def fetch_asset_metadata(yahoo_ticker):
         y_sector = info.get('sector', '').lower()
         asset_sector = AssetSector.OTHER
 
+        # Proste mapowanie sektorów
         if 'technology' in y_sector:
             asset_sector = AssetSector.TECHNOLOGY
         elif 'financial' in y_sector:
             asset_sector = AssetSector.FINANCE
         elif 'energy' in y_sector or 'oil' in y_sector:
             asset_sector = AssetSector.ENERGY
-        elif 'healthcare' in y_sector or 'pharmaceutical' in y_sector:
+        elif 'healthcare' in y_sector:
             asset_sector = AssetSector.HEALTHCARE
         elif 'consumer' in y_sector:
             asset_sector = AssetSector.CONSUMER
-        elif 'industrial' in y_sector:
-            asset_sector = AssetSector.INDUSTRIAL
         elif 'real estate' in y_sector:
             asset_sector = AssetSector.REAL_ESTATE
         elif 'basic materials' in y_sector:
             asset_sector = AssetSector.MATERIALS
-        elif 'communication' in y_sector or 'telecom' in y_sector:
+        elif 'communication' in y_sector:
             asset_sector = AssetSector.TELECOM
-
-        y_industry = info.get('industry', '').lower()
-        if 'games' in y_industry or 'gaming' in y_industry:
-            asset_sector = AssetSector.GAMING
+        elif 'industrial' in y_sector:
+            asset_sector = AssetSector.INDUSTRIAL
 
         return {
             'name': info.get('longName') or info.get('shortName'),
             'asset_type': asset_type,
             'sector': asset_sector,
-            'success': True
+            'success': True,
+            # FIX: Zwracamy walutę dla Importera (np. ISAC.L -> USD)
+            'currency': info.get('currency', 'PLN')
         }
 
     except Exception as e:
