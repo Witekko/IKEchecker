@@ -15,7 +15,11 @@ def get_taxes_context(user, portfolio_id=None):
     portfolio_type = portfolio.portfolio_type
 
     rates = get_current_currency_rates()
-    stats = analyze_holdings(transactions, rates.get('EUR', 4.30), rates.get('USD', 4.00))
+
+    # FIX: Przekazujemy cały słownik 'rates', zamiast rozbitych floatów.
+    # Wcześniej było: analyze_holdings(transactions, rates.get('EUR'), rates.get('USD')) -> To trafiało do start_date i powodowało błąd.
+    stats = analyze_holdings(transactions, rates)
+
     current_value = stats['total_value']
 
     if portfolio_type in ['IKE', 'IKZE']:
@@ -36,11 +40,14 @@ def _calculate_ike_tax_shield(transactions, current_value):
         elif t.type == 'WITHDRAWAL':
             total_withdrawals += abs(amt)
         elif t.type == 'DIVIDEND' and t.asset and t.asset.currency == 'PLN':
+            # Zakładamy 19% podatku Belki zaoszczędzonego na polskich dywidendach
             dividend_tax_saved += round(amt * 0.19, 2)
 
+    # Koszt uzyskania przychodu (tylko wpłaty netto)
     cost_basis = max(0.0, total_deposits - total_withdrawals)
     total_gain = current_value - cost_basis
 
+    # Symulacja: Ile bym zapłacił podatku, gdybym wypłacił teraz?
     exit_tax = 0.0
     if total_gain > 0:
         exit_tax = round(total_gain * 0.19, 2)
