@@ -32,8 +32,9 @@
             background-color: var(--bg-dark);
             color: #e0e0e0;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding-bottom: 0;
             overflow-x: hidden;
+            /* Domyślny padding (zostanie nadpisany w @media) */
+            padding-bottom: 0;
         }
 
         /* --- BOOTSTRAP OVERRIDES --- */
@@ -49,32 +50,15 @@
             box-shadow: 0 0 0 0.25rem rgba(0, 255, 127, 0.25) !important;
         }
 
-        /* --- DROPDOWN & FOCUS OVERRIDES --- */
-        .dropdown-menu-dark {
-            background-color: #252525;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .dropdown-item.active, .dropdown-item:active {
-            background-color: rgba(0, 255, 127, 0.15) !important;
-            color: var(--accent-green) !important;
-            font-weight: 600;
-        }
-        .dropdown-item:hover, .dropdown-item:focus {
-            background-color: rgba(255,255,255,0.08) !important;
-            color: #fff;
-        }
-        .btn-outline-secondary:focus, .btn-outline-secondary:active:focus {
-            box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1) !important;
-        }
+        /* --- DROPDOWN & FOCUS --- */
+        .dropdown-menu-dark { background-color: #252525; border: 1px solid rgba(255,255,255,0.1); }
+        .dropdown-item.active, .dropdown-item:active { background-color: rgba(0, 255, 127, 0.15) !important; color: var(--accent-green) !important; font-weight: 600; }
+        .dropdown-item:hover, .dropdown-item:focus { background-color: rgba(255,255,255,0.08) !important; color: #fff; }
+        .btn-outline-secondary:focus, .btn-outline-secondary:active:focus { box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1) !important; }
 
         /* --- CHART DEFAULTS --- */
         .chart-container-wide { position: relative; width: 100%; height: 450px; }
         .chart-container { position: relative; width: 100%; height: 350px; }
-
-        @media (max-width: 768px) {
-            .chart-container-wide { height: 300px; }
-            .chart-container { height: 250px; }
-        }
 
         /* --- LOADER --- */
         #page-loader {
@@ -88,199 +72,118 @@
         .loader-text { color: #fff; font-family: monospace; letter-spacing: 2px; font-size: 0.8rem; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        /* --- DYNAMIC SIDEBAR (DESKTOP) --- */
-        .sidebar-desktop {
-            position: fixed; top: 0; left: 0; bottom: 0;
-            width: var(--sidebar-collapsed);
-            background-color: var(--card-bg);
-            border-right: 1px solid rgba(255,255,255,0.05);
-            padding: 20px 10px;
-            display: none;
-            flex-direction: column;
-            z-index: 1000;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
-            white-space: nowrap !important;
-        }
-        .sidebar-desktop:hover { width: var(--sidebar-width); align-items: flex-start; }
-
-        /* --- NAV LINKS --- */
+        /* --- SIDEBAR COMPONENTS (SHARED) --- */
         .nav-link {
             color: var(--text-gray); border-radius: 10px; padding: 12px 15px; margin-bottom: 8px;
-            transition: all 0.2s; display: flex; align-items: center; width: 100%;
-            height: 48px; /* Sztywna wysokość */
+            transition: all 0.2s; display: flex; align-items: center; width: 100%; height: 48px;
         }
         .nav-link:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
         .nav-link.active { background-color: rgba(0, 255, 127, 0.1); color: var(--accent-green); font-weight: bold; }
-
-        .nav-link i {
-            width: 30px; text-align: center; margin-right: 15px; font-size: 1.2rem; flex-shrink: 0;
-            transition: transform 0.2s;
-        }
+        .nav-link i { width: 30px; text-align: center; margin-right: 15px; font-size: 1.2rem; flex-shrink: 0; transition: transform 0.2s; }
         .nav-link:hover i { transform: scale(1.1); }
 
-        /* --- TEKSTY W LINKACH --- */
-        .link-text {
-            opacity: 1;
-            max-width: 200px;
-            transition: opacity 0.2s ease, max-width 0.3s ease;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-        .sidebar-desktop:not(:hover) .link-text {
-            opacity: 0;
-            max-width: 0;
-        }
-
-        /* --- LOGO I PROFIL UŻYTKOWNIKA (FIX ZNIKANIA) --- */
-        .brand-logo, .user-profile {
-            display: flex; align-items: center;
-            width: 100%;
-            transition: all 0.3s;
-            /* Domyślnie (zwarte): centrujemy */
-            justify-content: center;
-            padding-left: 0 !important;
-        }
-
-        .sidebar-desktop:hover .brand-logo,
-        .sidebar-desktop:hover .user-profile {
-            justify-content: flex-start;
-            padding-left: 10px !important;
-        }
-
-        /* Teksty w logo i profilu */
-        .brand-text, .user-info {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            white-space: nowrap;
-            /* Klucz do animacji */
-            transition: max-width 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
-            max-width: 200px; /* Pełna szerokość */
-            opacity: 1;
-            margin-left: 15px;
-        }
-
-        /* Ukrywanie tekstów w stanie zwiniętym */
-        .sidebar-desktop:not(:hover) .brand-text,
-        .sidebar-desktop:not(:hover) .user-info {
-            max-width: 0;
-            opacity: 0;
-            margin-left: 0; /* Usuwamy margines, żeby nie przesuwał ikony */
-        }
-
-        /* --- PORTFOLIO BUTTON (FIX SKAKANIA) --- */
         .portfolio-btn {
-            height: 56px !important;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 0 15px !important;
-            transition: all 0.3s ease;
-            overflow: hidden;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            height: 56px !important; width: 100%; display: flex; align-items: center; justify-content: flex-start;
+            padding: 0 15px !important; transition: all 0.3s ease; overflow: hidden;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .sidebar-desktop:not(:hover) .portfolio-btn {
-            justify-content: center !important;
-            padding: 0 !important;
-            background: transparent !important;
-            border-color: transparent !important;
+        .brand-logo, .user-profile { display: flex; align-items: center; width: 100%; transition: all 0.3s; justify-content: flex-start; }
+        .brand-text, .user-info, .link-text, .portfolio-text-wrapper {
+            display: flex; flex-direction: column; overflow: hidden; white-space: nowrap;
+            transition: max-width 0.3s ease, opacity 0.2s ease; max-width: 200px; opacity: 1; margin-left: 10px;
         }
 
-        .portfolio-text-wrapper {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            transition: max-width 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
-            max-width: 200px;
-            opacity: 1;
-            margin-left: 10px;
-        }
-
-        .sidebar-desktop:not(:hover) .portfolio-text-wrapper {
-            max-width: 0;
-            opacity: 0;
-            margin-left: 0;
-        }
-
-        /* --- LAYOUT --- */
+        /* --- LAYOUT COMMON --- */
         .main-content { width: 100%; transition: margin-left 0.3s ease; display: flex; flex-direction: column; min-height: 100vh; }
         .content-wrapper { width: 100%; margin: 0 auto; flex: 1; }
+        footer { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); }
+        .ls-1 { letter-spacing: 1px; }
+        .hover-effect:hover { color: #0dcaf0 !important; transition: color 0.3s ease; text-decoration: underline !important; }
 
-        @media (max-width: 767px) {
-            .content-wrapper { padding: 0 10px; }
-            /* Stopka mobilna */
-            body { padding-bottom: calc(var(--bottom-nav-height) + 20px); }
-        }
 
+        /* ========================================= */
+        /* DESKTOP ONLY                */
+        /* (min-width: 768px)              */
+        /* ========================================= */
         @media (min-width: 768px) {
-            .sidebar-desktop { display: flex; }
-            .bottom-nav { display: none; }
             body { padding-bottom: 0; }
+            .bottom-nav { display: none; }
+            .sidebar-desktop { display: flex; }
 
             .main-content {
                 margin-left: var(--sidebar-collapsed);
                 width: calc(100% - var(--sidebar-collapsed));
                 padding-top: 2rem;
-                padding-bottom: 0;
             }
+            .content-wrapper { width: 85%; max-width: 1600px; padding-bottom: 2rem; }
 
-            .content-wrapper {
-                width: 85%;
-                max-width: 1600px;
-                padding-bottom: 2rem;
+            /* --- SIDEBAR DESKTOP BEHAVIOR --- */
+            .sidebar-desktop {
+                position: fixed; top: 0; left: 0; bottom: 0;
+                width: var(--sidebar-collapsed);
+                background-color: var(--card-bg);
+                border-right: 1px solid rgba(255,255,255,0.05);
+                padding: 20px 10px;
+                flex-direction: column; z-index: 1000;
+                transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                overflow: hidden; box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+                white-space: nowrap !important;
             }
+            .sidebar-desktop:hover { width: var(--sidebar-width); align-items: flex-start; }
+
+            /* COLLAPSED STATE (Gdy myszka poza menu) */
+            .sidebar-desktop:not(:hover) .brand-text,
+            .sidebar-desktop:not(:hover) .user-info,
+            .sidebar-desktop:not(:hover) .link-text,
+            .sidebar-desktop:not(:hover) .portfolio-text-wrapper {
+                max-width: 0; opacity: 0; margin-left: 0;
+            }
+            .sidebar-desktop:not(:hover) .brand-logo,
+            .sidebar-desktop:not(:hover) .user-profile {
+                justify-content: center; padding-left: 0 !important;
+            }
+            .sidebar-desktop:not(:hover) .portfolio-btn {
+                justify-content: center !important; padding: 0 !important;
+                background: transparent !important; border-color: transparent !important;
+            }
+            /* Ukrywanie strzałek dropdownów gdy zwinięte */
+            .sidebar-desktop:not(:hover) .dropdown-toggle::after,
+            .sidebar-desktop:not(:hover) .dropdown-toggle i:not(:first-child) { display: none !important; }
         }
 
-        /* --- MOBILE BOTTOM NAV --- */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            height: var(--bottom-nav-height);
-            background-color: var(--card-bg);
-            border-top: 1px solid rgba(255,255,255,0.05);
-            display: flex; justify-content: space-around; align-items: center;
-            z-index: 1000;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
-        }
-        .bottom-link {
-            color: var(--text-gray); text-decoration: none;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.7rem; flex: 1; height: 100%;
-        }
-        .bottom-link i { font-size: 1.4rem; margin-bottom: 4px; }
-        .bottom-link.active { color: var(--accent-green); }
 
-        .ls-1 { letter-spacing: 1px; }
-        .hover-effect:hover { color: #0dcaf0 !important; transition: color 0.3s ease; text-decoration: underline !important; }
-
-        footer {
-            margin-top: auto;
-            border-top: 1px solid rgba(255,255,255,0.05);
-        }
+        /* ========================================= */
+        /* MOBILE ONLY                 */
+        /* (max-width: 767px)              */
+        /* ========================================= */
         @media (max-width: 767px) {
-            footer { margin-bottom: var(--bottom-nav-height); }
-        }
+            /* FIX STÓPKI: Wymuszamy padding na body */
+            body { padding-bottom: calc(var(--bottom-nav-height) + 20px) !important; }
 
-        /* --- SIDEBAR DROPDOWN FIX --- */
-        @media (min-width: 768px) {
-            .sidebar-desktop:not(:hover) .dropdown-toggle {
-                border-color: transparent !important;
-                background: transparent !important;
-                padding: 0 !important;
-                justify-content: center !important;
-                width: 100% !important;
-                box-shadow: none !important;
-            }
-            .sidebar-desktop:not(:hover) .dropdown-toggle::after { display: none !important; }
+            .chart-container-wide { height: 300px; }
+            .chart-container { height: 250px; }
+            .content-wrapper { padding: 0 10px; }
 
-            /* Ukrywamy strzałki i dodatkowe elementy w stanie zwiniętym */
-            .sidebar-desktop:not(:hover) .dropdown-toggle i:not(:first-child) {
-               display: none !important;
+            /* Ukrywamy stopkę przed wjechaniem pod menu */
+            footer { margin-bottom: 0 !important; }
+
+            /* --- MOBILE BOTTOM NAV --- */
+            .bottom-nav {
+                position: fixed; bottom: 0; left: 0; right: 0;
+                height: var(--bottom-nav-height);
+                background-color: var(--card-bg);
+                border-top: 1px solid rgba(255,255,255,0.05);
+                display: flex; justify-content: space-around; align-items: center;
+                z-index: 1000; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
             }
+            .bottom-link {
+                color: var(--text-gray); text-decoration: none;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                font-size: 0.7rem; flex: 1; height: 100%;
+            }
+            .bottom-link i { font-size: 1.4rem; margin-bottom: 4px; }
+            .bottom-link.active { color: var(--accent-green); }
         }
     </style>
 </head>
