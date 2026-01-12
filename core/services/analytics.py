@@ -14,53 +14,78 @@ logger = logging.getLogger('core')
 def analyze_holdings(transactions, currency_rates, start_date=None):
     """
     Analizuje stan posiadania.
+    Jeśli podano start_date, oblicza zyski względem tej daty (Period Profit).
     """
     calc = PortfolioCalculator(transactions).process()
     holdings_data = calc.get_holdings()
     cash, total_invested = calc.get_cash_balance()
 
+    # --- 1. PRZYGOTOWANIE DANYCH OKRESOWYCH (Jeśli wybrano filtr) ---
     period_stats = {}
     use_period_logic = start_date is not None
 
     if use_period_logic:
+        # Pobieramy surowe dane transakcji do obliczeń
         tx_data = list(
             transactions.values('date', 'type', 'amount', 'quantity', 'asset__symbol', 'asset__yahoo_ticker'))
+
         if tx_data:
             df = pd.DataFrame(tx_data)
             df['date'] = pd.to_datetime(df['date']).dt.date
             df['amount'] = df['amount'].astype(float)
             df['quantity'] = df['quantity'].astype(float)
 
+            # A. Stan na początek okresu (ilość akcji)
             df_start = df[df['date'] < start_date]
-            df_start.loc[df_start['type'] == 'SELL', 'quantity'] *= -1
-            qty_at_start = df_start.groupby('asset__symbol')['quantity'].sum()
+            # Dla sprzedaży quantity jest dodatnie w bazie, ale w portfelu odejmuje, więc musimy to obsłużyć
+            # W bazie: BUY qty=10, SELL qty=10.
+            # Logika: bilans = suma(BUY) - suma(SELL)
 
+            # Tworzymy kolumnę 'signed_qty': BUY +, SELL -
+            df_start_signed = df_start.copy()
+            df_start_signed['signed_qty'] = df_start_signed.apply(
+                lambda x: x['quantity'] if x['type'] in ['BUY', 'OPEN BUY', 'DEPOSIT'] else -x['quantity'], axis=1
+            )
+            qty_at_start = df_start_signed.groupby('asset__symbol')['signed_qty'].sum()
+
+            # B. Przepływy pieniężne w trakcie okresu (Flows)
+            # To suma 'amount' z transakcji w zakresie dat.
+            # amount jest ujemny dla BUY, dodatni dla SELL.
             df_period = df[(df['date'] >= start_date) & (df['date'] <= date.today())]
             flows_in_period = df_period.groupby('asset__symbol')['amount'].sum()
 
+            # C. Cena historyczna na start okresu
             tickers = df['asset__yahoo_ticker'].dropna().unique().tolist()
-            hist_prices = fetch_historical_data_for_timeline(tickers, start_date - timedelta(days=5))
+            # Pobieramy historię z lekkim zapasem wstecz
+            hist_prices = fetch_historical_data_for_timeline(tickers, start_date - timedelta(days=7))
 
             def get_start_price(ticker_sym):
                 if hist_prices.empty: return 0.0
                 try:
-                    # FIX: hist_prices ma indeks date, więc szukamy po date
+                    # Szukamy ceny z daty start_date lub najbliższej poprzedniej (asof)
                     target = start_date
                     if isinstance(target, str): target = pd.to_datetime(target).date()
 
                     if isinstance(hist_prices.columns, pd.MultiIndex):
                         if ticker_sym in hist_prices.columns.levels[0]:
-                            # asof działa lepiej na posortowanym indeksie
-                            return float(hist_prices[ticker_sym]['Close'].asof(target))
+                            series = hist_prices[ticker_sym]['Close'].dropna()
+                            if series.empty: return 0.0
+                            # asof zwraca wartość dla klucza lub mniejszego
+                            idx = series.index.asof(target)
+                            return float(series.loc[idx]) if pd.notnull(idx) else 0.0
                     else:
-                        # Fallback (nie powinno wystąpić z nowym market.py)
-                        return float(hist_prices['Close'].asof(target))
+                        # Fallback dla pojedynczego indeksu
+                        series = hist_prices['Close'].dropna()
+                        idx = series.index.asof(target)
+                        return float(series.loc[idx]) if pd.notnull(idx) else 0.0
                 except:
                     return 0.0
                 return 0.0
 
+            # Mapowanie symbol -> ticker
             sym_to_ticker = {row['asset__symbol']: row['asset__yahoo_ticker'] for row in tx_data if
                              row['asset__symbol']}
+
             all_syms = set(qty_at_start.index).union(set(flows_in_period.index))
             for s in all_syms:
                 period_stats[s] = {
@@ -73,56 +98,77 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
     portfolio_value_stock = 0.0
     total_day_change_pln = 0.0
     total_unrealized_pln = 0.0
-    gainers = 0;
+    gainers = 0
     losers = 0
 
+    # --- 2. GŁÓWNA PĘTLA PO AKTYWACH ---
     for sym, data in holdings_data.items():
         qty = data['qty']
         asset = data['asset']
 
-        # FIX: Jeśli ilość jest bliska zeru (pozycje zamknięte)
+        # A. POZYCJE ZAMKNIĘTE (Ilość ~ 0)
         if qty <= 0.0001:
+            # Pokaż zamknięte tylko w widoku MAX (gdy start_date jest None)
+            # LUB jeśli zamknięcie nastąpiło W TRAKCIE wybranego okresu.
+            # Uproszczenie: Na razie zostawiamy logikę jak była,
+            # ale można by tu dodać filtrowanie po dacie zamknięcia.
+
             if abs(data['realized']) > 0.01:
                 is_foreign = asset.currency != 'PLN'
                 realized_pln = float(data['realized'])
 
-                # Obliczamy ROI dla zamkniętej pozycji
                 revenue = 0.0
+                last_trade_date = None
+                sorted_trades = sorted(data['trades'], key=lambda x: x['date'])
+                if sorted_trades:
+                    last_trade_date = sorted_trades[-1]['date']
+
                 for t in data['trades']:
                     if t['type'] in ['SELL', 'CLOSE', 'CLOSE SELL']:
                         revenue += float(t['amount'])
 
-                # Koszt = Przychód - Zysk
                 cost_basis = revenue - realized_pln
                 roi_pct = (realized_pln / cost_basis * 100) if cost_basis > 0.01 else 0.0
 
-                processed_assets.append({
-                    'is_closed': True,
-                    'symbol': sym,
-                    'name': asset.name,
-                    'display_name': asset.display_name,
-                    'sector': asset.get_sector_display(),
-                    'asset_type': asset.get_asset_type_display(),
-                    'currency': asset.currency,
-                    'is_foreign': is_foreign,
-                    'realized_pln': realized_pln,
-                    'gain_pln': realized_pln,
-                    'gain_percent': roi_pct,
-                    'value_pln': 0.0, 'day_change_pct': 0.0, 'cost_pln': 0.0,
-                    'avg_price': 0.0, 'cur_price': 0.0, 'quantity': 0.0
-                })
+                # Jeśli w trybie okresowym, sprawdzamy czy zamknięcie było w okresie
+                show_closed = True
+                if use_period_logic:
+                    if not last_trade_date or last_trade_date.date() < start_date:
+                        show_closed = False
+
+                if show_closed:
+                    processed_assets.append({
+                        'is_closed': True,
+                        'symbol': sym,
+                        'name': asset.name,
+                        'display_name': asset.display_name,
+                        'sector': asset.get_sector_display(),
+                        'asset_type': asset.get_asset_type_display(),
+                        'currency': asset.currency,
+                        'is_foreign': is_foreign,
+                        'realized_pln': realized_pln,
+                        'gain_pln': realized_pln,
+                        'gain_percent': roi_pct,
+                        'price_date': last_trade_date,
+                        # Puste pola dla spójności
+                        'value_pln': 0.0, 'day_change_pct': 0.0, 'day_change_pln': 0.0,
+                        'cost_pln': 0.0, 'avg_price': 0.0, 'cur_price': 0.0, 'quantity': 0.0,
+                        'trades': []
+                    })
             continue
 
-        # POZYCJE OTWARTE
+        # B. POZYCJE OTWARTE
         cost = data['cost']
         cur_price, prev_close = get_cached_price(asset)
 
+        # Fallback ceny
         is_fallback_price = False
         if cur_price <= 0:
             cur_price = (cost / qty) if qty > 0 else 0
             prev_close = cur_price
             is_fallback_price = True
 
+        # Waluta
         multiplier = 1.0
         is_foreign = False
         if asset.currency != 'PLN':
@@ -131,26 +177,66 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
             if multiplier == 0: multiplier = 1.0
         if is_fallback_price: multiplier = 1.0
 
+        # Wycena bieżąca
         value_pln = (qty * cur_price) * multiplier
 
-        # Zysk Niezrealizowany
+        # Zyski (Domyślnie ALL TIME)
         current_position_unrealized = value_pln - cost
-        total_unrealized_pln += current_position_unrealized
 
-        # Zysk całkowity (Realized + Unrealized)
         display_profit_pln = current_position_unrealized + data['realized']
         display_return_pct = (display_profit_pln / cost * 100) if cost > 0 else 0.0
 
+        # Zmiana dzienna (zawsze w odniesieniu do wczoraj)
         day_change_pct = ((cur_price - prev_close) / prev_close * 100) if prev_close > 0 else 0
         day_change_val = (qty * (cur_price - prev_close)) * multiplier
+
+        # --- FIX: NADPISANIE DLA OKRESU (PERIOD VIEW) ---
+        if use_period_logic and sym in period_stats:
+            p_stats = period_stats[sym]
+
+            # 1. Wartość portfela na start okresu (ilość wtedy * cena wtedy * waluta)
+            qty_start = p_stats['qty_start']
+            price_start = p_stats['price_start']
+
+            # Wartość w PLN na start
+            val_start_pln = qty_start * price_start * multiplier
+
+            # 2. Przepływy (Flows) w PLN
+            # p_stats['flow'] to suma 'amount' z bazy.
+            # W bazie XTB amount jest już w walucie konta (PLN) zazwyczaj.
+            # Jeśli nie, trzeba by mnożyć. Zakładamy, że amount jest w PLN (tak działa Twój importer).
+            net_flows_pln = p_stats['flow']
+
+            # 3. Zysk w okresie = (Wartość Koniec) - (Wartość Start) + (Suma Wpłat/Wypłat)
+            # Uwaga: Kupno to ujemny amount. Sprzedaż to dodatni.
+            # Wzór: Profit = End - Start + Sum(Amounts)
+            # Przykład: Start 0. Kupno za 1000 (amt -1000). Koniec 1100.
+            # Profit = 1100 - 0 + (-1000) = 100. Zgadza się.
+
+            period_profit_pln = value_pln - val_start_pln + net_flows_pln
+
+            # 4. Stopa zwrotu w okresie
+            # Baza inwestycji = Wartość Startowa + (Zakupy netto, jeśli były)
+            # Uproszczony mianownik: Start Value + Abs(Negative Flows)
+            invested_in_period = val_start_pln + abs(min(0, net_flows_pln))
+
+            period_return_pct = 0.0
+            if invested_in_period > 0.01:
+                period_return_pct = (period_profit_pln / invested_in_period) * 100
+
+            # Nadpisujemy zmienne wyświetlane
+            display_profit_pln = period_profit_pln
+            display_return_pct = period_return_pct
+
+        # Statystyki łączne
+        total_unrealized_pln += (value_pln - cost)  # To zostawiamy jako All-Time w podsumowaniu technicznym
+        portfolio_value_stock += value_pln
+        total_day_change_pln += day_change_val
 
         if day_change_pct > 0:
             gainers += 1
         elif day_change_pct < 0:
             losers += 1
-
-        portfolio_value_stock += value_pln
-        total_day_change_pln += day_change_val
 
         processed_assets.append({
             'is_closed': False,
@@ -164,10 +250,15 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
             'cur_price': float(cur_price),
             'value_pln': float(value_pln),
             'cost_pln': float(cost),
+
+            # Te wartości są teraz dynamiczne (All Time lub Period)
             'gain_pln': float(display_profit_pln),
             'gain_percent': float(display_return_pct),
+
             'realized_pln': float(data['realized']),
             'day_change_pct': float(day_change_pct),
+            'day_change_pln': float(day_change_val),
+            'trades': data['trades'],
             'currency': asset.currency,
             'is_foreign': is_foreign,
             'price_date': asset.last_updated,
@@ -195,6 +286,7 @@ def analyze_history(transactions, currency_rates):
     """
     Generuje dane do wykresu historycznego.
     """
+    # (Ta funkcja pozostaje bez zmian, wklejam skrótowo żeby plik był kompletny)
     if not transactions.exists():
         return {'dates': [], 'val_user': [], 'val_inv': [], 'last_date': 'N/A'}
 
@@ -217,7 +309,6 @@ def analyze_history(transactions, currency_rates):
 
     user_tickers = df_tx['asset__yahoo_ticker'].dropna().unique().tolist()
 
-    # Tickery do pobrania
     CURRENCY_MAP = {
         'USD': 'USDPLN=X', 'EUR': 'EURPLN=X', 'GBP': 'GBPPLN=X',
         'CHF': 'CHFPLN=X', 'NOK': 'NOKPLN=X', 'SEK': 'SEKPLN=X',
@@ -227,14 +318,12 @@ def analyze_history(transactions, currency_rates):
     benchmarks = ['^GSPC', 'WIG.WA']
     full_ticker_list = list(set(user_tickers + needed_currencies + benchmarks))
 
-    # POBIERANIE (Market zwraca index typu DATE, nie Timestamp!)
     hist_data = fetch_historical_data_for_timeline(full_ticker_list, start_date)
 
     last_market_date_str = "N/A"
     if not hist_data.empty:
         last_market_date_str = hist_data.index[-1].strftime('%d %b %Y')
 
-    # FIX: full_dates też musi być typu date, żeby pasować do hist_data
     full_dates = pd.date_range(start=start_date, end=end_date, freq='D').date
     timeline_df = pd.DataFrame(index=full_dates)
     timeline_df.index.name = 'date'
@@ -242,11 +331,9 @@ def analyze_history(transactions, currency_rates):
     def get_series(tk):
         if hist_data.empty: return pd.Series(dtype=float)
         try:
-            # Teraz mamy pewność, że kolumny to MultiIndex (Dzięki nowemu market.py)
             if isinstance(hist_data.columns, pd.MultiIndex):
                 if tk in hist_data.columns.levels[0]:
                     return hist_data[tk]['Close']
-            # Fallback (gdyby jednak coś poszło nie tak)
             elif tk in hist_data.columns:
                 return hist_data[tk]
         except:
@@ -255,12 +342,10 @@ def analyze_history(transactions, currency_rates):
 
     def smart_fill(series, target_dates):
         if series.empty: return pd.Series(0.0, index=target_dates)
-        # series.index to Date, target_dates to Date -> Union zadziała
         combined_idx = series.index.union(target_dates).sort_values()
         extended = series.reindex(combined_idx).ffill()
         return extended.reindex(target_dates).fillna(0)
 
-    # --- CASH & INVESTED ---
     daily_cash = df_tx.groupby('date')['amount'].sum()
     timeline_df['cash_flow'] = daily_cash
     timeline_df['cash_flow'] = timeline_df['cash_flow'].fillna(0)
@@ -279,7 +364,6 @@ def analyze_history(transactions, currency_rates):
         invested_series.append(curr_invested)
     timeline_df['invested'] = invested_series
 
-    # --- QUANTITY ---
     mask_holdings = df_tx['type'].isin(['BUY', 'SELL']) & df_tx['asset__yahoo_ticker'].notnull()
     daily_qty = pd.DataFrame(index=full_dates)
     if mask_holdings.any():
@@ -288,7 +372,6 @@ def analyze_history(transactions, currency_rates):
         grouped = df_h.groupby(['date', 'asset__yahoo_ticker'])['quantity'].sum().unstack(fill_value=0)
         daily_qty = grouped.reindex(full_dates, fill_value=0).cumsum()
 
-    # --- WYCENA ---
     price_df = pd.DataFrame(index=full_dates)
     for col in daily_qty.columns:
         s = get_series(col)
@@ -314,10 +397,8 @@ def analyze_history(transactions, currency_rates):
     timeline_df['user_value'] = timeline_df['cash_balance'] + stock_val.sum(axis=1)
     timeline_df['user_value'] = timeline_df['user_value'].clip(lower=0.0)
 
-    # --- BENCHMARKI (SP500, WIG) ---
     daily_deposits = df_tx[df_tx['type'] == 'DEPOSIT'].groupby('date')['amount'].sum().reindex(full_dates, fill_value=0)
 
-    # SP500
     usd_bm = smart_fill(get_series('USDPLN=X'), full_dates).replace(0.0, currency_rates.get('USD', 4.0))
     sp500_price = smart_fill(get_series('^GSPC'), full_dates)
     denom_sp = usd_bm * sp500_price
@@ -327,7 +408,6 @@ def analyze_history(transactions, currency_rates):
     timeline_df['sp500_val'] = units_sp.cumsum() * denom_sp
     timeline_df.loc[timeline_df['sp500_val'] <= 0.01, 'sp500_val'] = timeline_df['invested']
 
-    # WIG
     wig_price = smart_fill(get_series('WIG.WA'), full_dates)
     units_wig = daily_deposits / wig_price
     units_wig = units_wig.fillna(0.0)
@@ -335,7 +415,6 @@ def analyze_history(transactions, currency_rates):
     timeline_df['wig_val'] = units_wig.cumsum() * wig_price
     timeline_df.loc[timeline_df['wig_val'] <= 0.01, 'wig_val'] = timeline_df['invested']
 
-    # INFLACJA
     inf_series = []
     inf_cap = 0.0
     daily_rate = 1.06 ** (1 / 365)
@@ -349,7 +428,6 @@ def analyze_history(transactions, currency_rates):
         inf_series.append(inf_cap)
     timeline_df['inf_val'] = inf_series
 
-    # FORMATOWANIE
     def calc_pct(v_col, b_col):
         base = timeline_df[b_col]
         val = timeline_df[v_col]

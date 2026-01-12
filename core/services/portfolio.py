@@ -137,10 +137,15 @@ def enrich_assets_context(context, assets, total_portfolio_value):
                 'display_name': a.get('display_name', f"{a['name']} ({a['symbol']})"),
                 'gain_pln': fmt_2(a['gain_pln']),
                 'gain_pln_raw': a['gain_pln'],
+                # FIX: Dodano ROI % i Datę
+                'gain_percent': fmt_2(a['gain_percent']),
+                'gain_percent_raw': a['gain_percent'],
+                'close_date': a['price_date'],
                 'asset_type': a.get('asset_type', 'STOCK')
             })
             continue
 
+        # --- FIX 3: Obliczanie dni (teraz zadziała, bo mamy 'trades') ---
         days_held = 0
         if a.get('trades'):
             sorted_trades = sorted(a['trades'], key=lambda x: x['date'])
@@ -160,6 +165,10 @@ def enrich_assets_context(context, assets, total_portfolio_value):
             'gain_pln': fmt_2(a['gain_pln']),
             'gain_percent': fmt_2(a['gain_percent']),
             'day_change_pct': fmt_2(a['day_change_pct']),
+
+            'first_buy_date': first_trade_date,
+            'day_change_pln': a.get('day_change_pln', 0.0),  # Bez formatowania, bo formatujemy w HTML
+
             'share_pct': fmt_2(a['share_pct']),
             'value_pln_raw': a['value_pln'],
             'gain_pln_raw': a['gain_pln'],

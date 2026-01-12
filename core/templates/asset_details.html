@@ -81,6 +81,7 @@
             <button type="button" class="btn btn-outline-secondary active" onclick="updateChartRange('SINCE_BUY')">SINCE BUY</button>
             <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('1M')">1M</button>
             <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('3M')">3M</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('YTD')">YTD</button>
             <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('1Y')">1Y</button>
             <button type="button" class="btn btn-outline-secondary" onclick="updateChartRange('MAX')">MAX</button>
         </div>
@@ -260,6 +261,16 @@
             const idx = masterDates.indexOf(firstTradeDate);
             return (idx !== -1) ? Math.max(0, idx - 3) : 0;
         }
+
+        // FIX: YTD Logic
+        if (range === 'YTD') {
+            const currentYear = new Date().getFullYear();
+            const ytdDateStr = currentYear + '-01-01';
+            // Znajdź pierwszy indeks, gdzie data >= 1 stycznia obecnego roku
+            const idx = masterDates.findIndex(d => d >= ytdDateStr);
+            return (idx !== -1) ? idx : 0;
+        }
+
         let sliceCount = totalPoints;
         if (range === '1M') sliceCount = 21;
         else if (range === '3M') sliceCount = 63;

@@ -2,6 +2,81 @@
 
 {% block content %}
 
+<style>
+    /* 1. DOMYŚLNY WYGLĄD NAGŁÓWKA */
+    th.sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s ease, color 0.2s ease;
+        white-space: nowrap;
+        color: #adb5bd; /* Jasny szary dla nieaktywnych */
+    }
+
+    /* Hover - wyraźniejsze podświetlenie */
+    th.sortable:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    /* 2. AKTYWNY FILTR - ŚNIEŻNA BIEL + PODKREŚLENIE TŁEM */
+    th.asc, th.desc {
+        color: #ffffff !important; /* Tekst na biało */
+        background-color: rgba(255, 255, 255, 0.1) !important; /* Tło aktywnego nagłówka */
+        border-bottom: 2px solid #ffffff; /* Dodatkowy pasek na dole */
+    }
+
+    /* 3. KONTENER FLEXBOX */
+    .th-content {
+        display: flex;
+        align-items: center;
+        gap: 10px; /* Większy odstęp */
+    }
+    th.text-end .th-content {
+        justify-content: flex-end;
+    }
+
+    /* 4. IKONY STRZAŁEK - WIĘKSZE I WYRAŹNIEJSZE */
+    .sort-icon {
+        font-size: 0.9em; /* Powiększone */
+        display: flex;
+        flex-direction: column;
+        line-height: 0.8;
+        opacity: 1; /* Pełna widoczność kontenera */
+    }
+
+    /* Strzałki nieaktywne - szare */
+    .sort-icon i {
+        color: #495057; /* Ciemnoszary - widoczny, ale zgaszony */
+        transition: all 0.2s;
+    }
+
+    /* Hover na nagłówku zapala obie strzałki na jasnoszaro */
+    th.sortable:hover .sort-icon i {
+        color: #ced4da;
+    }
+
+    /* AKTYWNA STRZAŁKA W GÓRĘ - BIAŁA JAK ŚNIEG */
+    th.asc .sort-icon .fa-caret-up {
+        color: #ffffff !important;
+        transform: scale(1.2); /* Lekkie powiększenie */
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.8); /* Efekt neonu */
+    }
+    /* Ukrywamy drugą strzałkę, gdy jedna jest aktywna (dla czystości) */
+    th.asc .sort-icon .fa-caret-down {
+        display: none;
+    }
+
+    /* AKTYWNA STRZAŁKA W DÓŁ - BIAŁA JAK ŚNIEG */
+    th.desc .sort-icon .fa-caret-down {
+        color: #ffffff !important;
+        transform: scale(1.2);
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    }
+    th.desc .sort-icon .fa-caret-up {
+        display: none;
+    }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="fw-bold text-white mb-0">Portfolio Holdings</h2>
@@ -11,6 +86,7 @@
     <div class="btn-group shadow-sm bg-dark rounded-pill p-1 border border-secondary border-opacity-25" role="group">
         <a href="?range=1m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1m' %}btn-success{% else %}btn-dark text-muted{% endif %}">1M</a>
         <a href="?range=3m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '3m' %}btn-success{% else %}btn-dark text-muted{% endif %}">3M</a>
+        <a href="?range=ytd" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'ytd' %}btn-success{% else %}btn-dark text-muted{% endif %}">YTD</a>
         <a href="?range=1y" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1y' %}btn-success{% else %}btn-dark text-muted{% endif %}">1Y</a>
         <a href="?range=all" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'all' or not current_range %}btn-success{% else %}btn-dark text-muted{% endif %}">MAX</a>
     </div>
@@ -19,35 +95,30 @@
 <div class="card mb-5 border-0 shadow-lg" style="background: linear-gradient(90deg, #121212 0%, #1e1e1e 100%); border-bottom: 2px solid #333 !important;">
     <div class="card-body p-4">
         <div class="row text-center text-md-start align-items-center g-4">
-
             <div class="col-6 col-md-3 border-end border-secondary border-opacity-25">
                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Total Value</div>
                 <h3 class="mb-0 fw-bold text-white">{{ tile_value_str }} <span class="fs-6 text-muted">PLN</span></h3>
             </div>
-
             <div class="col-6 col-md-3 border-end border-secondary border-opacity-25">
                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Profit ({{ current_range|upper }})</div>
                 <h4 class="mb-0 fw-bold {% if tile_total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                     {% if tile_total_profit_raw > 0 %}+{% endif %}{{ tile_total_profit_str }}
                 </h4>
             </div>
-
             <div class="col-6 col-md-3 border-end border-secondary border-opacity-25">
                 <div class="text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Return ({{ current_range|upper }})</div>
                 <span class="fs-5 fw-bold {% if tile_return_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                     {% if tile_return_pct_raw > 0 %}+{% endif %}{{ tile_return_pct_str }}%
                 </span>
             </div>
-
             <div class="col-6 col-md-3" style="cursor: pointer;" onclick="togglePerf()">
                 <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 mb-1">
-                    <span id="lbl-twr" class="small fw-bold text-white text-uppercase" style="border-bottom: 2px solid #0dcaf0; font-size: 0.7rem;">TWR</span>
+                    <span id="lbl-twr" class="small fw-bold text-white text-uppercase" style="border-bottom: 2px solid #00ff7f; font-size: 0.7rem;">TWR</span>
                     <span class="text-muted small">|</span>
                     <span id="lbl-mwr" class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">MWR</span>
                     <i class="fas fa-sync-alt small text-muted opacity-50 ms-2"></i>
                 </div>
-
-                <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|slice:':1' != '-' %}text-info{% else %}text-danger{% endif %}">
+                <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}">
                     {{ tile_twr }}%
                 </h4>
                 <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
@@ -67,38 +138,44 @@
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="table-pln">
-                <thead class="bg-dark text-muted text-uppercase small" style="font-size: 0.75rem;">
+                <thead class="bg-dark text-uppercase align-middle fs-6">
                     <tr>
-                        <th class="ps-4 py-3">Asset</th>
-                        <th class="text-end">1D %</th>
-                        <th class="text-end">Units</th>
-                        <th class="text-end">Avg Price</th>
-                        <th class="text-end">Cur. Price</th>
-                        <th class="text-end">Date</th> <th class="text-end">Days</th> <th class="text-end">Value (PLN)</th>
-                        <th class="text-end">Share %</th>
-                        <th class="text-end">Return %</th>
-                        <th class="text-end pe-4">Profit (PLN)</th>
+                        <th class="ps-4 py-3 sortable" onclick="sortTable(0, 'table-pln')"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(1, 'table-pln')"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(2, 'table-pln')"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(3, 'table-pln')"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(4, 'table-pln')"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(5, 'table-pln')"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(6, 'table-pln')"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(7, 'table-pln')"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(8, 'table-pln')"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(9, 'table-pln')"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(10, 'table-pln')"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end pe-4 sortable" onclick="sortTable(11, 'table-pln')"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for asset in pln_items %}
                     <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
-                        <td class="ps-4">
+                        <td class="ps-4" data-value="{{ asset.display_name }}">
                             <div class="fw-bold text-white">{{ asset.display_name }}</div>
                             <div class="small text-muted" style="font-size: 0.7rem;">
                                 {{ asset.sector }} &bull; {{ asset.asset_type }}
                             </div>
                         </td>
-                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">
                             {{ asset.day_change_pct }}%
                         </td>
-                        <td class="text-end text-white">{{ asset.quantity }}</td>
-                        <td class="text-end text-muted">{{ asset.avg_price_pln }}</td>
-                        <td class="text-end text-white fw-bold">{{ asset.current_price_fmt }}</td>
-                        <td class="text-end text-muted small">{{ asset.price_date|date:"Y-m-d" }}</td>
-                        <td class="text-end text-muted">{{ asset.days_held }}</td>
-                        <td class="text-end text-white fw-bold">{{ asset.value_pln }}</td>
-                        <td class="text-end">
+                        <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">
+                            {{ asset.day_change_pln|default:0|floatformat:2 }}
+                        </td>
+                        <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
+                        <td class="text-end text-muted" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
+                        <td class="text-end text-white fw-bold" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
+                        <td class="text-end text-muted small" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
+                        <td class="text-end text-muted" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
+                        <td class="text-end text-white fw-bold" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
+                        <td class="text-end" data-value="{{ asset.share_pct_raw }}">
                             <div class="d-flex align-items-center justify-content-end">
                                 <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
                                 <div class="progress" style="height: 3px; width: 25px; background-color: #333;">
@@ -106,10 +183,10 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">
                             {{ asset.gain_percent }}%
                         </td>
-                        <td class="text-end pe-4">
+                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
                             <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
                                 {% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}
                             </span>
@@ -119,7 +196,7 @@
                 </tbody>
                 <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
                     <tr class="fw-bold">
-                        <td colspan="7" class="text-end py-3 text-muted text-uppercase small">GPW Summary:</td>
+                        <td colspan="8" class="text-end py-3 text-muted text-uppercase small">GPW Summary:</td>
                         <td class="text-end text-white fs-6">{{ pln_stats.value }}</td>
                         <td class="text-end text-white small">{{ pln_stats.share_total }}%</td>
                         <td class="text-end {% if pln_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ pln_stats.return_pct }}%</td>
@@ -143,40 +220,44 @@
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="table-foreign">
-                <thead class="bg-dark text-muted text-uppercase small" style="font-size: 0.75rem;">
+                <thead class="bg-dark text-uppercase align-middle fs-6">
                     <tr>
-                        <th class="ps-4 py-3">Asset</th>
-                        <th class="text-end">1D %</th>
-                        <th class="text-end">Units</th>
-                        <th class="text-end">Avg Price (PLN)</th>
-                        <th class="text-end">Cur. Price</th>
-                        <th class="text-end">Date</th>
-                        <th class="text-end">Days</th>
-                        <th class="text-end">Value (PLN)</th>
-                        <th class="text-end">Share %</th>
-                        <th class="text-end">Return %</th>
-                        <th class="text-end pe-4">Profit (PLN)</th>
+                        <th class="ps-4 py-3 sortable" onclick="sortTable(0, 'table-foreign')"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(1, 'table-foreign')"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(2, 'table-foreign')"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(3, 'table-foreign')"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(4, 'table-foreign')"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(5, 'table-foreign')"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(6, 'table-foreign')"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(7, 'table-foreign')"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(8, 'table-foreign')"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(9, 'table-foreign')"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(10, 'table-foreign')"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end pe-4 sortable" onclick="sortTable(11, 'table-foreign')"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for asset in foreign_items %}
                     <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
-                        <td class="ps-4">
+                        <td class="ps-4" data-value="{{ asset.display_name }}">
                             <div class="fw-bold text-white">{{ asset.display_name }}</div>
                             <div class="small text-muted" style="font-size: 0.7rem;">
                                 {{ asset.sector }} &bull; {{ asset.asset_type }}
                             </div>
                         </td>
-                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">
                             {{ asset.day_change_pct }}%
                         </td>
-                        <td class="text-end text-white">{{ asset.quantity }}</td>
-                        <td class="text-end text-muted">{{ asset.avg_price_pln }}</td>
-                        <td class="text-end text-white fw-bold">{{ asset.current_price_fmt }}</td>
-                        <td class="text-end text-muted small">{{ asset.price_date|date:"Y-m-d" }}</td>
-                        <td class="text-end text-muted">{{ asset.days_held }}</td>
-                        <td class="text-end text-white fw-bold">{{ asset.value_pln }}</td>
-                        <td class="text-end">
+                        <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">
+                            {{ asset.day_change_pln|default:0|floatformat:2 }}
+                        </td>
+                        <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
+                        <td class="text-end text-muted" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
+                        <td class="text-end text-white fw-bold" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
+                        <td class="text-end text-muted small" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
+                        <td class="text-end text-muted" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
+                        <td class="text-end text-white fw-bold" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
+                        <td class="text-end" data-value="{{ asset.share_pct_raw }}">
                             <div class="d-flex align-items-center justify-content-end">
                                 <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
                                 <div class="progress" style="height: 3px; width: 25px; background-color: #333;">
@@ -184,10 +265,10 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">
                             {{ asset.gain_percent }}%
                         </td>
-                        <td class="text-end pe-4">
+                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
                             <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
                                 {% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}
                             </span>
@@ -197,7 +278,7 @@
                 </tbody>
                 <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
                     <tr class="fw-bold">
-                        <td colspan="7" class="text-end py-3 text-muted text-uppercase small">Global Summary:</td>
+                        <td colspan="8" class="text-end py-3 text-muted text-uppercase small">Global Summary:</td>
                         <td class="text-end text-white fs-6">{{ foreign_stats.value }}</td>
                         <td class="text-end text-white small">{{ foreign_stats.share_total }}%</td>
                         <td class="text-end {% if foreign_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ foreign_stats.return_pct }}%</td>
@@ -220,25 +301,29 @@
 <div class="card border-secondary border-opacity-25 mb-5">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-dark text-muted text-uppercase small" style="font-size: 0.75rem;">
+            <table class="table table-hover align-middle mb-0" id="table-closed">
+                <thead class="bg-dark text-uppercase align-middle fs-6">
                     <tr>
-                        <th class="ps-4 py-3">Asset</th>
-                        <th class="text-end">Status</th>
-                        <th class="text-end pe-4">Realized Profit (PLN)</th>
+                        <th class="ps-4 py-3 sortable" onclick="sortTable(0, 'table-closed')"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(1, 'table-closed')"><div class="th-content">Close Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end sortable" onclick="sortTable(2, 'table-closed')"><div class="th-content">Return % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end pe-4 sortable" onclick="sortTable(3, 'table-closed')"><div class="th-content">Realized Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for asset in closed_items %}
                     <tr style="cursor: pointer;" onclick="window.location='{% url 'asset_details' asset.symbol %}'">
-                        <td class="ps-4">
+                        <td class="ps-4" data-value="{{ asset.display_name }}">
                             <div class="fw-bold text-white">{{ asset.display_name }}</div>
                             <div class="small text-muted">{{ asset.asset_type }}</div>
                         </td>
-                        <td class="text-end">
-                            <span class="badge bg-secondary">SOLD</span>
+                        <td class="text-end text-muted small" data-value="{{ asset.close_date|date:'Ymd' }}">
+                            {{ asset.close_date|date:"Y-m-d"|default:"--" }}
                         </td>
-                        <td class="text-end pe-4">
+                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">
+                            {{ asset.gain_percent }}%
+                        </td>
+                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
                             <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
                                 {% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}
                             </span>
@@ -253,9 +338,7 @@
 {% endif %}
 
 <script>
-    // JS do przełączania TWR/MWR
     let showTwr = true;
-
     function togglePerf() {
         showTwr = !showTwr;
         const vMwr = document.getElementById('val-mwr');
@@ -264,15 +347,13 @@
         const lTwr = document.getElementById('lbl-twr');
 
         if (showTwr) {
-            vMwr.style.display = 'none';
-            vTwr.style.display = 'block';
+            vMwr.style.display = 'none'; vTwr.style.display = 'block';
             lMwr.style.borderBottom = 'none'; lMwr.classList.replace('text-white', 'text-muted');
-            lTwr.style.borderBottom = '2px solid #0dcaf0'; lTwr.classList.replace('text-muted', 'text-white');
+            lTwr.style.borderBottom = '2px solid #00ff7f'; lTwr.classList.replace('text-muted', 'text-white');
         } else {
-            vMwr.style.display = 'block';
-            vTwr.style.display = 'none';
+            vMwr.style.display = 'block'; vTwr.style.display = 'none';
             lTwr.style.borderBottom = 'none'; lTwr.classList.replace('text-white', 'text-muted');
-            lMwr.style.borderBottom = '2px solid #198754'; lMwr.classList.replace('text-muted', 'text-white');
+            lMwr.style.borderBottom = '2px solid #00ff7f'; lMwr.classList.replace('text-muted', 'text-white');
         }
     }
 
@@ -280,6 +361,66 @@
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl)
     })
+
+    function sortTable(n, tableId) {
+        // Debug w konsoli - sprawdź czy działa
+        console.log("Sorting table: " + tableId + " column: " + n);
+
+        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        table = document.getElementById(tableId);
+        switching = true;
+        dir = "asc";
+
+        var headers = table.getElementsByTagName("TH");
+        for (i = 0; i < headers.length; i++) {
+            headers[i].classList.remove("asc", "desc");
+        }
+
+        while (switching) {
+            switching = false;
+            rows = table.rows;
+            var tbody = table.getElementsByTagName("tbody")[0];
+            var bodyRows = tbody.getElementsByTagName("tr");
+
+            for (i = 0; i < (bodyRows.length - 1); i++) {
+                shouldSwitch = false;
+                x = bodyRows[i].getElementsByTagName("TD")[n];
+                y = bodyRows[i + 1].getElementsByTagName("TD")[n];
+
+                var xVal = x.getAttribute("data-value") || x.innerText.toLowerCase();
+                var yVal = y.getAttribute("data-value") || y.innerText.toLowerCase();
+
+                var xNum = parseFloat(xVal);
+                var yNum = parseFloat(yVal);
+                var isNum = !isNaN(xNum) && !isNaN(yNum);
+
+                if (dir == "asc") {
+                    if (isNum) {
+                        if (xNum > yNum) { shouldSwitch = true; break; }
+                    } else {
+                        if (xVal > yVal) { shouldSwitch = true; break; }
+                    }
+                } else if (dir == "desc") {
+                    if (isNum) {
+                        if (xNum < yNum) { shouldSwitch = true; break; }
+                    } else {
+                        if (xVal < yVal) { shouldSwitch = true; break; }
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                bodyRows[i].parentNode.insertBefore(bodyRows[i + 1], bodyRows[i]);
+                switching = true;
+                switchcount ++;
+            } else {
+                if (switchcount == 0 && dir == "asc") {
+                    dir = "desc";
+                    switching = true;
+                }
+            }
+        }
+        headers[n].classList.add(dir);
+    }
 </script>
 
 {% endblock %}
