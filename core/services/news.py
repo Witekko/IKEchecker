@@ -3,27 +3,64 @@
 import feedparser
 import urllib.parse
 import difflib
-from datetime import date, datetime
+from datetime import date
 import logging
 
 logger = logging.getLogger('core')
 
-# Konfiguracja źródeł
-BLOCKED_SOURCES = ['puls biznesu', 'pb.pl', 'wyborcza.biz']
-PREFERRED_SOURCES = ['bankier', 'stockwatch', 'stooq', 'pap', 'biznes.pl', 'parkiet']
+# 1. Źródła płatne/niechciane
+BLOCKED_SOURCES = ['puls biznesu', 'pb.pl', 'wyborcza.biz', 'przegląd sportowy', 'sport.pl', 'meczyki']
+
+# 2. Źródła preferowane (darmowe i dobrej jakości)
+PREFERRED_SOURCES = ['bankier', 'stockwatch', 'stooq', 'pap', 'biznes.pl', 'parkiet', 'money.pl', 'infostrefa']
+
+# 3. Tickery "Słowa Pospolite" - wymagają specjalnego traktowania
+AMBIGUOUS_TICKERS = {
+    'PAS', 'DOM', 'TOR', 'KOG', 'LEN', 'AUTO', 'DATA', 'TEST', 'O2O', 'VIGO', 'ABC', 'BBT', 'BETA', 'ACT'
+}
 
 
 def get_asset_news(symbol, name):
     news_list = []
-    clean_name = name.split(' ')[0]
 
-    # Budowanie zapytania (bez zmian)
+    # Proste czyszczenie nazwy
+    clean_name = name.split(' ')[0].strip()
+    # Usuwamy ewentualne kropki z nazwy (np. "Passus S.A." -> "Passus")
+    clean_name = clean_name.replace(',', '').replace('.', '')
+
+    query = ""
+
     if symbol.endswith('.PL'):
         ticker_clean = symbol.replace('.PL', '')
-        query = f'"{clean_name}" OR "{ticker_clean}"'
+
+        # Sprawdzamy, czy ticker jest na czarnej liście
+        is_ambiguous = ticker_clean in AMBIGUOUS_TICKERS
+
+        # Czy nazwa jest bezpieczna? (Dłuższa niż 2 znaki i nie jest tożsama z tickerem)
+        # Np. Name="Passus", Ticker="PAS" -> SAFE.
+        # Np. Name="PAS", Ticker="PAS" -> UNSAFE.
+        is_name_safe = (clean_name.upper() != ticker_clean) and (len(clean_name) > 2)
+
+        if is_ambiguous:
+            if is_name_safe:
+                # STRATEGIA 1: Mamy bezpieczną nazwę (Passus). OLEWAMY ticker "PAS".
+                # Szukamy tylko po nazwie, bo słowo "Passus" nie występuje w sporcie.
+                query = f'"{clean_name}"'
+            else:
+                # STRATEGIA 2: Nazwa to też "PAS". Musimy szukać z kontekstem, ale BEZ słów sportowych.
+                # Wyrzuciłem "akcje" (akcja w ringu) i "wyniki" (wynik meczu).
+                strict_context = '("giełda" OR "notowania" OR "dywidenda" OR "emitent" OR "ESPI" OR "GPW" OR "inwestor")'
+                query = f'("{ticker_clean}" AND {strict_context})'
+        else:
+            # STRATEGIA 3: Normalne spółki (np. CDR, PKO).
+            # Tu możemy pozwolić sobie na szerszy kontekst.
+            query = f'"{clean_name}" OR "{ticker_clean}"'
+
         base_url = "https://news.google.com/rss/search"
         params = {'q': f"({query}) when:30d", 'hl': 'pl', 'gl': 'PL', 'ceid': 'PL:pl'}
+
     else:
+        # Zagraniczne
         query = f'"{clean_name}" stock'
         base_url = "https://news.google.com/rss/search"
         params = {'q': f"({query}) when:30d", 'hl': 'en-US', 'gl': 'US', 'ceid': 'US:en'}
@@ -34,25 +71,31 @@ def get_asset_news(symbol, name):
     try:
         feed = feedparser.parse(rss_url)
         today = date.today()
-
-        # 1. Faza wstępna: Pobierz i przetwórz więcej kandydatów (30)
         candidates = []
 
-        for entry in feed.entries[:30]:
+        # Pobieramy 40, żeby po ostrym filtrowaniu coś zostało
+        for entry in feed.entries[:40]:
             source_name = entry.source.title if hasattr(entry, 'source') else 'Google'
             source_lower = source_name.lower()
+            title_lower = entry.title.lower()
 
-            # A. Filtracja Paywalla (Wyrzucamy Puls Biznesu)
+            # A. Filtracja Źródeł (Dodatkowo blokujemy sportowe)
             if any(blocked in source_lower for blocked in BLOCKED_SOURCES):
                 continue
 
-            # B. Ocena źródła (Bonus dla Bankiera/StockWatch)
+            # B. Dodatkowe zabezpieczenie treści dla "PAS"
+            # Jeśli w tytule jest "mistrzowski", "waga", "gala", "ring" -> odrzucamy
+            if is_ambiguous and any(sport_word in title_lower for sport_word in
+                                    ['mistrzowski', 'waga', 'gala', 'ring', 'ksw', 'ufc', 'autostrada', 'drogowy']):
+                continue
+
+            # C. Priorytetyzacja
             priority_score = 0
             if any(pref in source_lower for pref in PREFERRED_SOURCES):
-                priority_score = 10  # Wysoki priorytet
+                priority_score = 10
 
-            # Parsowanie daty
-            dt_obj = date(2000, 1, 1)  # Fallback
+            # Data
+            dt_obj = date(2000, 1, 1)
             date_label = "Recent"
             freshness = 2
 
@@ -73,13 +116,11 @@ def get_asset_news(symbol, name):
                 except:
                     pass
 
-            # Tagi
             tags = []
-            title_lower = entry.title.lower()
-            if 'espi' in title_lower or 'ebi' in title_lower or 'raport' in title_lower: tags.append('OFFICIAL')
-            if 'dywidend' in title_lower or 'dividend' in title_lower: tags.append('MONEY')
-            if 'wyniki' in title_lower or 'results' in title_lower: tags.append('RESULTS')
-            if 'rekomendacj' in title_lower or 'recommendation' in title_lower: tags.append('RECO')
+            if 'espi' in title_lower or 'ebi' in title_lower: tags.append('OFFICIAL')
+            if 'dywidend' in title_lower: tags.append('MONEY')
+            if 'wyniki' in title_lower and 'finans' in title_lower: tags.append('RESULTS')  # Tylko "wyniki finansowe"
+            if 'rekomendacj' in title_lower: tags.append('RECO')
 
             candidates.append({
                 'title': entry.title,
@@ -89,14 +130,11 @@ def get_asset_news(symbol, name):
                 'date_obj': dt_obj,
                 'freshness': freshness,
                 'tags': tags,
-                'priority': priority_score  # Klucz do sortowania przed deduplikacją
+                'priority': priority_score
             })
 
-        # 2. Sortowanie po Priorytecie (Najpierw "Dobre Źródła", potem reszta)
-        # Dzięki temu przy usuwaniu duplikatów, zachowamy wersję z lepszego źródła
+        # D. Sortowanie i Deduplikacja
         candidates.sort(key=lambda x: x['priority'], reverse=True)
-
-        # 3. Deduplikacja (Zachowujemy pierwszy napotkany - czyli ten o wyższym priorytecie)
         unique_news = []
         seen_titles = []
 
@@ -104,20 +142,15 @@ def get_asset_news(symbol, name):
             title = item['title']
             is_duplicate = False
             for seen in seen_titles:
-                # Jeśli podobieństwo > 60%, traktujemy jako duplikat
-                if difflib.SequenceMatcher(None, title, seen).ratio() > 0.60:
-                    is_duplicate = True
+                if difflib.SequenceMatcher(None, title, seen).ratio() > 0.85:
+                    is_duplicate = True;
                     break
-
             if not is_duplicate:
                 unique_news.append(item)
                 seen_titles.append(title)
 
-        # 4. Sortowanie końcowe po dacie (Najnowsze na górze)
         unique_news.sort(key=lambda x: x['date_obj'], reverse=True)
-
-        # 5. Przycięcie do 6 sztuk
-        news_list = unique_news[:6]
+        news_list = unique_news[:8]
 
     except Exception as e:
         logger.error(f"News Error: {e}")

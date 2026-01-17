@@ -286,12 +286,15 @@ def process_xtb_file(uploaded_file, portfolio_obj, overwrite_manual=False):
                         min_date = dates.min()
                         max_date = dates.max()
 
+                        # FIX: Rozszerzamy zakres do końca dnia ostatniej transakcji (23:59:59)
+                        # Dzięki temu usuniemy też wpisy dodane ręcznie "później" tego samego dnia.
+                        max_date_extended = max_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
                         # Usuwamy transakcje ręczne (MAN-) w tym zakresie dat
-                        # Używamy delete() co jest szybkie i skuteczne
                         deleted_count, _ = Transaction.objects.filter(
                             portfolio=portfolio_obj,
                             xtb_id__startswith='MAN-',
-                            date__range=(min_date, max_date)
+                            date__range=(min_date, max_date_extended)  # Używamy rozszerzonej daty
                         ).delete()
 
                         logger.info(f"Usunięto {deleted_count} ręcznych transakcji kolidujących z importem.")

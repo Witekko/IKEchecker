@@ -8,7 +8,7 @@ from ..models import Asset, Transaction
 from .config import SUFFIX_MAP
 from .market import validate_ticker_and_price
 from .calculator import PortfolioCalculator
-
+from .market import fetch_asset_metadata
 
 def add_manual_transaction(portfolio, data):
     t_type = data.get('type')
@@ -116,3 +116,90 @@ def add_manual_transaction(portfolio, data):
     )
 
     return f"Transaction {t_type} {symbol} added."
+
+
+def update_assets_bulk(post_data):
+    """
+    Parsuje surowe dane z formularza (request.POST) i aktualizuje aktywa.
+    Oczekuje kluczy: asset_{id}_name, asset_{id}_sector, asset_{id}_type.
+    """
+    # Pobieramy wszystkie aktywa do mapy, żeby nie robić 100 zapytań SQL
+    all_assets = {str(a.id): a for a in Asset.objects.all()}
+    updated_count = 0
+
+    for key, value in post_data.items():
+        # Szukamy kluczy zmian nazwy, bo one są wyznacznikiem wiersza
+        if key.startswith('asset_') and key.endswith('_name'):
+            parts = key.split('_')
+            if len(parts) == 3:
+                asset_id = parts[1]
+
+                if asset_id in all_assets:
+                    asset = all_assets[asset_id]
+
+                    # Pobieramy wartości z formularza
+                    new_name = value.strip()
+                    new_sector = post_data.get(f'asset_{asset_id}_sector')
+                    new_type = post_data.get(f'asset_{asset_id}_type')
+
+                    # Sprawdzamy zmiany (Dirty check)
+                    changed = False
+                    if asset.name != new_name:
+                        asset.name = new_name
+                        changed = True
+                    if asset.sector != new_sector:
+                        asset.sector = new_sector
+                        changed = True
+                    if asset.asset_type != new_type:
+                        asset.asset_type = new_type
+                        changed = True
+
+                    if changed:
+                        asset.save()
+                        updated_count += 1
+
+    return updated_count
+
+
+def sync_all_assets_metadata():
+    """
+    Iteruje po wszystkich aktywach i aktualizuje dane z Yahoo Finance.
+    Zwraca (zaktualizowane, błędy).
+    """
+    assets = Asset.objects.all()
+    updated_count = 0
+    errors = 0
+
+    for asset in assets:
+        # Pomijamy waluty i PLN, bo Yahoo często nie ma dla nich dobrych metadanych
+        if asset.symbol == 'CASH' or ('PLN' in asset.symbol and len(asset.symbol) == 3):
+            continue
+
+        ticker = asset.yahoo_ticker if asset.yahoo_ticker else asset.symbol
+        data = fetch_asset_metadata(ticker)
+
+        if data['success']:
+            changed = False
+
+            # Logika nadpisywania (tylko jeśli w bazie są domyślne/puste)
+            if asset.sector == 'OTHER' and data['sector'] != 'OTHER':
+                asset.sector = data['sector']
+                changed = True
+
+            if asset.asset_type == 'STOCK' and data['asset_type'] != 'STOCK':
+                asset.asset_type = data['asset_type']
+                changed = True
+
+            # Nazwę aktualizujemy, jeśli obecna jest pusta lub tożsama z symbolem
+            if not asset.name or asset.name == asset.symbol:
+                if data['name']:
+                    asset.name = data['name']
+                    changed = True
+
+            if changed:
+                asset.save()
+                updated_count += 1
+        else:
+            errors += 1
+
+    return updated_count, errors
