@@ -1,0 +1,8 @@
+<div class="btn-group shadow-sm bg-dark rounded-pill p-1 border border-secondary border-opacity-25" role="group">
+    <a href="?range=1m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1m' %}btn-success{% else %}btn-dark text-muted{% endif %}">1M</a>
+    <a href="?range=3m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '3m' %}btn-success{% else %}btn-dark text-muted{% endif %}">3M</a>
+    <a href="?range=6m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '6m' %}btn-success{% else %}btn-dark text-muted{% endif %}">6M</a>
+    <a href="?range=ytd" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'ytd' %}btn-success{% else %}btn-dark text-muted{% endif %}">YTD</a>
+    <a href="?range=1y" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1y' %}btn-success{% else %}btn-dark text-muted{% endif %}">1Y</a>
+    <a href="?range=all" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'all' or not current_range %}btn-success{% else %}btn-dark text-muted{% endif %}">MAX</a>
+</div>

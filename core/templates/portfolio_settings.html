@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 
@@ -10,7 +11,6 @@
 </div>
 
 <div class="row g-3 mb-5">
-
     <div class="col-6 col-xl-3">
         <div class="card h-100 border-secondary border-opacity-25 bg-dark shadow-sm operation-card"
              data-bs-toggle="modal" data-bs-target="#addTransactionModal">
@@ -25,24 +25,11 @@
     </div>
 
     <div class="col-6 col-xl-3">
-        <div class="card h-100 border-secondary border-opacity-25 bg-dark shadow-sm operation-card"
-             data-bs-toggle="modal" data-bs-target="#importModal">
-            <div class="card-body text-center d-flex flex-column align-items-center justify-content-center py-4">
-                <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center mb-3 icon-circle">
-                    <i class="fas fa-file-import fa-2x text-primary"></i>
-                </div>
-                <h6 class="fw-bold text-white mb-1">Import Data</h6>
-                <span class="text-muted small" style="font-size: 0.75rem;">XTB Excel / CSV</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-xl-3">
         <a href="{% url 'manage_assets' %}" class="text-decoration-none">
             <div class="card h-100 border-secondary border-opacity-25 bg-dark shadow-sm operation-card">
                 <div class="card-body text-center d-flex flex-column align-items-center justify-content-center py-4">
-                    <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center mb-3 icon-circle">
-                        <i class="fas fa-edit fa-2x text-warning"></i>
+                    <div class="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center mb-3 icon-circle">
+                        <i class="fas fa-edit fa-2x text-info"></i>
                     </div>
                     <h6 class="fw-bold text-white mb-1">Manage Assets</h6>
                     <span class="text-muted small" style="font-size: 0.75rem;">Rename & Sectors</span>
@@ -52,375 +39,139 @@
     </div>
 
     <div class="col-6 col-xl-3">
-        <div class="card h-100 border-secondary border-opacity-25 bg-dark shadow-sm operation-card opacity-50" style="cursor: not-allowed;">
+        <div class="card h-100 border-secondary border-opacity-25 bg-dark shadow-sm operation-card" style="opacity: 0.5; cursor: not-allowed;">
             <div class="card-body text-center d-flex flex-column align-items-center justify-content-center py-4">
-                <div class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center mb-3 icon-circle">
-                    <i class="fas fa-heartbeat fa-2x text-danger"></i>
+                <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center mb-3 icon-circle">
+                    <i class="fas fa-heartbeat fa-2x text-warning"></i>
                 </div>
                 <h6 class="fw-bold text-white mb-1">Health Check</h6>
                 <span class="text-muted small" style="font-size: 0.75rem;">Coming Soon</span>
             </div>
         </div>
     </div>
-</div>
 
-<style>
-    /* Style dla kafelków */
-    .operation-card { cursor: pointer; transition: all 0.2s ease; border-width: 1px; }
-    .operation-card:hover { transform: translateY(-3px); background-color: #252525 !important; border-color: rgba(255,255,255,0.2) !important; }
-    .icon-circle { width: 60px; height: 60px; transition: transform 0.2s; }
-    .operation-card:hover .icon-circle { transform: scale(1.1); }
-
-    /* Style dla zielonego przełącznika (Auto-Deposit) */
-    .green-switch:checked {
-        background-color: #198754 !important;
-        border-color: #198754 !important;
-    }
-    .green-switch:focus {
-        border-color: #198754 !important;
-        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25) !important;
-    }
-
-    /* Style dla żółtego checkboxa ostrzegawczego (Import) */
-    #overwriteManual:checked {
-        background-color: #ffc107; /* Bootstrap Warning Yellow */
-        border-color: #ffc107;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
-    }
-    #overwriteManual:focus {
-        box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25);
-        border-color: #ffc107;
-    }
-</style>
-
-<div class="card border-secondary border-opacity-25 mb-5">
-    <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 text-white"><i class="fas fa-history me-2 text-warning"></i>Recent Transactions</h5>
-        <span class="badge bg-secondary">Last 20</span>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-small">
-                <thead class="bg-dark text-muted text-uppercase small">
-                    <tr>
-                        <th class="ps-3">Date</th>
-                        <th>Type</th>
-                        <th>Asset</th>
-                        <th class="text-end">Amount</th>
-                        <th class="text-end pe-3">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in recent_transactions %}
-                    <tr>
-                        <td class="ps-3 text-white small">{{ t.date|date:"Y-m-d H:i" }}</td>
-                        <td><span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">{{ t.type }}</span></td>
-                        <td class="text-white small">
-                            {% if t.asset %}{{ t.asset.symbol }}{% else %}-{% endif %}
-                        </td>
-                        <td class="text-end fw-bold {% if t.amount > 0 %}text-success{% else %}text-danger{% endif %} small">
-                            {{ t.amount }}
-                        </td>
-                        <td class="text-end pe-3">
-                            <a href="{% url 'delete_transaction' t.id %}"
-                               class="btn btn-sm btn-outline-danger border-0"
-                               onclick="return confirm('Are you sure you want to delete this transaction? This cannot be undone.');"
-                               title="Delete Transaction">
-                                <i class="fas fa-trash-alt"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-3 text-muted">No transactions found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="col-6 col-xl-3">
+        <form method="post" onsubmit="return confirm('Are you sure you want to DELETE all transactions? This cannot be undone.');">
+            {% csrf_token %}
+            <button type="submit" name="clear_transactions" class="btn p-0 w-100 h-100 border-0 bg-transparent">
+                <div class="card h-100 border-secondary border-opacity-25 bg-dark shadow-sm operation-card">
+                    <div class="card-body text-center d-flex flex-column align-items-center justify-content-center py-4">
+                        <div class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center mb-3 icon-circle">
+                            <i class="fas fa-trash-alt fa-2x text-danger"></i>
+                        </div>
+                        <h6 class="fw-bold text-white mb-1">Clear Data</h6>
+                        <span class="text-muted small" style="font-size: 0.75rem;">Delete All Transactions</span>
+                    </div>
+                </div>
+            </button>
+        </form>
     </div>
 </div>
 
 <div class="row g-4">
-    <div class="col-lg-7">
-        <div class="card h-100 border-secondary border-opacity-25">
-            <div class="card-header bg-transparent border-0 pt-4 px-4">
-                <h5 class="fw-bold text-white mb-0"><i class="fas fa-sliders-h me-2 text-success"></i>General Configuration</h5>
+    <div class="col-lg-6">
+        <div class="card border-secondary border-opacity-25">
+            <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 py-3">
+                <h5 class="fw-bold text-white mb-0">General Settings</h5>
             </div>
             <div class="card-body p-4">
                 <form method="post">
                     {% csrf_token %}
-                    <input type="hidden" name="save_settings" value="1">
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small text-uppercase fw-bold">Portfolio Name</label>
-                        {{ form.name }}
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label text-muted small text-uppercase fw-bold">Type</label>
-                            {{ form.portfolio_type }}
-                            <div class="form-text text-muted small">Affects tax calculations (IKE/IKZE = 0% tax).</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label text-muted small text-uppercase fw-bold">Currency</label>
-                            {{ form.currency }}
-                            <div class="form-text text-muted small">Base currency.</div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-end mt-4">
-                        <button type="submit" class="btn btn-success fw-bold px-4">
-                            <i class="fas fa-save me-2"></i>Save Changes
-                        </button>
-                    </div>
+                    {{ form.as_p }}
+                    <button type="submit" name="save_settings" class="btn btn-primary mt-3 w-100">Save Changes</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-5">
-        <div class="card border-danger border-opacity-25 h-100" style="background: rgba(220, 53, 69, 0.05);">
-            <div class="card-header bg-transparent border-0 pt-4 px-4">
-                <h5 class="fw-bold text-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h5>
+    <div class="col-lg-6">
+        <div class="card border-secondary border-opacity-25 h-100">
+            <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 py-3">
+                <h5 class="fw-bold text-white mb-0">Danger Zone</h5>
             </div>
-            <div class="card-body p-4">
-
-                <div class="mb-4 pb-4 border-bottom border-danger border-opacity-25">
-                    <h6 class="text-white fw-bold">Clear All Transactions</h6>
-                    <p class="text-muted small mb-3">
-                        Removes all transactions. Portfolio settings remain. <strong>Irreversible.</strong>
+            <div class="card-body p-4 d-flex flex-column justify-content-center">
+                <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger mb-0">
+                    <h6 class="fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> Delete Portfolio</h6>
+                    <p class="small mb-3">
+                        This will permanently delete <strong>{{ active_portfolio.name }}</strong> and all its history.
                     </p>
-                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmClearModal">
-                        <i class="fas fa-broom me-2"></i>Clear Transactions
-                    </button>
+                    <form method="post" onsubmit="return confirm('FINAL WARNING: Delete this portfolio?');">
+                        {% csrf_token %}
+                        <button type="submit" name="delete_portfolio" class="btn btn-outline-danger w-100 fw-bold">
+                            Delete Portfolio
+                        </button>
+                    </form>
                 </div>
-
-                <div>
-                    <h6 class="text-white fw-bold">Delete Portfolio</h6>
-                    <p class="text-muted small mb-3">
-                        Delete portfolio and all data.
-                    </p>
-                    <button class="btn btn-danger btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                        <i class="fas fa-trash-alt me-2"></i>Delete Portfolio
-                    </button>
-                </div>
-
             </div>
         </div>
     </div>
 </div>
 
 <div class="modal fade" id="addTransactionModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark border border-secondary border-opacity-25 text-white">
-            <div class="modal-header border-bottom border-secondary border-opacity-25">
-                <h5 class="modal-title"><i class="fas fa-plus-circle text-success me-2"></i>New Transaction</h5>
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title">Add Manual Transaction</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-
-            <form method="post" action="#" id="addTxForm">
+            <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="manual_add" value="1">
-
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label text-muted small text-uppercase fw-bold">Type</label>
+                        <label class="form-label text-muted">Type</label>
                         <select name="type" id="txType" class="form-select bg-dark text-white border-secondary">
                             <option value="BUY">BUY (Stock Purchase)</option>
                             <option value="SELL">SELL (Stock Sale)</option>
+                            <option value="DIVIDEND">DIVIDEND (Cash In)</option>
                             <option value="DEPOSIT">DEPOSIT (Cash In)</option>
                             <option value="WITHDRAWAL">WITHDRAWAL (Cash Out)</option>
-                            <option value="DIVIDEND">DIVIDEND (Cash Income)</option>
+                            <option value="TAX">TAX (Cost)</option>
                         </select>
                     </div>
-
                     <div class="mb-3">
-                        <label class="form-label text-muted small text-uppercase fw-bold">Date</label>
-                        <input type="datetime-local" name="date" class="form-control bg-dark text-white border-secondary" required
-                               value="{% now 'Y-m-d\TH:i' %}">
+                        <label class="form-label text-muted">Date & Time</label>
+                        <input type="datetime-local" name="date" class="form-control bg-dark text-white border-secondary" required>
                     </div>
 
                     <div id="assetFields">
                         <div class="mb-3">
-                            <label class="form-label text-muted small text-uppercase fw-bold">Symbol (Ticker)</label>
-                            <input type="text" name="symbol" id="txSymbol" class="form-control bg-dark text-white border-secondary"
-                                   placeholder="e.g. CDR, AAPL.US" style="text-transform: uppercase;">
+                            <label class="form-label text-muted">Asset Symbol</label>
+                            <input type="text" name="symbol" class="form-control bg-dark text-white border-secondary" placeholder="e.g. AAPL.US">
                         </div>
-
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label text-muted small text-uppercase fw-bold">Quantity</label>
-                                <input type="number" step="0.0001" name="quantity" id="txQty" class="form-control bg-dark text-white border-secondary" placeholder="0">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label text-muted">Quantity</label>
+                                <input type="number" step="0.0001" name="quantity" id="txQty" class="form-control bg-dark text-white border-secondary">
                             </div>
-                            <div class="col-6 mb-3">
-                                <label class="form-label text-muted small text-uppercase fw-bold">Price</label>
-                                <input type="number" step="0.01" name="price" id="txPrice" class="form-control bg-dark text-white border-secondary" placeholder="0.00">
+                            <div class="col-6">
+                                <label class="form-label text-muted">Price</label>
+                                <input type="number" step="0.01" name="price" id="txPrice" class="form-control bg-dark text-white border-secondary">
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small text-uppercase fw-bold">Total Amount (PLN)</label>
-                        <div class="input-group">
-                            <input type="number" step="0.01" name="amount" id="txAmount" class="form-control bg-dark text-white border-success fw-bold" required>
-                            <span class="input-group-text bg-dark text-white border-secondary">PLN</span>
-                        </div>
-                        <div class="form-text text-muted small" id="calcInfo">Calculated automatically based on Qty * Price.</div>
+                        <label class="form-label text-muted">Total Amount (PLN)</label>
+                        <input type="number" step="0.01" name="amount" id="txAmount" class="form-control bg-dark text-white border-secondary" required>
+                        <div class="form-text text-muted small mt-1" id="calcInfo">Auto-calculated (Qty * Price)</div>
                     </div>
 
-                    <div class="mt-3 p-3 rounded border border-success border-opacity-25 d-flex justify-content-between align-items-center"
-                         style="background: rgba(25, 135, 84, 0.05);">
-
-                        <div class="me-3">
-                            <label class="form-check-label text-white small fw-bold" for="autoDepositCheck">
-                                Auto-Deposit missing funds?
-                            </label>
-                            <div class="text-muted" style="font-size: 0.70rem; line-height: 1.2;">
-                                If cash balance is low, automatically create a DEPOSIT transaction.
-                            </div>
-                        </div>
-
-                        <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
-                            <input class="form-check-input green-switch m-0" type="checkbox" role="switch" name="auto_deposit" id="autoDepositCheck" checked style="width: 3em; height: 1.5em;">
-                        </div>
-                    </div>
-
-                </div>
-                <div class="modal-footer border-top border-secondary border-opacity-25">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success fw-bold">Add Transaction</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="importModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark border border-primary border-opacity-50 text-white">
-            <div class="modal-header border-bottom border-secondary border-opacity-25">
-                <h5 class="modal-title"><i class="fas fa-file-import text-primary me-2"></i>Import XTB Data</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-
-            <form method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <p class="text-muted small mb-3">Upload your XTB export file (.xlsx or .csv).</p>
-
-                    <input type="file" name="file" class="form-control bg-dark text-white border-secondary mb-4" required>
-
-                    <div class="p-3 rounded border border-warning border-opacity-25 d-flex justify-content-between align-items-center"
-                         style="background: rgba(255, 193, 7, 0.05);">
-
-                        <label class="text-white small me-3" for="overwriteManual" style="cursor: pointer;">
-                            <strong>Clean up manual entries?</strong><br>
-                            <span class="text-muted" style="font-size: 0.75rem; line-height: 1.2; display: block; margin-top: 2px;">
-                                If checked, system will DELETE duplicate manual transactions (MAN-...) found in this file's date range.
-                            </span>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input bg-dark border-secondary" type="checkbox" name="auto_deposit" id="autoDeposit">
+                        <label class="form-check-label text-muted" for="autoDeposit">
+                            Auto-create DEPOSIT if insufficient cash?
                         </label>
-
-                        <div class="form-check m-0 p-0">
-                            <input class="form-check-input m-0 border-warning" type="checkbox" name="overwrite_manual" id="overwriteManual" checked
-                                   style="width: 1.5em; height: 1.5em; cursor: pointer; float: none;">
-                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top border-secondary border-opacity-25">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary fw-bold">Upload & Process</button>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="submit" class="btn btn-success w-100">Add Transaction</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="confirmClearModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark border border-danger">
-            <div class="modal-header border-bottom border-secondary border-opacity-25">
-                <h5 class="modal-title text-white">Confirm Reset</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-white">
-                Are you sure you want to delete ALL transactions in <strong>{{ active_portfolio.name }}</strong>?
-            </div>
-            <div class="modal-footer border-top border-secondary border-opacity-25">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="clear_transactions" value="1">
-                    <button type="submit" class="btn btn-danger fw-bold">Yes, Clear It</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark border border-danger">
-            <div class="modal-header border-bottom border-secondary border-opacity-25">
-                <h5 class="modal-title text-white">Delete Portfolio?</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-white">
-                Are you absolutely sure you want to delete <strong>{{ active_portfolio.name }}</strong>?
-            </div>
-            <div class="modal-footer border-top border-secondary border-opacity-25">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="delete_portfolio" value="1">
-                    <button type="submit" class="btn btn-danger fw-bold">Yes, Delete Forever</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const typeSelect = document.getElementById('txType');
-        const assetFields = document.getElementById('assetFields');
-
-        const qtyInput = document.getElementById('txQty');
-        const priceInput = document.getElementById('txPrice');
-        const amountInput = document.getElementById('txAmount');
-        const calcInfo = document.getElementById('calcInfo');
-
-        // 1. Pokaż/Ukryj pola w zależności od typu
-        function updateFields() {
-            const type = typeSelect.value;
-            if (['DEPOSIT', 'WITHDRAWAL', 'TAX'].includes(type)) {
-                assetFields.style.display = 'none';
-                calcInfo.style.display = 'none';
-                amountInput.readOnly = false; // Pozwól wpisać kwotę ręcznie
-            } else {
-                assetFields.style.display = 'block';
-                calcInfo.style.display = 'block';
-            }
-        }
-
-        // 2. Automatyczne liczenie
-        function calculateTotal() {
-            const qty = parseFloat(qtyInput.value) || 0;
-            const price = parseFloat(priceInput.value) || 0;
-
-            if (qty > 0 && price > 0) {
-                const total = (qty * price).toFixed(2);
-                amountInput.value = total;
-            }
-        }
-
-        typeSelect.addEventListener('change', updateFields);
-        qtyInput.addEventListener('input', calculateTotal);
-        priceInput.addEventListener('input', calculateTotal);
-
-        updateFields();
-    });
-</script>
+<script src="{% static 'js/forms.js' %}"></script>
 
 {% endblock %}

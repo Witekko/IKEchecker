@@ -3,32 +3,39 @@
 {% block content %}
 <div class="row justify-content-center mt-5">
     <div class="col-md-6">
-        <div class="card shadow border-start border-4 border-warning">
-            <div class="card-header bg-transparent text-uppercase fw-bold text-warning">
+        <div class="card shadow border-start border-4 border-warning bg-dark">
+            <div class="card-header bg-transparent text-uppercase fw-bold text-warning border-secondary border-opacity-25">
                 <i class="fas fa-file-import me-2"></i> Import Data
             </div>
             <div class="card-body p-4">
                 <p class="text-muted mb-4">
-                    Wgraj plik <code>.xlsx</code> wygenerowany z platformy XTB (Raport Kasowy / Cash Operations).
-                    System automatycznie wykryje nowe transakcje i pominie duplikaty.
+                    Upload <code>.xlsx</code> file from XTB (Cash Operations Report).
+                    The system detects duplicates automatically.
                 </p>
 
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    
+
                     <div class="mb-4">
                         <input type="file" name="file" class="form-control form-control-lg bg-dark text-light border-secondary" required id="id_file">
                     </div>
 
+                    <div class="form-check mb-3">
+                        <input class="form-check-input bg-dark border-secondary" type="checkbox" name="overwrite_manual" id="overwriteManual">
+                        <label class="form-check-label text-muted" for="overwriteManual">
+                            Clean manual entries in this date range?
+                        </label>
+                    </div>
+
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-warning fw-bold text-dark text-uppercase py-2">
-                            <i class="fas fa-upload me-2"></i> Przetwórz Plik
+                            <i class="fas fa-upload me-2"></i> Process File
                         </button>
                     </div>
                 </form>
             </div>
-            <div class="card-footer bg-transparent text-muted small text-center border-top border-secondary">
-                <i class="fas fa-shield-alt me-1"></i> Twoje dane są przetwarzane lokalnie.
+            <div class="card-footer bg-transparent text-muted small text-center border-top border-secondary border-opacity-25">
+                <i class="fas fa-shield-alt me-1"></i> Data processed locally.
             </div>
         </div>
     </div>

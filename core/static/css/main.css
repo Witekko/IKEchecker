@@ -1,0 +1,253 @@
+:root {
+    --bg-dark: #121212;
+    --card-bg: #1e1e1e;
+    --accent-green: #00ff7f;
+    --text-gray: #a0a0a0;
+    --soft-red: #ef5350;
+    --sidebar-width: 260px;
+    --sidebar-collapsed: 80px;
+    --bottom-nav-height: 70px;
+
+    /* ZMIENNE DO SZTYWNYCH WYSOKOŚCI (Fix skakania) */
+    --logo-height: 70px;
+    --link-height: 50px;
+    --profile-height: 70px;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+    padding-bottom: 0;
+}
+
+/* --- BOOTSTRAP OVERRIDES --- */
+.card { background-color: var(--card-bg) !important; border-color: rgba(255,255,255,0.05) !important; color: #e0e0e0; }
+.table { --bs-table-bg: transparent; --bs-table-color: #e0e0e0; --bs-table-hover-bg: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1); font-size: 0.9rem; }
+
+/* Tabela - Nagłówki */
+.table thead th {
+    background-color: #1a1a1a !important; color: #adb5bd !important;
+    text-transform: uppercase; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;
+    padding: 15px 0; border-bottom: 2px solid rgba(255,255,255,0.1); vertical-align: middle;
+}
+.table tbody td { vertical-align: middle; padding: 12px 0; }
+
+h1, h2, h3, h4, h5, h6 { color: #fff !important; }
+
+/* Formularze */
+.form-control, .form-select { background-color: #2c2c2c !important; border-color: #444 !important; color: #fff !important; }
+.form-control:focus, .form-select:focus {
+    background-color: #333 !important; border-color: var(--accent-green) !important;
+    box-shadow: 0 0 0 0.25rem rgba(0, 255, 127, 0.25) !important;
+}
+
+/* --- UTILS --- */
+.ls-1 { letter-spacing: 1px; }
+.text-accent { color: var(--accent-green) !important; }
+.cursor-pointer { cursor: pointer; }
+.chart-container-wide { position: relative; width: 100%; height: 450px; }
+.chart-container { position: relative; width: 100%; height: 350px; }
+
+/* --- SIDEBAR STYLING --- */
+
+/* 1. Linki (Ogólne) */
+.nav-link {
+    color: var(--text-gray); border-radius: 10px;
+    /* FIX: Sztywna wysokość i Flexbox */
+    height: var(--link-height);
+    display: flex; align-items: center;
+    padding: 0 15px; margin-bottom: 4px;
+    transition: all 0.2s; white-space: nowrap;
+}
+.nav-link:hover { background-color: rgba(255,255,255,0.05); color: #fff; }
+.nav-link.active { background-color: rgba(0, 255, 127, 0.1); color: var(--accent-green); font-weight: bold; }
+.nav-link i {
+    width: 30px; text-align: center; margin-right: 15px;
+    font-size: 1.2rem; flex-shrink: 0; transition: margin 0.3s;
+}
+
+/* --- SIDEBAR (Desktop) --- */
+@media (min-width: 768px) {
+    .main-content {
+        margin-left: var(--sidebar-collapsed);
+        width: calc(100% - var(--sidebar-collapsed));
+        padding-top: 2rem;
+        transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 100vh;
+        display: flex; flex-direction: column;
+    }
+    .content-wrapper { width: 90%; max-width: 1600px; margin: 0 auto; padding-bottom: 2rem; flex: 1; }
+
+    .sidebar-desktop {
+        position: fixed; top: 0; left: 0; bottom: 0;
+        width: var(--sidebar-collapsed);
+        background-color: var(--card-bg);
+        border-right: 1px solid rgba(255,255,255,0.05);
+        padding: 10px; /* Mniejszy padding góra/dół */
+        display: flex; flex-direction: column; z-index: 1000;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden; box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        white-space: nowrap !important;
+    }
+    .sidebar-desktop:hover { width: var(--sidebar-width); align-items: flex-start; }
+
+    /* --- FIX: ELEMENTY SZTYWNE W PIONIE (Żeby nie skakały) --- */
+
+    /* Logo Container */
+    .brand-logo {
+        height: var(--logo-height);
+        display: flex; align-items: center; width: 100%;
+        margin-bottom: 10px; flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    /* Portfolio Button */
+    .portfolio-wrapper {
+        margin-bottom: 20px; width: 100%; flex-shrink: 0;
+    }
+    .portfolio-btn {
+        height: 56px; /* Sztywna wysokość */
+        display: flex; align-items: center; width: 100%;
+        padding: 0 15px; overflow: hidden;
+        justify-content: flex-start; /* Zawsze do lewej */
+    }
+
+    /* User Profile (Dół) */
+    .user-profile-wrapper {
+        margin-top: auto; padding-top: 15px;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        width: 100%; flex-shrink: 0;
+        height: var(--profile-height); /* Sztywne miejsce na dole */
+        display: flex; align-items: center;
+    }
+    .user-profile {
+        display: flex; align-items: center; width: 100%;
+        text-decoration: none; color: white; overflow: hidden;
+    }
+
+    /* --- LOGIKA ZWIJANIA (COLLAPSED STATE) --- */
+
+    /* 1. Ukrywanie tekstów (Opacity, nie display:none, żeby zachować flow) */
+    .sidebar-desktop:not(:hover) .brand-text,
+    .sidebar-desktop:not(:hover) .user-info,
+    .sidebar-desktop:not(:hover) .link-text,
+    .sidebar-desktop:not(:hover) .portfolio-text-wrapper {
+        opacity: 0;
+        transform: translateX(-10px);
+        pointer-events: none;
+        width: 0; /* To ważne */
+        margin: 0; padding: 0;
+    }
+
+    /* 2. Centrujemy ikony, gdy zwinięte */
+    .sidebar-desktop:not(:hover) .brand-logo { justify-content: center; padding: 0; }
+    .sidebar-desktop:not(:hover) .nav-link { justify-content: center; padding: 0; }
+    .sidebar-desktop:not(:hover) .portfolio-btn { justify-content: center; padding: 0; }
+    .sidebar-desktop:not(:hover) .user-profile { justify-content: center; padding: 0; }
+
+    /* 3. Reset marginesów ikon przy zwinięciu */
+    .sidebar-desktop:not(:hover) .nav-link i,
+    .sidebar-desktop:not(:hover) .portfolio-btn i,
+    .sidebar-desktop:not(:hover) .brand-logo img,
+    .sidebar-desktop:not(:hover) .user-profile div:first-child {
+        margin-right: 0 !important;
+    }
+
+    /* Ukrywanie strzałek dropdown */
+    .sidebar-desktop:not(:hover) .dropdown-toggle::after { display: none !important; }
+}
+
+/* --- MOBILE --- */
+@media (max-width: 767px) {
+    body { padding-bottom: calc(var(--bottom-nav-height) + 20px) !important; }
+    .chart-container-wide { height: 300px; }
+    .chart-container { height: 250px; }
+    .content-wrapper { padding: 0 10px; width: 100%; }
+
+    /* Kontener paska */
+    .bottom-nav {
+        position: fixed; bottom: 0; left: 0; right: 0;
+        height: var(--bottom-nav-height);
+        background-color: var(--card-bg);
+        border-top: 1px solid rgba(255,255,255,0.05);
+        display: flex; justify-content: space-around; align-items: center;
+        z-index: 1000; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+    }
+
+    /* STYLIZACJA LINKÓW */
+    .bottom-link {
+        color: var(--text-gray);
+        text-decoration: none;
+        display: flex;
+        flex-direction: column; /* Kluczowe: Ikonka nad tekstem */
+        align-items: center;    /* Środek poziomo */
+        justify-content: center;/* Środek pionowo */
+        font-size: 0.7rem;
+        flex: 1;
+        height: 100%;
+        transition: color 0.2s, background-color 0.2s;
+    }
+
+    .bottom-link i {
+        font-size: 1.4rem;
+        margin-bottom: 4px;
+        color: inherit;
+    }
+
+    .bottom-link.active {
+        color: var(--accent-green);
+    }
+
+    .bottom-link:hover {
+        color: #fff;
+        background-color: rgba(255,255,255,0.05);
+    }
+    /* --- FIX TABELEK NA MOBILE (Scroll poziomy) --- */
+
+    /* 1. Wymuszamy przewijanie kontenera */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* Płynne przewijanie na iOS */
+        margin-bottom: 60px; /* Miejsce na scrollbar nad paskiem nawigacji */
+    }
+
+    /* 2. Blokujemy zawijanie tekstu w komórkach */
+    .table th, .table td {
+        white-space: nowrap; /* KLUCZOWE: To naprawia "zgniatanie" */
+        padding: 10px 8px;   /* Trochę ciaśniej niż na desktopie */
+        font-size: 0.8rem;   /* Mniejsza czcionka dla danych */
+    }
+
+    /* 3. Powiększamy pierwszą kolumnę (Nazwa aktywa), żeby była czytelna */
+    .table td:first-child {
+        min-width: 140px;
+        font-weight: 600;
+    }
+
+    /* Ukrywamy scrollbar systemowy (opcjonalnie, dla estetyki), ale zostawiamy funkcję */
+    .table-responsive::-webkit-scrollbar {
+        height: 4px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.2);
+        border-radius: 2px;
+    }
+}
+
+/* Inne */
+#page-loader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(18, 18, 18, 0.9); z-index: 9999;
+    display: none; justify-content: center; align-items: center; flex-direction: column;
+}
+.spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Fix Green Filters */
+.btn-outline-secondary.active, .btn-check:checked + .btn-outline-secondary {
+    background-color: var(--accent-green) !important;
+    color: #121212 !important; border-color: var(--accent-green) !important; font-weight: 700;
+}
+.nav-pills .nav-link.active { background-color: var(--accent-green) !important; color: #121212 !important; font-weight: bold; }

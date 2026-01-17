@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 
@@ -16,7 +17,6 @@
     </div>
 
     <div class="row g-3 mb-5">
-
         <div class="col-md-3">
             <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
                 <div class="card-body py-3">
@@ -26,48 +26,44 @@
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
-            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
                 <div class="card-body py-3">
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Total Gross</div>
-                    <h4 class="mb-0 fw-bold text-white">{{ total_gross }}</h4>
-                    <small class="text-muted">PLN</small>
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Gross Total</div>
+                    <h3 class="mb-0 fw-bold text-white">{{ total_gross }}</h3>
+                    <small class="text-muted">Before tax</small>
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
-            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
                 <div class="card-body py-3">
                     <div class="text-muted small fw-bold text-uppercase mb-1">Tax Paid</div>
-                    <h4 class="mb-0 fw-bold text-danger">{{ total_tax }}</h4>
-                    <small class="text-muted">PLN</small>
+                    <h3 class="mb-0 fw-bold text-danger">{{ total_tax }}</h3>
+                    <small class="text-muted">Withholding tax</small>
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
-            <div class="card h-100 shadow-sm border-secondary border-opacity-25">
+            <div class="card h-100 shadow-sm border-secondary border-opacity-25 bg-dark">
                 <div class="card-body py-3">
                     <div class="text-muted small fw-bold text-uppercase mb-1">Top Payer</div>
                     {% if top_payer %}
-                        <h4 class="mb-0 fw-bold text-white">{{ top_payer.symbol }}</h4>
-                        <small class="text-success fw-bold">+{{ top_payer.amount }} PLN</small>
+                        <h3 class="mb-0 fw-bold text-warning">{{ top_payer.symbol }}</h3>
+                        <small class="text-muted">{{ top_payer.amount }} PLN</small>
                     {% else %}
-                        <h4 class="mb-0 fw-bold text-white">-</h4>
-                        <small class="text-muted">No data</small>
+                        <h3 class="mb-0 fw-bold text-muted">-</h3>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row mb-5 g-4">
-        <div class="col-lg-7">
-            <div class="card h-100 border-secondary border-opacity-25">
-                <div class="card-header border-0 pt-4 px-4">
-                    <span class="text-muted text-uppercase fw-bold ls-1">Yearly Payouts</span>
+    <div class="row g-4 mb-5">
+        <div class="col-lg-6">
+            <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
+                <div class="card-header bg-transparent border-0 pt-3">
+                    <h6 class="text-uppercase text-muted fw-bold mb-0 ls-1">Annual Growth</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -76,11 +72,15 @@
                 </div>
             </div>
         </div>
-
-        <div class="col-lg-5">
-            <div class="card h-100 border-secondary border-opacity-25">
-                <div class="card-header border-0 pt-4 px-4">
-                    <span class="text-muted text-uppercase fw-bold ls-1">Seasonality (Last Year)</span>
+        <div class="col-lg-6">
+            <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
+                <div class="card-header bg-transparent border-0 pt-3 d-flex justify-content-between">
+                    <h6 class="text-uppercase text-muted fw-bold mb-0 ls-1">Seasonality</h6>
+                    <select id="yearSelector" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: 100px;">
+                        {% for y in years_labels %}
+                            <option value="{{ y }}" {% if forloop.last %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -91,104 +91,41 @@
         </div>
     </div>
 
-    <h4 class="mb-3 text-muted text-uppercase fw-bold ls-1">Top Payers Ranking</h4>
-    <div class="card border-0 shadow-sm mb-5">
+    <div class="card border-secondary border-opacity-25 mb-5">
+        <div class="card-header bg-transparent border-0 pt-3">
+            <h5 class="fw-bold text-white mb-0">Payer Breakdown</h5>
+        </div>
         <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-dark">
-                    <tr class="text-muted small text-uppercase">
-                        <th class="ps-4 py-3">#</th>
-                        <th>Symbol</th>
-                        <th>Total Paid (Gross)</th>
-                        <th>Share</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for payer in payers_list %}
-                    <tr>
-                        <td class="ps-4 text-muted">{{ forloop.counter }}</td>
-                        <td>
-                            <a href="/asset/{{ payer.symbol }}/" class="text-white fw-bold text-decoration-none">
-                                {{ payer.symbol }}
-                            </a>
-                        </td>
-                        <td class="fw-bold text-success">+{{ payer.amount }} PLN</td>
-                        <td>
-                            <div class="progress" style="height: 4px; width: 100px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ payer.share }}%; opacity: {{ forloop.revcounter0|add:2 }}0%"></div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="4" class="text-center py-4 text-muted">No dividends</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="divTable">
+                    <thead class="bg-dark text-uppercase small">
+                        <tr>
+                            <th class="ps-4 py-3 sortable" onclick="sortTable(0, 'divTable')">Asset</th>
+                            <th class="text-end sortable" onclick="sortTable(1, 'divTable')">Total Received (PLN)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in payers_list %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-white">{{ p.symbol }}</td>
+                            <td class="text-end pe-4 text-success fw-bold">{{ p.amount }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center py-4 text-muted">No dividends yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    {{ years_labels|json_script:"d-years" }}
+    {# --- DATA ISLANDS --- #}
+    {{ years_labels|json_script:"d-years-lbl" }}
     {{ years_data|json_script:"d-years-val" }}
     {{ monthly_data|json_script:"d-months-val" }}
+    {{ all_monthly_data|json_script:"d-all-months" }}
 
-    <style>.ls-1 { letter-spacing: 1px; }</style>
-
-    <script>
-        function gd(id) { return JSON.parse(document.getElementById(id).textContent); }
-
-        const NEW_GREEN = '#98FB98';
-        const SOFT_BLUE = '#42a5f5';
-
-        // 1. WYKRES ROCZNY
-        new Chart(document.getElementById('yearlyChart'), {
-            type: 'bar',
-            data: {
-                labels: gd('d-years'),
-                datasets: [{
-                    label: 'Net Dividend (PLN)',
-                    data: gd('d-years-val'),
-                    backgroundColor: NEW_GREEN,
-                    borderRadius: 6,
-                    barPercentage: 0.6
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { display: false }, ticks: { color: '#888' } },
-                    y: { grid: { color: '#333', borderDash: [4, 4] }, ticks: { color: '#888' } }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // 2. WYKRES MIESIĘCZNY (Sezonowość)
-        const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        new Chart(document.getElementById('monthlyChart'), {
-            type: 'line',
-            data: {
-                labels: monthLabels,
-                datasets: [{
-                    label: 'Monthly',
-                    data: gd('d-months-val'),
-                    borderColor: SOFT_BLUE,
-                    backgroundColor: 'rgba(66, 165, 245, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 4,
-                    pointBackgroundColor: SOFT_BLUE
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { display: false }, ticks: { color: '#888' } },
-                    y: { grid: { display: false } }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-    </script>
+    <script src="{% static 'js/charts_dividends.js' %}"></script>
+    <script src="{% static 'js/tables.js' %}"></script>
 
 {% endblock %}

@@ -1,0 +1,75 @@
+{% load static %}
+<nav class="sidebar-desktop d-none d-md-flex">
+
+    <a href="/" class="text-white text-decoration-none brand-logo">
+        <img src="{% static 'img/logo.svg' %}" alt="Logo" width="40" height="40" class="flex-shrink-0 shadow-lg rounded-circle me-3">
+        <div class="brand-text">
+            <div class="fw-bold ls-1 fs-5">IKE Tracker</div>
+            <div class="small text-muted" style="font-size: 0.65rem;">PRO DASHBOARD</div>
+        </div>
+    </a>
+
+    {% if user.is_authenticated %}
+
+    <div class="portfolio-wrapper">
+        <div class="dropdown w-100">
+            <button class="btn btn-outline-secondary portfolio-btn dropdown-toggle text-white w-100"
+                    type="button" data-bs-toggle="dropdown" style="border-color: rgba(255,255,255,0.1);">
+                <i class="fas fa-wallet text-warning flex-shrink-0 fs-5 me-3"></i>
+                <div class="portfolio-text-wrapper text-start overflow-hidden">
+                    <div class="small text-muted" style="font-size: 0.65rem; line-height: 1;">PORTFOLIO</div>
+                    <div class="fw-bold text-truncate" style="font-size: 0.85rem;">{{ active_portfolio.name }}</div>
+                </div>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark w-100 shadow-lg">
+                <li class="px-3 py-2 text-muted small text-uppercase fw-bold">Switch Portfolio</li>
+                {% for p in all_portfolios %}
+                <li>
+                    <a class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}"
+                       href="{% url 'switch_portfolio' p.id %}">
+                       <span class="text-truncate me-2">{{ p.name }}</span>
+                       <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.6rem;">{{ p.portfolio_type }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#createPortfolioModal"><i class="fas fa-plus-circle me-2"></i> Create New</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="flex-grow-1 w-100 overflow-auto" style="scrollbar-width: none;"> <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="fas fa-home"></i> <span class="link-text">Dashboard</span></a>
+        <a href="{% url 'assets_list' %}" class="nav-link {% if request.resolver_match.url_name == 'assets_list' %}active{% endif %}"><i class="fas fa-list-ul"></i> <span class="link-text">Assets</span></a>
+        <a href="{% url 'dividends' %}" class="nav-link {% if request.resolver_match.url_name == 'dividends' %}active{% endif %}"><i class="fas fa-coins"></i> <span class="link-text">Dividends</span></a>
+        <a href="{% url 'taxes' %}" class="nav-link {% if request.resolver_match.url_name == 'taxes' %}active{% endif %}"><i class="fas fa-file-invoice-dollar"></i> <span class="link-text">Taxes</span></a>
+        <a href="{% url 'portfolio_settings' %}" class="nav-link {% if request.resolver_match.url_name == 'portfolio_settings' %}active{% endif %}"><i class="fas fa-cog"></i> <span class="link-text">Settings</span></a>
+        <a href="{% url 'upload' %}" class="nav-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}"><i class="fas fa-file-excel"></i> <span class="link-text">Import XTB</span></a>
+
+        {% if user.is_superuser %}
+        <div class="my-3 border-top border-secondary border-opacity-25 w-75 mx-auto"></div>
+        <a href="/admin/" class="nav-link text-warning"><i class="fas fa-crown"></i> <span class="link-text">Admin</span></a>
+        {% endif %}
+    </div>
+
+    <div class="user-profile-wrapper">
+        <div class="dropdown w-100">
+            <a href="#" class="user-profile dropdown-toggle px-2" data-bs-toggle="dropdown">
+                <div class="rounded-circle bg-dark border border-secondary d-flex align-items-center justify-content-center flex-shrink-0 me-3" style="width: 38px; height: 38px;">
+                    {{ user.username|slice:":1"|upper }}
+                </div>
+                <div class="user-info">
+                    <div class="fw-bold small text-truncate">{{ user.username }}</div>
+                </div>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+                <li>
+                    <form action="{% url 'login' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt me-2"></i>Log out</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</nav>

@@ -1,233 +1,79 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 
-    {# --- EMPTY STATE --- #}
     {% if not last_transactions %}
         <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
             <div class="text-center">
                 <div class="mb-4">
-                    <div class="rounded-circle bg-dark d-inline-flex align-items-center justify-content-center border border-secondary border-opacity-25"
-                         style="width: 100px; height: 100px;">
+                    <div class="rounded-circle bg-dark d-inline-flex align-items-center justify-content-center border border-secondary border-opacity-25" style="width: 100px; height: 100px;">
                         <i class="fas fa-rocket fa-3x text-success animate-pulse"></i>
                     </div>
                 </div>
                 <h2 class="fw-bold text-white mb-3">Welcome to IKE Tracker!</h2>
-                <p class="text-muted mb-4" style="max-width: 500px; margin: 0 auto;">
-                    Your portfolio is currently empty. Upload your XTB history to start.
-                </p>
+                <p class="text-muted mb-4" style="max-width: 500px; margin: 0 auto;">Upload your XTB history to start.</p>
                 <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
-                    <a href="{% url 'upload' %}" class="btn btn-success btn-lg px-5 rounded-pill fw-bold shadow-sm">
-                        <i class="fas fa-file-upload me-2"></i> Import XTB Excel
-                    </a>
+                    <a href="{% url 'upload' %}" class="btn btn-success btn-lg px-5 rounded-pill fw-bold shadow-sm"><i class="fas fa-file-upload me-2"></i> Import XTB Excel</a>
                 </div>
             </div>
         </div>
-
     {% else %}
 
-        {# --- HEADER: TITLE & RATES --- #}
         <div class="d-flex justify-content-between align-items-end mb-4">
             <div>
                 <h2 class="fw-bold mb-0 text-white">Dashboard</h2>
-                <p class="text-muted small mb-0">Overview</p>
+                <p class="text-muted small mb-0">Overview for <span class="text-white fw-bold">{{ active_portfolio.name }}</span></p>
             </div>
-
             <div class="d-flex align-items-center gap-3">
                 <div class="d-none d-md-flex align-items-center gap-3 text-muted small border-end border-secondary border-opacity-25 pe-3">
-                    <div class="text-end lh-1">
-                        <div class="fw-bold text-white" style="font-size: 0.7rem;">USD</div>
-                        <div>{{ rates.USD|default:"--" }}</div>
-                    </div>
-                    <div class="text-end lh-1">
-                        <div class="fw-bold text-white" style="font-size: 0.7rem;">EUR</div>
-                        <div>{{ rates.EUR|default:"--" }}</div>
-                    </div>
+                    <div class="text-end lh-1"><div class="fw-bold text-white" style="font-size: 0.7rem;">USD</div><div>{{ rates.USD|default:"--" }}</div></div>
+                    <div class="text-end lh-1"><div class="fw-bold text-white" style="font-size: 0.7rem;">EUR</div><div>{{ rates.EUR|default:"--" }}</div></div>
                 </div>
                 <div class="d-flex align-items-center">
                     <div class="spinner-grow {% if '2025' in last_market_date or '2026' in last_market_date %}text-success{% else %}text-warning{% endif %} me-2" role="status" style="width: 0.6rem; height: 0.6rem;"></div>
-                    <div class="text-end lh-1">
-                        <div class="text-muted small fw-bold" style="font-size: 0.65rem;">UPDATED</div>
-                        <div class="text-white small" style="font-size: 0.75rem;">{{ last_market_date|default:"N/A" }}</div>
-                    </div>
+                    <div class="text-end lh-1"><div class="text-muted small fw-bold" style="font-size: 0.65rem;">UPDATED</div><div class="text-white small" style="font-size: 0.75rem;">{{ last_market_date|default:"N/A" }}</div></div>
                 </div>
             </div>
         </div>
 
-        {# --- HYBRID ROW 1: MAIN STATS --- #}
-        <div class="row g-3 mb-4">
+        <div class="d-flex justify-content-center mb-4">{% include 'includes/time_filters.html' %}</div>
+        {% include 'includes/summary_tiles.html' %}
 
-            <div class="col-12 col-xl-3">
-                <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark">
-                    <div class="card-body d-flex flex-column justify-content-center py-3 px-4">
-                        <div class="text-muted text-uppercase small fw-bold mb-1">Total Value</div>
-                        <h3 class="mb-0 fw-bold text-white text-truncate">
-                            {{ tile_value_str }} <span class="fs-6 text-muted fw-normal">PLN</span>
-                        </h3>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-6 col-xl-3">
-                <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
-                    <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
-                        <div class="text-muted small text-uppercase fw-bold mb-1">Total Profit</div>
-                        <h4 class="mb-0 fw-bold {% if tile_total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {% if tile_total_profit_raw > 0 %}+{% endif %}{{ tile_total_profit_str }}
-                            <small class="fs-6 opacity-50 d-none d-lg-inline text-muted">PLN</small>
-                        </h4>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-3 col-xl-2">
-                <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
-                    <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
-                        <div class="text-muted small text-uppercase fw-bold mb-1">Return</div>
-                        <h4 class="mb-0 fw-bold {% if tile_return_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {% if tile_return_pct_raw > 0 %}+{% endif %}{{ tile_return_pct_str }}%
-                        </h4>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-3 col-xl-2">
-                <div class="card h-100 border-secondary border-opacity-25 shadow-sm position-relative"
-                     style="cursor: pointer;" onclick="togglePerf()">
-                    <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
-                        <div class="d-flex justify-content-center gap-2 mb-1">
-                            <span id="lbl-twr" class="small fw-bold text-white text-uppercase" style="border-bottom: 2px solid var(--accent-green);">TWR</span>
-                            <span class="text-muted small">|</span>
-                            <span id="lbl-mwr" class="small fw-bold text-muted text-uppercase">MWR</span>
-                        </div>
-                        <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|stringformat:'s'|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}">
-                            {{ tile_twr }}%
-                        </h4>
-                        <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|stringformat:'s'|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
-                            {{ tile_mwr }}%
-                        </h4>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-12 col-xl-2">
-                <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark">
-                    <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
-                        <div class="text-muted small text-uppercase fw-bold mb-1">Unrealized</div>
-                        <h5 class="mb-0 fw-bold {% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ tile_current_profit_str }} <span class="small opacity-50 d-none d-lg-inline text-muted">PLN</span>
-                        </h5>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {# --- HYBRID ROW 2: DAILY STATS --- #}
-        <div class="row g-3 mb-5">
-            <div class="col-6 col-lg-3">
-                <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center">
-                    <div class="card-body py-2">
-                        <div class="text-muted small text-uppercase mb-1">1D Change</div>
-                        <div class="fw-bold fs-5 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {% if tile_day_pct_raw > 0 %}<i class="fas fa-caret-up text-accent me-1"></i>{% else %}<i class="fas fa-caret-down text-danger me-1"></i>{% endif %}
-                            {{ tile_day_pct_str }}%
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center">
-                    <div class="card-body py-2">
-                        <div class="text-muted small text-uppercase mb-1">1D Gain</div>
-                        <div class="fw-bold fs-5 {% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ tile_day_pln_str }} <span class="small text-muted">PLN</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center">
-                    <div class="card-body py-2">
-                        <div class="text-muted small text-uppercase mb-1"><i class="fas fa-arrow-up text-accent me-1"></i>Gainers</div>
-                        <div class="fw-bold fs-5 text-white">{{ tile_gainers }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center">
-                    <div class="card-body py-2">
-                        <div class="text-muted small text-uppercase mb-1"><i class="fas fa-arrow-down text-danger me-1"></i>Losers</div>
-                        <div class="fw-bold fs-5 text-white">{{ tile_losers }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {# --- RANGE BUTTONS --- #}
-        <div class="d-flex justify-content-center mb-4">
-            <div class="btn-group shadow-sm bg-dark rounded-pill p-1 border border-secondary border-opacity-25" role="group">
-                <a href="?range=1m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1m' %}btn-success{% else %}btn-dark text-muted{% endif %}">1M</a>
-                <a href="?range=3m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '3m' %}btn-success{% else %}btn-dark text-muted{% endif %}">3M</a>
-                <a href="?range=6m" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '6m' %}btn-success{% else %}btn-dark text-muted{% endif %}">6M</a>
-                <a href="?range=ytd" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'ytd' %}btn-success{% else %}btn-dark text-muted{% endif %}">YTD</a>
-                <a href="?range=1y" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == '1y' %}btn-success{% else %}btn-dark text-muted{% endif %}">1Y</a>
-                <a href="?range=all" class="btn btn-sm rounded-pill px-3 fw-bold {% if current_range == 'all' or not current_range %}btn-success{% else %}btn-dark text-muted{% endif %}">MAX</a>
-            </div>
-        </div>
-
-        {# --- MAIN CHART --- #}
         <div class="card mb-5 border-secondary border-opacity-25">
             <div class="card-header d-flex justify-content-between align-items-center border-0 pb-0 pt-4 px-4 bg-transparent">
                 <span class="text-muted text-uppercase fw-bold ls-1 small">History</span>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-sm btn-dark text-muted active rounded-start-pill px-3" id="btn-val" onclick="switchChart('value')">PLN</button>
-                    <button type="button" class="btn btn-sm btn-dark text-muted rounded-end-pill px-3" id="btn-pct" onclick="switchChart('percent')">%</button>
+                    <button type="button" class="btn btn-sm btn-dark text-muted active rounded-start-pill px-3" id="btn-val" onclick="switchMainChart('value')">PLN</button>
+                    <button type="button" class="btn btn-sm btn-dark text-muted rounded-end-pill px-3" id="btn-pct" onclick="switchMainChart('percent')">%</button>
                 </div>
             </div>
-            <div class="card-body pt-2 px-3">
-                <div class="chart-container-wide">
-                    <canvas id="timelineChart"></canvas>
-                </div>
-            </div>
+            <div class="card-body pt-2 px-3"><div class="chart-container-wide"><canvas id="timelineChart"></canvas></div></div>
         </div>
 
-        {# --- ALLOCATION & PROFIT --- #}
         <div class="row mb-5 g-4">
             <div class="col-md-6">
                 <div class="card h-100 border-secondary border-opacity-25">
                     <div class="card-header border-0 pt-4 px-4 d-flex justify-content-between align-items-center bg-transparent">
                         <span class="text-muted text-uppercase fw-bold ls-1 small">Allocation</span>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-secondary active" onclick="switchAlloc('asset', this)">Asset</button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="switchAlloc('sector', this)">Sector</button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="switchAlloc('type', this)">Type</button>
+                        <div class="btn-group btn-group-sm" role="group" id="alloc-btn-group">
+                            <button type="button" class="btn btn-outline-secondary active" data-mode="asset">Asset</button>
+                            <button type="button" class="btn btn-outline-secondary" data-mode="sector">Sector</button>
+                            <button type="button" class="btn btn-outline-secondary" data-mode="type">Type</button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="allocationChart"></canvas>
-                        </div>
-                    </div>
+                    <div class="card-body"><div class="chart-container"><canvas id="allocationChart"></canvas></div></div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="card h-100 border-secondary border-opacity-25">
-                    <div class="card-header border-0 pt-4 px-4 bg-transparent">
-                        <span class="text-muted text-uppercase fw-bold ls-1 small">Profit by Asset</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="profitChart"></canvas>
-                        </div>
-                    </div>
+                    <div class="card-header border-0 pt-4 px-4 bg-transparent"><span class="text-muted text-uppercase fw-bold ls-1 small">Profit by Asset</span></div>
+                    <div class="card-body"><div class="chart-container"><canvas id="profitChart"></canvas></div></div>
                 </div>
             </div>
         </div>
 
-        {# --- BOTTOM SECTION: PERFORMANCE & ACTIVITY --- #}
         <div class="row g-4">
-
-            {# LEFT: PERFORMANCE STATS #}
             <div class="col-xl-4">
                 <div class="card h-100 border-secondary border-opacity-25">
                     <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
@@ -243,33 +89,39 @@
                                     <div class="small text-muted text-uppercase" style="font-size: 0.6rem;">Win Rate</div>
                                 </div>
                             </div>
-                            <div class="row g-3">
+                            <div class="row g-3 mb-4">
                                 <div class="col-6">
                                     <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 text-center">
                                         <div class="small text-muted text-uppercase mb-1">Realized</div>
-                                        <div class="fw-bold {% if perf_total_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                            {{ perf_total_realized }}
-                                        </div>
+                                        <div class="fw-bold {% if perf_total_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ perf_total_realized }}</div>
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 text-center">
                                         <div class="small text-muted text-uppercase mb-1">Count</div>
-                                        <div class="fw-bold text-white">
-                                            <span class="text-success">{{ perf_win_count }}W</span> - <span class="text-danger">{{ perf_loss_count }}L</span>
-                                        </div>
+                                        <div class="fw-bold text-white"><span class="text-success">{{ perf_win_count }}W</span> - <span class="text-danger">{{ perf_loss_count }}L</span></div>
                                     </div>
                                 </div>
-                                <div class="col-12">
-                                    <div class="p-2 border-bottom border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
-                                        <span class="small text-muted">BEST</span>
-                                        <span class="small text-success fw-bold">{{ perf_best_trade.symbol }} (+{{ perf_best_trade.pct_fmt }}%)</span>
-                                    </div>
-                                    <div class="p-2 d-flex justify-content-between align-items-center">
-                                        <span class="small text-muted">WORST</span>
-                                        <span class="small text-danger fw-bold">{{ perf_worst_trade.symbol }} ({{ perf_worst_trade.pct_fmt }}%)</span>
+                            </div>
+                            <div class="border-top border-secondary border-opacity-25 pt-3">
+                                {% if perf_best_trade %}
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small text-muted text-uppercase fw-bold"><i class="fas fa-arrow-up text-success me-2"></i>Best Trade</span>
+                                    <div class="text-end">
+                                        <div class="fw-bold text-white">{{ perf_best_trade.symbol }}</div>
+                                        <div class="small text-success">+{{ perf_best_trade.gain_fmt }} PLN ({{ perf_best_trade.pct_fmt }}%)</div>
                                     </div>
                                 </div>
+                                {% endif %}
+                                {% if perf_worst_trade %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small text-muted text-uppercase fw-bold"><i class="fas fa-arrow-down text-danger me-2"></i>Worst Trade</span>
+                                    <div class="text-end">
+                                        <div class="fw-bold text-white">{{ perf_worst_trade.symbol }}</div>
+                                        <div class="small text-danger">{{ perf_worst_trade.gain_fmt }} PLN ({{ perf_worst_trade.pct_fmt }}%)</div>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                         {% else %}
                             <div class="text-center py-5 my-auto">
@@ -281,10 +133,9 @@
                 </div>
             </div>
 
-            {# RIGHT: RECENT ACTIVITY #}
             <div class="col-xl-8">
                 <div class="card h-100 border-secondary border-opacity-25">
-                    <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center">
                             <h5 class="fw-bold text-white mb-0"><i class="fas fa-history text-info me-2"></i>History</h5>
                             <span class="d-none d-sm-inline text-muted small border-start border-secondary border-opacity-25 ps-3 ms-3 py-1">Last 20</span>
@@ -340,197 +191,56 @@
             </div>
         </div>
 
-        {# --- SCRIPTS DATA & CONFIG --- #}
-        {{ chart_labels|json_script:"l-alloc" }}
-        {{ chart_allocation|json_script:"d-alloc" }}
-        {{ chart_sector_labels|json_script:"l-sec" }}
-        {{ chart_sector_values|json_script:"d-sec" }}
-        {{ chart_type_labels|json_script:"l-typ" }}
-        {{ chart_type_values|json_script:"d-typ" }}
-        {{ chart_profit_labels|json_script:"l-prof" }}
-        {{ chart_profit_values|json_script:"d-prof" }}
-        {{ closed_labels|json_script:"l-closed" }}
-        {{ closed_values|json_script:"d-closed" }}
-        {{ timeline_dates|json_script:"t-dates" }}
-        {{ timeline_total_value|json_script:"t-user" }}
-        {{ timeline_invested|json_script:"t-inv" }}
-        {{ timeline_deposit_points|json_script:"t-points" }}
-        {{ timeline_pct_user|json_script:"p-user" }}
-        {{ timeline_pct_wig|json_script:"p-wig" }}
-        {{ timeline_pct_sp500|json_script:"p-sp500" }}
-        {{ timeline_pct_inflation|json_script:"p-inf" }}
-        {{ perf_win_count|json_script:"p-wins" }}
-        {{ perf_loss_count|json_script:"p-losses" }}
-
-        <style>
-            .ls-1 { letter-spacing: 1px; }
-            .chart-container-wide { position: relative; height: 500px; width: 100%; }
-            .chart-container { position: relative; height: 350px; width: 100%; }
-            @media (max-width: 768px) {
-                .chart-container-wide { height: 350px; }
-                .chart-container { height: 300px; }
-            }
-            .btn-group .btn.active {
-                background-color: var(--accent-green);
-                color: #121212 !important;
-                border-color: var(--accent-green);
-                font-weight: bold;
-            }
-            #txFilters .nav-link { color: #aaa; transition: all 0.2s; }
-            #txFilters .nav-link.active { background-color: var(--accent-green); color: #121212 !important; }
-            #txFilters .nav-link:hover:not(.active) { color: #fff; background-color: rgba(255,255,255,0.1); }
-
-            /* CSS dla Neon Green (tylko do grafik) */
-            .text-accent { color: #00ff7f !important; }
-        </style>
-
-        <script>
-            let showTwr = true;
-            function togglePerf() {
-                showTwr = !showTwr;
-                const vMwr = document.getElementById('val-mwr');
-                const vTwr = document.getElementById('val-twr');
-                const lMwr = document.getElementById('lbl-mwr');
-                const lTwr = document.getElementById('lbl-twr');
-                if (showTwr) {
-                    vMwr.style.display = 'none'; vTwr.style.display = 'block';
-                    lMwr.style.borderBottom = 'none'; lMwr.classList.replace('text-white', 'text-muted');
-                    lTwr.style.borderBottom = '2px solid #00ff7f'; lTwr.classList.replace('text-muted', 'text-white');
-                } else {
-                    vMwr.style.display = 'block'; vTwr.style.display = 'none';
-                    lTwr.style.borderBottom = 'none'; lTwr.classList.replace('text-white', 'text-muted');
-                    lMwr.style.borderBottom = '2px solid #00ff7f'; lMwr.classList.replace('text-muted', 'text-white');
-                }
-            }
-
-            function gd(i){try{return JSON.parse(document.getElementById(i).textContent);}catch(e){return[];}}
-
-            // GRAPH COLOR: NEON GREEN (#00ff7f)
-            const NEON_GREEN = '#00ff7f';
-            const SOFT_RED = '#ef5350';
-            const MAIN_COLOR = '#00ff7f';
-
-            const pieColors = ['#00ff7f', '#ab47bc', SOFT_RED, '#ffa726', '#ffca28', '#42a5f5', '#5c6bc0', '#26a69a', '#ec407a', '#78909c', '#8d6e63', '#d4e157'];
-
-            function filterTx(type, btn) {
-                document.querySelectorAll('#txFilters .nav-link').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const rows = document.querySelectorAll('#txTable tbody tr');
-                rows.forEach(row => {
-                    const rowType = row.getAttribute('data-type');
-                    if (type === 'ALL') { row.style.display = ''; }
-                    else if (type === 'BUY' && (rowType === 'BUY' || rowType === 'OPEN BUY')) { row.style.display = ''; }
-                    else if (type === 'SELL' && (rowType === 'SELL' || rowType === 'CLOSE' || rowType === 'CLOSE SELL')) { row.style.display = ''; }
-                    else if (type === 'DIVIDEND' && rowType === 'DIVIDEND') { row.style.display = ''; }
-                    else { row.style.display = 'none'; }
-                });
-            }
-
-            const wins = gd('p-wins'); const losses = gd('p-losses');
-            const ctxWin = document.getElementById('winRateChart');
-            if (ctxWin && (wins + losses > 0)) {
-                new Chart(ctxWin, {
-                    type: 'doughnut', data: { labels: ['Wins', 'Losses'], datasets: [{ data: [wins, losses], backgroundColor: [NEON_GREEN, SOFT_RED], borderWidth: 0, hoverOffset: 5 }] },
-                    options: { maintainAspectRatio: false, cutout: '80%', plugins: { legend: { display: false } } }
-                });
-            }
-
-            let mainChartInstance = null;
-            const chartData = {
-                dates: gd('t-dates'),
-                value: { label: 'PLN', user: gd('t-user'), inv: gd('t-inv'), points: gd('t-points') },
-                percent: { label: '%', user: gd('p-user'), wig: gd('p-wig'), sp500: gd('p-sp500'), inf: gd('p-inf') }
-            };
-
-            function renderMainChart(mode) {
-                const ctx = document.getElementById('timelineChart');
-                if (mainChartInstance) mainChartInstance.destroy();
-
-                const ctx2d = ctx.getContext('2d');
-                const gradient = ctx2d.createLinearGradient(0, 0, 0, 400);
-                gradient.addColorStop(0, 'rgba(0, 255, 127, 0.2)');
-                gradient.addColorStop(1, 'rgba(0, 255, 127, 0.0)');
-
-                let datasets = [];
-                const d = chartData[mode];
-                if (mode === 'value') {
-                    datasets = [
-                        {
-                            label: 'Portfolio Value',
-                            data: d.user,
-                            borderColor: MAIN_COLOR,
-                            backgroundColor: gradient,
-                            borderWidth: 3,
-                            fill: true,
-                            pointRadius: d.points,
-                            pointBackgroundColor: MAIN_COLOR,
-                            tension: 0.3
-                        },
-                        { label: 'Invested', data: d.inv, borderColor: '#6c757d', borderWidth: 2, borderDash:[4,4], pointRadius:0, tension: 0.3 }
-                    ];
-                } else {
-                    datasets = [
-                        { label: 'My Return (%)', data: d.user, borderColor: MAIN_COLOR, backgroundColor: gradient, borderWidth: 3, fill: true, pointRadius: 0, tension: 0.3 },
-                        { label: 'WIG (%)', data: d.wig, borderColor: '#ffca28', borderWidth: 2, pointRadius:0, fill:false, tension: 0.3 },
-                        { label: 'S&P 500 (%)', data: d.sp500, borderColor: '#ab47bc', borderWidth: 2, pointRadius:0, fill:false, tension: 0.3 },
-                        { label: 'Goal (6%)', data: d.inf, borderColor: '#42a5f5', borderWidth: 2, borderDash:[2,2], pointRadius:0, fill:false, tension: 0.3 },
-                        { label: 'Zero', data: Array(d.user.length).fill(0), borderColor: '#444', borderWidth:1, pointRadius:0 }
-                    ];
-                }
-                mainChartInstance = new Chart(ctx, {
-                    type: 'line', data: { labels: chartData.dates, datasets: datasets },
-                    options: {
-                        responsive:true, maintainAspectRatio:false, interaction: { mode: 'index', intersect: false },
-                        scales:{ x: { grid: { display: false }, ticks: { color: '#a0a0a0' } }, y: { grid: { color: '#333', borderDash: [4, 4] }, ticks: { color: '#a0a0a0', callback: function(value) { return value + (mode === 'percent' ? '%' : ' PLN'); } } } },
-                        plugins:{ legend: { labels: { color: '#e0e0e0', usePointStyle: true, boxWidth: 10 } }, tooltip: { backgroundColor: 'rgba(30,30,30,0.95)', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#444', borderWidth: 1, cornerRadius: 8, padding: 10 } }
-                    }
-                });
-            }
-
-            function switchChart(mode) {
-                const btnVal = document.getElementById('btn-val'); const btnPct = document.getElementById('btn-pct');
-                btnVal.className = 'btn btn-sm btn-dark text-muted rounded-start-pill px-3';
-                btnPct.className = 'btn btn-sm btn-dark text-muted rounded-end-pill px-3';
-                if (mode === 'value') { btnVal.classList.add('active', 'bg-primary', 'text-white'); btnVal.classList.remove('text-muted'); }
-                else { btnPct.classList.add('active', 'bg-primary', 'text-white'); btnPct.classList.remove('text-muted'); }
-                renderMainChart(mode);
-            }
-            if(chartData.dates && chartData.dates.length > 0) renderMainChart('value');
-
-            let allocChartInstance = null;
-            const allocData = { asset: { labels: gd('l-alloc'), values: gd('d-alloc') }, sector: { labels: gd('l-sec'), values: gd('d-sec') }, type: { labels: gd('l-typ'), values: gd('d-typ') } };
-            function renderAllocChart(mode) {
-                const ctx = document.getElementById('allocationChart');
-                if (allocChartInstance) allocChartInstance.destroy();
-                const d = allocData[mode];
-                if (!d.values || d.values.length === 0) return;
-                const totalPortfolio = d.values.reduce((a, b) => a + b, 0);
-                const labelsWithPercent = d.labels.map((label, index) => {
-                    const value = d.values[index];
-                    const percent = totalPortfolio > 0 ? ((value / totalPortfolio) * 100).toFixed(1) : 0;
-                    return `${label} (${percent}%)`;
-                });
-                allocChartInstance = new Chart(ctx, {
-                    type:'doughnut', data:{ labels: labelsWithPercent, datasets:[{ data: d.values, backgroundColor: pieColors, borderWidth: 0, hoverOffset: 10 }] },
-                    options:{ maintainAspectRatio:false, cutout: '70%', plugins: { legend: { position: 'right', labels: { color: '#e0e0e0', usePointStyle: true, boxWidth: 10 } } } }
-                });
-            }
-            function switchAlloc(mode, btn) {
-                btn.parentNode.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                renderAllocChart(mode);
-            }
-            renderAllocChart('asset');
-
-            const lPr = gd('l-prof');
-            if(lPr.length>0) {
-                new Chart(document.getElementById('profitChart'), {
-                    type:'bar', data:{ labels:lPr, datasets:[{ label:'Gain/Loss', data:gd('d-prof'), backgroundColor:gd('d-prof').map(v=>v>=0? NEON_GREEN : SOFT_RED), borderRadius: 6 }] },
-                    options: { maintainAspectRatio:false, scales: { x: { grid: { display: false }, ticks: { color: '#a0a0a0' } }, y: { grid: { color: '#333' }, ticks: { color: '#a0a0a0' } } }, plugins: { legend: { display: false } } }
-                });
-            }
-        </script>
-
     {% endif %}
+
+    {# --- SCRIPTS DATA & CONFIG --- #}
+    {# 1. Wykres Główny (Assets) #}
+    {{ chart_labels|json_script:"l-alloc" }}
+    {{ chart_allocation|json_script:"d-alloc" }}
+    {{ chart_colors|json_script:"d-colors" }}
+
+    {# 2. Sektory (Z KOLORAMI!) #}
+    {{ chart_sector_labels|json_script:"l-sec" }}
+    {{ chart_sector_values|json_script:"d-sec" }}
+    {{ chart_sector_colors|json_script:"d-sec-col" }}  {# 3. Typy (Z KOLORAMI!) #}
+    {{ chart_type_labels|json_script:"l-typ" }}
+    {{ chart_type_values|json_script:"d-typ" }}
+    {{ chart_type_colors|json_script:"d-typ-col" }}    {# 4. Reszta danych #}
+    {{ chart_profit_labels|json_script:"l-prof" }}
+    {{ chart_profit_values|json_script:"d-prof" }}
+    {{ closed_labels|json_script:"l-closed" }}
+    {{ closed_values|json_script:"d-closed" }}
+    {{ timeline_dates|json_script:"t-dates" }}
+    {{ timeline_total_value|json_script:"t-user" }}
+    {{ timeline_invested|json_script:"t-inv" }}
+    {{ timeline_deposit_points|json_script:"t-points" }}
+    {{ timeline_pct_user|json_script:"p-user" }}
+    {{ timeline_pct_wig|json_script:"p-wig" }}
+    {{ timeline_pct_sp500|json_script:"p-sp500" }}
+    {{ timeline_pct_inflation|json_script:"p-inf" }}
+    {{ perf_win_count|json_script:"p-wins" }}
+    {{ perf_loss_count|json_script:"p-losses" }}
+
+    <style>
+        .ls-1 { letter-spacing: 1px; }
+        .chart-container-wide { position: relative; height: 500px; width: 100%; }
+        .chart-container { position: relative; height: 350px; width: 100%; }
+        @media (max-width: 768px) {
+            .chart-container-wide { height: 350px; }
+            .chart-container { height: 300px; }
+        }
+        .btn-group .btn.active {
+            background-color: var(--accent-green);
+            color: #121212 !important;
+            border-color: var(--accent-green);
+            font-weight: bold;
+        }
+        #txFilters .nav-link { color: #aaa; transition: all 0.2s; }
+        #txFilters .nav-link.active { background-color: var(--accent-green); color: #121212 !important; }
+        #txFilters .nav-link:hover:not(.active) { color: #fff; background-color: rgba(255,255,255,0.1); }
+        .text-accent { color: #00ff7f !important; }
+    </style>
+
+    <script src="{% static 'js/charts_dashboard.js' %}"></script>
 
 {% endblock %}

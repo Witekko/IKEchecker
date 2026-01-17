@@ -1,0 +1,13 @@
+<nav class="bottom-nav d-flex d-md-none">
+    {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}" class="bottom-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="fas fa-chart-pie"></i><span>Dash</span></a>
+        <a href="{% url 'assets_list' %}" class="bottom-link {% if request.resolver_match.url_name == 'assets_list' %}active{% endif %}"><i class="fas fa-list-ul"></i><span>Assets</span></a>
+        <a href="{% url 'dividends' %}" class="bottom-link {% if request.resolver_match.url_name == 'dividends' %}active{% endif %}"><i class="fas fa-coins"></i><span>Divs</span></a>
+        <a href="{% url 'taxes' %}" class="bottom-link {% if request.resolver_match.url_name == 'taxes' %}active{% endif %}"><i class="fas fa-file-invoice-dollar"></i><span>Taxes</span></a>
+        <a href="{% url 'portfolio_settings' %}" class="bottom-link {% if request.resolver_match.url_name == 'portfolio_settings' %}active{% endif %}"><i class="fas fa-cog"></i><span>Setts</span></a>
+    {% else %}
+        <a href="{% url 'login' %}" class="bottom-link text-success w-100 flex-row gap-2">
+            <i class="fas fa-sign-in-alt"></i><span>Log in</span>
+        </a>
+    {% endif %}
+</nav>
