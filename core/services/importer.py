@@ -5,6 +5,7 @@ import re
 import yfinance as yf
 from datetime import datetime
 from django.utils import timezone
+from django.db.models import Q  # <--- KONIECZNY IMPORT
 from ..models import Transaction, Asset
 from .config import SUFFIX_MAP
 from .market import fetch_asset_metadata
@@ -13,13 +14,14 @@ from abc import ABC, abstractmethod
 
 logger = logging.getLogger('core')
 
+
 class BaseImporter(ABC):
     """Abstract base class for transaction importers."""
-    
+
     def __init__(self, file, portfolio):
         self.file = file
         self.portfolio = portfolio
-        self.stats = {'added': 0, 'skipped': 0, 'new_assets': 0}
+        self.stats = {'added': 0, 'updated': 0, 'skipped': 0, 'new_assets': 0}
         self.asset_cache = {}
 
     @abstractmethod
@@ -42,37 +44,49 @@ class BaseImporter(ABC):
             except Exception as e:
                 logger.warning(f"Skipping row due to error: {e}")
                 continue
-        
+
         return self.stats
 
     def _process_row(self, row):
+        # 1. Walidacja ID
         if pd.isna(row.get('ID')): return
+        xtb_id = str(int(row['ID'])) if isinstance(row['ID'], (int, float)) else str(row['ID'])
 
-        xtb_id = str(row['ID'])
-        if Transaction.objects.filter(xtb_id=xtb_id).exists():
-            self.stats['skipped'] += 1
-            return
-
+        # 2. Parsowanie danych
         trans_type = self._parse_transaction_type(str(row.get('Type', '')))
-        quantity = self._parse_quantity(trans_type, str(row.get('Comment', '')))
+        comment = str(row.get('Comment', ''))
+
+        # Parsowanie liczb
+        quantity = self._parse_quantity(trans_type, comment)
+        price = self._parse_price(comment)
+        amount = self._parse_amount(row.get('Amount'))
+
         date_obj = self._parse_date(row.get('Time'))
-        
         if not date_obj: return
 
-        amount = self._parse_amount(row.get('Amount'))
+        # 3. Rozwiązywanie Assetu
         asset_obj = self._resolve_asset(str(row.get('Symbol', '')))
 
-        Transaction.objects.create(
+        # 4. UPSERT (Update or Create)
+        # To zapewnia brak duplikatów dla tych samych ID z XTB
+        obj, created = Transaction.objects.update_or_create(
             portfolio=self.portfolio,
-            asset=asset_obj,
             xtb_id=xtb_id,
-            date=date_obj,
-            type=trans_type,
-            amount=amount,
-            quantity=quantity,
-            comment=str(row.get('Comment', ''))
+            defaults={
+                'asset': asset_obj,
+                'date': date_obj,
+                'type': trans_type,
+                'amount': amount,
+                'quantity': quantity,
+                'price': price,
+                'comment': comment
+            }
         )
-        self.stats['added'] += 1
+
+        if created:
+            self.stats['added'] += 1
+        else:
+            self.stats['updated'] += 1
 
     def _parse_date(self, val_time):
         try:
@@ -109,51 +123,35 @@ class BaseImporter(ABC):
         if existing: return existing, False
 
         yahoo_ticker = xtb_symbol
-        currency = 'PLN'  # Domyślna, bezpieczna
+        currency = 'PLN'
         name = xtb_symbol
-
         asset_type = 'STOCK'
         sector = 'OTHER'
 
-        # 1. Najpierw zgadujemy po sufiksie (z config.py)
-        found_rule = False
+        # 1. Zgadywanie po sufiksie
         for suffix, rule in SUFFIX_MAP.items():
             if xtb_symbol.endswith(suffix):
                 base = xtb_symbol.replace(suffix, '')
                 yahoo_suf = rule['yahoo_suffix'] if rule['yahoo_suffix'] is not None else ''
                 yahoo_ticker = f"{base}{yahoo_suf}"
-                currency = rule['default_currency']  # Np. GBP dla .UK (popraw config!)
-                found_rule = True
+                currency = rule['default_currency']
                 break
 
-        # 2. Pytamy Yahoo o prawdę (i nadpisujemy walutę, jeśli trzeba)
-        if found_rule or True:  # Zawsze warto sprawdzić Yahoo
+        # 2. Pobranie metadanych
+        try:
             meta = fetch_asset_metadata(yahoo_ticker)
             if meta['success']:
-                if meta.get('name'): name = meta['name']
-                if meta.get('asset_type'): asset_type = meta['asset_type']
-                if meta.get('sector'): sector = meta['sector']
+                name = meta.get('name', name)
+                asset_type = meta.get('asset_type', asset_type)
+                sector = meta.get('sector', sector)
+                currency = meta.get('currency', currency)
+        except:
+            pass
 
-                # KLUCZOWA ZMIANA: Nadpisz walutę, jeśli Yahoo ją podało
-                if meta.get('currency'):
-                    currency = meta['currency']
-            else:
-                # Fallback (stara metoda yf.Ticker.info)
-                try:
-                    info = yf.Ticker(yahoo_ticker).info
-                    if 'currency' in info: currency = info['currency']
-                    if 'shortName' in info:
-                        name = info['shortName']
-                    elif 'longName' in info:
-                        name = info['longName']
-                except:
-                    pass
-
-        # Tworzymy Asset z potwierdzoną walutą
         return Asset.objects.create(
             symbol=xtb_symbol,
             yahoo_ticker=yahoo_ticker,
-            currency=currency,  # Tu trafi USD dla ISAC.L, a GBP dla SHELL.L
+            currency=currency,
             name=name,
             asset_type=asset_type,
             sector=sector
@@ -168,11 +166,12 @@ class BaseImporter(ABC):
         if 'withdrawal' in raw: return 'WITHDRAWAL'
         if 'dividend' in raw: return 'DIVIDEND'
         if 'withholding tax' in raw: return 'TAX'
+        if 'fee' in raw: return 'FEE'
         return 'OTHER'
 
     def _parse_quantity(self, trans_type, comment):
         if trans_type in ['BUY', 'SELL']:
-            match = re.search(r'(BUY|SELL) ([0-9./]+)', comment)
+            match = re.search(r'(BUY|SELL)\s+([0-9./]+)', comment, re.IGNORECASE)
             if match:
                 try:
                     val = match.group(2)
@@ -181,6 +180,17 @@ class BaseImporter(ABC):
                 except:
                     pass
         return 0.0
+
+    def _parse_price(self, comment):
+        if '@' in comment:
+            match = re.search(r'@\s*([0-9.,]+)', comment)
+            if match:
+                try:
+                    val = match.group(1).replace(',', '.')
+                    return float(val)
+                except:
+                    pass
+        return None
 
 
 class XtbExcelImporter(BaseImporter):
@@ -197,7 +207,6 @@ class XtbExcelImporter(BaseImporter):
                 break
         if not target_sheet: target_sheet = xls.sheet_names[0]
 
-        # Find header
         df_preview = pd.read_excel(self.file, sheet_name=target_sheet, header=None, nrows=40)
         header_idx = self._find_header_row(df_preview)
 
@@ -248,7 +257,7 @@ class XtbCsvImporter(BaseImporter):
                 return df_raw
             else:
                 raise ValueError("Nie znaleziono nagłówka w pliku CSV.")
-        
+
         new_header = df_raw.iloc[header_idx]
         df = df_raw[header_idx + 1:].copy()
         df.columns = new_header
@@ -272,36 +281,32 @@ def process_xtb_file(uploaded_file, portfolio_obj, overwrite_manual=False):
     else:
         raise ValueError("Nieobsługiwany format pliku. Użyj .xlsx lub .csv")
 
-    # --- LOGIKA NADPISYWANIA (Checkox) ---
+    # --- LOGIKA NADPISYWANIA I CZYSZCZENIA ŚMIECI ---
     if overwrite_manual:
-        # 1. Wczytaj dane wstępnie, żeby poznać zakres dat
         df = importer.load_dataframe()
         if df is not None and not df.empty:
-            # Szukamy kolumny czasu (Time)
             if 'Time' in df.columns:
                 try:
-                    # Konwersja na daty, ignorując błędy
                     dates = pd.to_datetime(df['Time'], errors='coerce').dropna()
                     if not dates.empty:
                         min_date = dates.min()
                         max_date = dates.max()
-
-                        # FIX: Rozszerzamy zakres do końca dnia ostatniej transakcji (23:59:59)
-                        # Dzięki temu usuniemy też wpisy dodane ręcznie "później" tego samego dnia.
                         max_date_extended = max_date.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-                        # Usuwamy transakcje ręczne (MAN-) w tym zakresie dat
+                        # FIX: Usuwamy transakcje w tym okresie, które:
+                        # 1. Są oznaczone jako MANUALNE (xtb_id zaczyna się od 'MAN-')
+                        # 2. LUB nie mają żadnego ID (xtb_id jest NULL) - to są Twoje "duchy" demo
                         deleted_count, _ = Transaction.objects.filter(
                             portfolio=portfolio_obj,
-                            xtb_id__startswith='MAN-',
-                            date__range=(min_date, max_date_extended)  # Używamy rozszerzonej daty
+                            date__range=(min_date, max_date_extended)
+                        ).filter(
+                            Q(xtb_id__startswith='MAN-') | Q(xtb_id__isnull=True)
                         ).delete()
 
-                        logger.info(f"Usunięto {deleted_count} ręcznych transakcji kolidujących z importem.")
+                        logger.info(f"Usunięto {deleted_count} transakcji (MAN lub NULL ID) kolidujących z importem.")
                 except Exception as e:
-                    logger.warning(f"Nie udało się określić zakresu dat do czyszczenia manualnego: {e}")
+                    logger.warning(f"Nie udało się wyczyścić manualnych: {e}")
 
-            # Resetujemy wskaźnik pliku, bo load_dataframe go przesunął
             uploaded_file.seek(0)
 
     return importer.process()

@@ -26,6 +26,16 @@
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-success fw-bold py-2">Log in</button>
                 </div>
+                <div class="position-relative my-4">
+                    <hr class="border-secondary opacity-25">
+                    <span class="position-absolute top-50 start-50 translate-middle bg-dark px-2 text-muted small">OR</span>
+                </div>
+
+                <div class="d-grid gap-2 mb-3">
+                    <a href="{% url 'demo_login' %}" class="btn btn-outline-warning fw-bold py-2">
+                        <i class="fas fa-user-secret me-2"></i> Try DEMO
+                    </a>
+                </div>
             </form>
 
             <div class="text-center mt-4">

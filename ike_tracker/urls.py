@@ -2,7 +2,6 @@ from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from core import views
-
 urlpatterns = [
     # --- PANEL ADMINA ---
     path('admin/', admin.site.urls),
@@ -10,6 +9,7 @@ urlpatterns = [
     # --- APLIKACJA (CORE) ---
     path('', views.dashboard_view, name='dashboard'),
     path('assets/', views.assets_list_view, name='assets_list'),
+    path('demo-login/', views.demo_login_view, name='demo_login'), # Dodaj to
 
     # --- NOWA ŚCIEŻKA: ZARZĄDZANIE AKTYWAMI ---
     path('assets/manage/', views.manage_assets_view, name='manage_assets'),

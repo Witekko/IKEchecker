@@ -6,7 +6,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.utils import timezone
-
+from django.contrib.auth import login, authenticate
+from django.core.management import call_command
+from django.contrib.auth.models import User
 # --- MODELE I FORMY ---
 from .models import Portfolio, Transaction, Asset, AssetSector, AssetType
 from .forms import UploadFileForm, CustomUserCreationForm, PortfolioSettingsForm
@@ -273,3 +275,29 @@ def manage_assets_view(request):
         'active_portfolio': active_portfolio
     }
     return render(request, 'manage_assets.html', context)
+
+
+def demo_login_view(request):
+    """
+    Loguje użytkownika 'demo_user' bez hasła, uprzednio resetując jego dane.
+    """
+    username = 'demo_user'
+
+    # 1. Reset danych (Clean Slate)
+    # To zapewnia, że każdy rekruter widzi świeże dane
+    call_command('reset_demo')
+
+    # 2. Pobranie użytkownika (stworzonego przez komendę wyżej)
+    try:
+        user = User.objects.get(username=username)
+
+        # 3. Wymuszone logowanie (obejście hasła)
+        # Backend 'ModelBackend' jest standardem w Django
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+        messages.success(request, "Zalogowano do trybu DEMO. Dane zostały przywrócone do stanu wzorcowego.")
+        return redirect('dashboard')
+
+    except User.DoesNotExist:
+        messages.error(request, "Błąd konfiguracji Demo. Użytkownik nie istnieje.")
+        return redirect('login')

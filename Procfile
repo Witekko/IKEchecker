@@ -1,1 +1,0 @@
-web: gunicorn ike_tracker.wsgi
