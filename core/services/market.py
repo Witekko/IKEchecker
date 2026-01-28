@@ -12,40 +12,120 @@ from ..models import Asset, AssetType, AssetSector
 logger = logging.getLogger('core')
 
 
-def get_current_currency_rates():
+from django.core.cache import cache
+
+def get_market_summary():
     """
-    Pobiera aktualne kursy: EUR, USD, GBP, JPY, AUD.
+    Pobiera zbiorcze dane rynkowe (Indeksy + Waluty) z 2 dni.
+    Zwraca:
+      1. 'rates': Słownik {Kod: Kurs} dla przeliczania walut portfela.
+      2. 'summary': Lista słowników do karuzeli [{'symbol', 'display', 'price', 'change_pct'}]
     """
-    tickers = ["EURPLN=X", "USDPLN=X", "GBPPLN=X", "JPYPLN=X", "AUDPLN=X"]
+    # Cache na 15 minut, żeby nie katować API przy każdym odświeżeniu
+    cached = cache.get('market_summary_v2')
+    if cached:
+        return cached
+
+    indices = {
+        '^GSPC': 'S&P 500', 
+        '^IXIC': 'Nasdaq', 
+        'WIG.WA': 'WIG',
+        'WIG20.WA': 'WIG20', 
+        'MWIG40.WA': 'mWIG40', 
+        'SWIG80.WA': 'sWIG80'
+    }
+    currencies = ["USDPLN=X", "EURPLN=X", "GBPPLN=X", "JPYPLN=X", "AUDPLN=X"]
+    
+    tickers = list(indices.keys()) + currencies
+    
+    summary_list = []
     rates = getattr(settings, 'DEFAULT_CURRENCY_RATES', {}).copy()
 
     try:
-        data = yf.download(tickers, period="5d", group_by='ticker', progress=False)
-
-        def get_safe_rate(ticker_name):
+        # Pobieramy 5 dni żeby mieć pewność że mamy "wczoraj" i "dziś" (weekendy)
+        # threads=False rozwiązuje problemy z sqlite w dev serverze Django
+        data = yf.download(tickers, period="1mo", group_by='ticker', progress=False, threads=False)
+        
+        # Helper do wyciągania danych
+        def process_ticker(ticker_sym, display_name, is_currency=False):
             try:
-                if ticker_name not in data.columns.levels[0]: return None
-                series = data[ticker_name]['Close']
-                val = float(series.dropna().iloc[-1])
-                return val
-            except:
+                if ticker_sym not in data.columns.levels[0]: return None
+                series = data[ticker_sym]['Close'].dropna()
+                if len(series) < 2: return None
+                
+                price_now = float(series.iloc[-1])
+                price_prev = float(series.iloc[-2])
+                
+                change_pct = ((price_now - price_prev) / price_prev) * 100
+                
+                # Jeśli waluta (np. JPY), to czasem trzeba skalować, ale tu trzymamy raw
+                if is_currency and "JPY" in ticker_sym: 
+                    # JPY w Yahoo to często ~2-3 (za 100 JPY?), ale standardowo dla usera chcemy kurs 1 JPY lub 100 JPY.
+                    # Wcześniejszy kod mnożył przez 100. Utrzymajmy spójność.
+                    price_now *= 100
+                
+                return {
+                    'symbol': display_name,
+                    'price': price_now,
+                    'change_pct': change_pct,
+                    'is_up': change_pct >= 0
+                }
+            except Exception as e:
+                # logger.warning(f"Error processing {ticker_sym}: {e}")
                 return None
 
-        r_eur = get_safe_rate('EURPLN=X');
-        if r_eur: rates['EUR'] = r_eur
-        r_usd = get_safe_rate('USDPLN=X');
-        if r_usd: rates['USD'] = r_usd
-        r_gbp = get_safe_rate('GBPPLN=X');
-        if r_gbp: rates['GBP'] = r_gbp
-        r_aud = get_safe_rate('AUDPLN=X');
-        if r_aud: rates['AUD'] = r_aud
-        r_jpy = get_safe_rate('JPYPLN=X');
-        if r_jpy: rates['JPY'] = r_jpy * 100
+        # 1. Przetwarzamy Indeksy
+        for tick, name in indices.items():
+            try:
+                res = process_ticker(tick, name)
+                
+                # Fallback: Jeśli history nie dało danych (np. 1 wiersz), spróbujmy wyciągnąć z .info
+                if not res:
+                    try:
+                        t_obj = yf.Ticker(tick)
+                        info = t_obj.info
+                        # Szukamy ceny i prev_close
+                        price_now = info.get('regularMarketPrice') or info.get('currentPrice')
+                        price_prev = info.get('regularMarketPreviousClose')
+                        
+                        if price_now and price_prev and price_prev > 0:
+                            change_pct = ((price_now - price_prev) / price_prev) * 100
+                            res = {
+                                'symbol': name,
+                                'price': price_now,
+                                'change_pct': change_pct,
+                                'is_up': change_pct >= 0
+                            }
+                    except Exception as fallback_err:
+                         # logger.warning(f"Fallback failed for {tick}: {fallback_err}")
+                         pass
+
+                if res: summary_list.append(res)
+            except Exception as e:
+                # Log error quietly found in logs but dont crash
+                print(f"Error processing {tick}: {e}")
+                continue
+            
+        # 2. Przetwarzamy Waluty (do listy i do rates)
+        curr_map = {'USDPLN=X': 'USD', 'EURPLN=X': 'EUR', 'GBPPLN=X': 'GBP', 'JPYPLN=X': 'JPY', 'AUDPLN=X': 'AUD'}
+        for tick in currencies:
+            code = curr_map.get(tick)
+            item = process_ticker(tick, code, is_currency=True)
+            if item:
+                summary_list.append(item)
+                rates[code] = round(item['price'], 4 if code == 'JPY' else 4) # Precyzja
 
     except Exception as e:
-        logger.error(f"Currency Error: {e}")
+        logger.error(f"Market Summary Error: {e}")
 
-    return {k: round(v, 2) for k, v in rates.items()}
+    result = {'rates': rates, 'summary': summary_list}
+    cache.set('market_summary_v2', result, 900) # 15 min
+    return result
+
+def get_current_currency_rates():
+    """ Wrapper zachowujący kompatybilność wsteczną """
+    data = get_market_summary()
+    return data['rates']
 
 
 def get_cached_price(asset: Asset):

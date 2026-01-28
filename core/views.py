@@ -38,9 +38,8 @@ def dashboard_view(request):
     context.update(stats_context)
 
     context['all_portfolios'] = get_user_portfolios(request.user)
-    context['active_portfolio'] = active_portfolio
+    context['active_portfolio'] = active_portfolio if active_portfolio else {'name': 'No Portfolio'}
     context['current_range'] = range_mode
-
     if 'error' in context:
         return render(request, 'dashboard.html', {'error': context['error']})
 

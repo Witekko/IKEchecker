@@ -2,7 +2,7 @@
 
 import math
 import pandas as pd
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from .calculator import PortfolioCalculator
 from .market import get_cached_price, fetch_historical_data_for_timeline
 from django.core.cache import cache
@@ -303,7 +303,7 @@ def analyze_history(transactions, currency_rates):
 
     last_tx_id = transactions.last().id
     count_tx = transactions.count()
-    cache_key = f"history_v9_{last_tx_id}_{count_tx}_{start_date}_{end_date}"
+    cache_key = f"history_v13_{last_tx_id}_{count_tx}_{start_date}_{end_date}"
     cached = cache.get(cache_key)
     if cached: return cached
 
@@ -454,7 +454,7 @@ def analyze_history(transactions, currency_rates):
         'pct_sp': timeline_df['pct_sp'].tolist(),
         'pct_wig': timeline_df['pct_wig'].tolist(),
         'pct_inf': timeline_df['pct_inf'].tolist(),
-        'last_market_date': last_market_date_str
+        'last_market_date': datetime.now() if not hist_data.empty else None
     }
 
     cache.set(cache_key, res, 900)

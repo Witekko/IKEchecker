@@ -3,7 +3,7 @@ from decimal import Decimal
 import colorsys
 import math
 from .config import fmt_2, fmt_4
-from .market import get_current_currency_rates, fetch_historical_data_for_timeline, get_cached_price
+from .market import get_market_summary, fetch_historical_data_for_timeline, get_cached_price
 from .calculator import PortfolioCalculator
 from .selectors import get_transactions, get_asset_by_symbol, get_portfolio_by_id
 from .analytics import analyze_holdings, analyze_history
@@ -58,7 +58,8 @@ def get_dashboard_context(user, portfolio_id=None):
     if not transactions.exists():
         return _get_empty_dashboard_context()
 
-    rates = get_current_currency_rates()
+    market_data = get_market_summary()
+    rates = market_data['rates']
     stats = analyze_holdings(transactions, rates)
     timeline = analyze_history(transactions, rates)
     charts = _prepare_dashboard_charts(stats['assets'], stats['cash'])
@@ -109,7 +110,8 @@ def get_dashboard_context(user, portfolio_id=None):
         'timeline_invested': timeline['val_inv'], 'timeline_deposit_points': timeline['points'],
         'timeline_pct_user': timeline['pct_user'], 'timeline_pct_wig': timeline.get('pct_wig', []),
         'timeline_pct_sp500': timeline['pct_sp'], 'timeline_pct_inflation': timeline['pct_inf'],
-        'last_market_date': timeline['last_market_date'], 'rates': rates
+        'last_market_date': timeline['last_market_date'], 'rates': rates,
+        'market_summary': market_data['summary']
     }
     enrich_assets_context(context, stats['assets'], stats['total_value'])
     return context
