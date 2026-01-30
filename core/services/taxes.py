@@ -3,7 +3,7 @@
 from .selectors import get_transactions
 from .analytics import analyze_holdings
 from .market import get_current_currency_rates
-from .config import fmt_2
+from core.config import fmt_2
 
 
 def get_taxes_context(user, portfolio_id=None):

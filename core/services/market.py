@@ -13,6 +13,7 @@ logger = logging.getLogger('core')
 
 
 from django.core.cache import cache
+from core.config import SUMMARY_INDICES, SUMMARY_CURRENCIES, BENCHMARKS
 
 def get_market_summary():
     """
@@ -26,15 +27,8 @@ def get_market_summary():
     if cached:
         return cached
 
-    indices = {
-        '^GSPC': 'S&P 500', 
-        '^IXIC': 'Nasdaq', 
-        'WIG.WA': 'WIG',
-        'WIG20.WA': 'WIG20', 
-        'MWIG40.WA': 'mWIG40', 
-        'SWIG80.WA': 'sWIG80'
-    }
-    currencies = ["USDPLN=X", "EURPLN=X", "GBPPLN=X", "JPYPLN=X", "AUDPLN=X"]
+    indices = SUMMARY_INDICES
+    currencies = SUMMARY_CURRENCIES
     
     tickers = list(indices.keys()) + currencies
     
@@ -71,7 +65,7 @@ def get_market_summary():
                     'is_up': change_pct >= 0
                 }
             except Exception as e:
-                # logger.warning(f"Error processing {ticker_sym}: {e}")
+                logger.warning(f"Error processing {ticker_sym}: {e}")
                 return None
 
         # 1. Przetwarzamy Indeksy
@@ -97,13 +91,12 @@ def get_market_summary():
                                 'is_up': change_pct >= 0
                             }
                     except Exception as fallback_err:
-                         # logger.warning(f"Fallback failed for {tick}: {fallback_err}")
+                         logger.warning(f"Fallback failed for {tick}: {fallback_err}")
                          pass
 
                 if res: summary_list.append(res)
             except Exception as e:
-                # Log error quietly found in logs but dont crash
-                print(f"Error processing {tick}: {e}")
+                logger.warning(f"Error processing {tick}: {e}")
                 continue
             
         # 2. Przetwarzamy Waluty (do listy i do rates)
@@ -180,7 +173,7 @@ def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -
     end_date = date.today()
     safe_download_start = start_date - timedelta(days=730)
 
-    benchmarks = ['SPY', 'USDPLN=X', 'EURPLN=X', 'GBPPLN=X', 'WIG.WA', 'ACWI']
+    benchmarks = [BENCHMARKS['SP500'], 'USDPLN=X', 'EURPLN=X', 'GBPPLN=X', BENCHMARKS['WIG'], BENCHMARKS['ACWI']]
 
     # Unikalne tickery usera bez benchmarków
     user_tickers = list(set(assets_tickers))

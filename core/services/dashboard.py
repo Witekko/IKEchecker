@@ -4,7 +4,7 @@ from ..models import Transaction
 from .market import get_current_currency_rates
 from .analytics import analyze_history, analyze_holdings
 from .performance import PerformanceCalculator
-from .config import fmt_2
+from core.config import fmt_2
 from .portfolio import get_dashboard_context as get_base_context
 # FIX: Import musi pasować do nazwy funkcji w utils.py (filter_timeline)
 from .utils import calculate_range_dates, filter_timeline

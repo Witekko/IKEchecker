@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 import colorsys
 import math
-from .config import fmt_2, fmt_4
+from core.config import fmt_2, fmt_4
 from .market import get_market_summary, fetch_historical_data_for_timeline, get_cached_price
 from .calculator import PortfolioCalculator
 from .selectors import get_transactions, get_asset_by_symbol, get_portfolio_by_id
@@ -231,8 +231,9 @@ def enrich_assets_context(context, assets, total_portfolio_value):
 
 
 def _get_empty_dashboard_context():
+    market_data = get_market_summary()
     return {'invested': "0.00", 'tile_value_str': "0.00", 'tile_total_profit_str': "0.00",
-            'rates': get_current_currency_rates()}
+            'rates': get_current_currency_rates(), 'market_summary': market_data['summary']}
 
 
 def _calculate_annual_return(total_profit, invested, first_date):

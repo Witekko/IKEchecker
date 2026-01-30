@@ -7,7 +7,7 @@ from datetime import datetime
 from django.utils import timezone
 from django.db.models import Q  # <--- KONIECZNY IMPORT
 from ..models import Transaction, Asset
-from .config import SUFFIX_MAP
+from core.config import SUFFIX_MAP
 from .market import fetch_asset_metadata
 import logging
 from abc import ABC, abstractmethod

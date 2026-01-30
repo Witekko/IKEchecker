@@ -7,6 +7,24 @@ document.addEventListener('DOMContentLoaded', function() {
             catch (e) { console.error('JSON Error:', id); return []; }
         }
 
+        // --- CONFIGURATION ---
+        const ChartDefaults = {
+            font: {
+                legendMain: 15,
+                legendSmall: 11,
+                labels: 12
+            },
+            colors: {
+                text: '#e0e0e0',
+                grid: '#333'
+            },
+            layout: {
+                padding: 25,
+                boxMain: 20,
+                boxSmall: 10
+            }
+        };
+
         // Kolory awaryjne (gdyby backend zawiódł)
         const PIE_COLORS = ['#4DB6AC', '#7986CB', '#FFB74D', '#E0E0E0', '#BA68C8'];
         const NEON_GREEN = '#00ff7f';
@@ -72,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         plugins: {
                             legend: {
                                 position: 'right',
-                                labels: { color: '#e0e0e0', usePointStyle: true, boxWidth: 10, padding: 15, font: { size: 11 } }
+                                labels: { color: ChartDefaults.colors.text, usePointStyle: true, boxWidth: ChartDefaults.layout.boxSmall, padding: 15, font: { size: ChartDefaults.font.legendSmall } }
                             },
                             tooltip: {
                                 callbacks: {
@@ -175,11 +193,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     responsive:true, 
                     maintainAspectRatio:false, 
                     interaction: { mode: 'index', intersect: false }, 
-                    scales:{ x: { display: false }, y: { grid: { color: '#333' } } }, 
+                    scales:{ x: { display: false }, y: { grid: { color: ChartDefaults.colors.grid } } }, 
                     plugins:{ 
                         legend: { 
                             display: true,
-                            labels: { color: '#e0e0e0', font: { size: 15, weight: 'bold' }, boxWidth: 20, padding: 25 }
+                            labels: { color: ChartDefaults.colors.text, font: { size: ChartDefaults.font.legendMain, weight: 'bold' }, boxWidth: ChartDefaults.layout.boxMain, padding: ChartDefaults.layout.padding }
                         },
                         tooltip: {
                             callbacks: {
@@ -217,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if(lPr.length>0) {
             new Chart(document.getElementById('profitChart'), {
                 type:'bar', data:{ labels:lPr, datasets:[{ label:'Gain/Loss', data:gd('d-prof'), backgroundColor:gd('d-prof').map(v=>v>=0? NEON_GREEN : SOFT_RED), borderRadius: 4 }] },
-                options: { maintainAspectRatio:false, scales: { x: { display: false }, y: { grid: { color: '#333' } } }, plugins: { legend: { display: false } } }
+                options: { maintainAspectRatio:false, scales: { x: { display: false }, y: { grid: { color: ChartDefaults.colors.grid } } }, plugins: { legend: { display: false } } }
             });
         }
     });

@@ -5,7 +5,7 @@ import random
 from datetime import timedelta
 from django.utils import timezone
 from ..models import Asset, Transaction
-from .config import SUFFIX_MAP
+from core.config import SUFFIX_MAP
 from .market import validate_ticker_and_price
 from .calculator import PortfolioCalculator
 from .market import fetch_asset_metadata

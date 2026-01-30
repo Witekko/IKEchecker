@@ -1,7 +1,7 @@
 # core/services/dividends.py
 
 from .market import get_current_currency_rates
-from .config import fmt_2
+from core.config import fmt_2
 from .selectors import get_transactions  # <--- Używamy warstwy Selectors
 
 

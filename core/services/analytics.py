@@ -7,6 +7,7 @@ from .calculator import PortfolioCalculator
 from .market import get_cached_price, fetch_historical_data_for_timeline
 from django.core.cache import cache
 import logging
+from core.config import BENCHMARKS, CURRENCY_TICKERS, DAILY_INFLATION_RATE
 
 logger = logging.getLogger('core')
 
@@ -310,12 +311,12 @@ def analyze_history(transactions, currency_rates):
     user_tickers = df_tx['asset__yahoo_ticker'].dropna().unique().tolist()
 
     CURRENCY_MAP = {
-        'USD': 'USDPLN=X', 'EUR': 'EURPLN=X', 'GBP': 'GBPPLN=X',
-        'CHF': 'CHFPLN=X', 'NOK': 'NOKPLN=X', 'SEK': 'SEKPLN=X',
-        'DKK': 'DKKPLN=X', 'CZK': 'CZKPLN=X', 'PLN': None
+        'USD': CURRENCY_TICKERS['USD'], 'EUR': CURRENCY_TICKERS['EUR'], 'GBP': CURRENCY_TICKERS['GBP'],
+        'CHF': CURRENCY_TICKERS['CHF'], 'NOK': CURRENCY_TICKERS['NOK'], 'SEK': CURRENCY_TICKERS['SEK'],
+        'DKK': CURRENCY_TICKERS['DKK'], 'CZK': CURRENCY_TICKERS['CZK'], 'PLN': None
     }
-    needed_currencies = [v for v in CURRENCY_MAP.values() if v]
-    benchmarks = ['SPY', 'WIG.WA', 'ACWI']
+    needed_currencies = [v for v in CURRENCY_TICKERS.values() if v]
+    benchmarks = [BENCHMARKS['SP500'], BENCHMARKS['WIG'], BENCHMARKS['ACWI']]
     full_ticker_list = list(set(user_tickers + needed_currencies + benchmarks))
 
     hist_data = fetch_historical_data_for_timeline(full_ticker_list, start_date)
@@ -399,8 +400,8 @@ def analyze_history(transactions, currency_rates):
 
     daily_deposits = df_tx[df_tx['type'] == 'DEPOSIT'].groupby('date')['amount'].sum().reindex(full_dates, fill_value=0)
 
-    usd_bm = smart_fill(get_series('USDPLN=X'), full_dates).replace(0.0, currency_rates.get('USD', 4.0))
-    sp500_price = smart_fill(get_series('SPY'), full_dates)
+    usd_bm = smart_fill(get_series(CURRENCY_TICKERS['USD']), full_dates).replace(0.0, currency_rates.get('USD', 4.0))
+    sp500_price = smart_fill(get_series(BENCHMARKS['SP500']), full_dates)
     denom_sp = usd_bm * sp500_price
     units_sp = daily_deposits / denom_sp
     units_sp = units_sp.fillna(0.0)
@@ -408,7 +409,7 @@ def analyze_history(transactions, currency_rates):
     timeline_df['sp500_val'] = units_sp.cumsum() * denom_sp
     timeline_df.loc[timeline_df['sp500_val'] <= 0.01, 'sp500_val'] = timeline_df['invested']
 
-    wig_price = smart_fill(get_series('WIG.WA'), full_dates)
+    wig_price = smart_fill(get_series(BENCHMARKS['WIG']), full_dates)
     units_wig = daily_deposits / wig_price
     units_wig = units_wig.fillna(0.0)
     units_wig[wig_price <= 0.001] = 0.0
@@ -416,7 +417,7 @@ def analyze_history(transactions, currency_rates):
     timeline_df['wig_val'] = units_wig.cumsum() * wig_price
     timeline_df.loc[timeline_df['wig_val'] <= 0.01, 'wig_val'] = timeline_df['invested']
 
-    acwi_price = smart_fill(get_series('ACWI'), full_dates)
+    acwi_price = smart_fill(get_series(BENCHMARKS['ACWI']), full_dates)
     denom_acwi = usd_bm * acwi_price
     units_acwi = daily_deposits / denom_acwi
     units_acwi = units_acwi.fillna(0.0)
@@ -426,7 +427,7 @@ def analyze_history(transactions, currency_rates):
 
     inf_series = []
     inf_cap = 0.0
-    daily_rate = 1.06 ** (1 / 365)
+    daily_rate = DAILY_INFLATION_RATE
     for amt in daily_inv_change:
         if amt > 0:
             inf_cap += amt;
