@@ -138,8 +138,8 @@ document.addEventListener('DOMContentLoaded', function() {
         let mainChartInstance = null;
         const chartData = {
             dates: gd('t-dates'),
-            value: { label: 'PLN', user: gd('t-user'), inv: gd('t-inv'), points: gd('t-points') },
-            percent: { label: '%', user: gd('p-user'), wig: gd('p-wig'), sp500: gd('p-sp500'), inf: gd('p-inf') }
+            value: { label: 'PLN', user: gd('t-user'), inv: gd('t-inv'), points: gd('t-points'), wig: gd('t-wig'), sp500: gd('t-sp500'), acwi: gd('t-acwi') },
+            percent: { label: '%', user: gd('p-user'), wig: gd('p-wig'), sp500: gd('p-sp500'), acwi: gd('p-acwi'), inf: gd('p-inf') }
         };
 
         function renderMainChart(mode) {
@@ -151,24 +151,63 @@ document.addEventListener('DOMContentLoaded', function() {
             gradient.addColorStop(0, 'rgba(0, 255, 127, 0.2)');
             gradient.addColorStop(1, 'rgba(0, 255, 127, 0.0)');
 
-            let datasets = [];
             if (mode === 'value') {
                 datasets = [
-                    { label: 'Value', data: chartData.value.user, borderColor: MAIN_COLOR, backgroundColor: gradient, borderWidth: 2, fill: true, pointRadius: chartData.value.points, pointBackgroundColor: '#fff' },
+                    { label: 'Portfolio', data: chartData.value.user, borderColor: MAIN_COLOR, backgroundColor: gradient, borderWidth: 2, fill: true, pointRadius: chartData.value.points, pointBackgroundColor: '#fff' },
                     { label: 'Invested', data: chartData.value.inv, borderColor: '#666', borderWidth: 2, borderDash:[4,4], fill:false, pointRadius:0 }
                 ];
             } else {
-                datasets = [{ label: 'Return %', data: chartData.percent.user, borderColor: MAIN_COLOR, backgroundColor: gradient, borderWidth: 2, fill: true, pointRadius: 0 }];
+                const sp500Data = chartData.percent.sp500 || [];
+
+
+                datasets = [
+                    { label: 'Portfolio %', data: chartData.percent.user, borderColor: MAIN_COLOR, backgroundColor: gradient, borderWidth: 2, fill: true, pointRadius: 0 },
+                    { label: 'S&P 500 ETF (SPY)', data: chartData.percent.sp500, borderColor: '#42A5F5', borderWidth: 2, borderDash: [3, 3], fill: false, pointRadius: 0, tension: 0.1 },
+                    { label: 'Global ETF (ACWI)', data: chartData.percent.acwi, borderColor: '#AB47BC', borderWidth: 2, borderDash: [3, 3], fill: false, pointRadius: 0, tension: 0.1 },
+                    { label: 'Inflation', data: chartData.percent.inf, borderColor: '#ef5350', borderWidth: 2, borderDash: [2, 2], fill: false, pointRadius: 0, tension: 0.1 }
+                ];
             }
+            
             mainChartInstance = new Chart(ctx, {
-                type: 'line', data: { labels: chartData.dates, datasets: datasets },
-                options: { responsive:true, maintainAspectRatio:false, interaction: { mode: 'index', intersect: false }, scales:{ x: { display: false }, y: { grid: { color: '#333' } } }, plugins:{ legend: { display: false } } }
+                type: 'line', 
+                data: { labels: chartData.dates, datasets: datasets },
+                options: { 
+                    responsive:true, 
+                    maintainAspectRatio:false, 
+                    interaction: { mode: 'index', intersect: false }, 
+                    scales:{ x: { display: false }, y: { grid: { color: '#333' } } }, 
+                    plugins:{ 
+                        legend: { 
+                            display: true,
+                            labels: { color: '#e0e0e0', font: { size: 15, weight: 'bold' }, boxWidth: 20, padding: 25 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    let value = context.parsed.y;
+                                    if (mode === 'value') {
+                                        return label + ': ' + value.toFixed(2) + ' PLN';
+                                    } else {
+                                        return label + ': ' + value.toFixed(2) + '%';
+                                    }
+                                }
+                            }
+                        }
+                    } 
+                }
             });
         }
-        window.switchChart = function(mode) {
+        window.switchMainChart = function(mode) {
             const btnVal = document.getElementById('btn-val'); const btnPct = document.getElementById('btn-pct');
-            if(mode==='value') { btnVal.classList.add('active','bg-primary'); btnPct.classList.remove('active','bg-primary'); }
-            else { btnPct.classList.add('active','bg-primary'); btnVal.classList.remove('active','bg-primary'); }
+            if(mode==='value') { 
+                btnVal.classList.add('active'); btnPct.classList.remove('active'); 
+                document.getElementById('chart-title').textContent = 'Portfolio Value vs Invested Capital';
+            }
+            else { 
+                btnPct.classList.add('active'); btnVal.classList.remove('active'); 
+                document.getElementById('chart-title').textContent = 'ROI vs Market Benchmarks';
+            }
             renderMainChart(mode);
         }
         if(chartData.dates.length > 0) renderMainChart('value');

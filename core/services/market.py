@@ -180,7 +180,7 @@ def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -
     end_date = date.today()
     safe_download_start = start_date - timedelta(days=730)
 
-    benchmarks = ['^GSPC', 'USDPLN=X', 'EURPLN=X', 'GBPPLN=X', 'WIG.WA']
+    benchmarks = ['SPY', 'USDPLN=X', 'EURPLN=X', 'GBPPLN=X', 'WIG.WA', 'ACWI']
 
     # Unikalne tickery usera bez benchmarków
     user_tickers = list(set(assets_tickers))
@@ -222,6 +222,29 @@ def fetch_historical_data_for_timeline(assets_tickers: list, start_date: date) -
     bench_df = process_download(benchmarks)
     if not bench_df.empty:
         combined_df = pd.concat([combined_df, bench_df], axis=1)
+
+    # Retry missing benchmarks
+    existing_tickers = []
+    if not combined_df.empty and isinstance(combined_df.columns, pd.MultiIndex):
+        existing_tickers = combined_df.columns.levels[0].tolist()
+    
+    for b in benchmarks:
+        if b not in existing_tickers:
+            try:
+                single = yf.download(b, start=safe_download_start, end=end_date + timedelta(days=1), progress=False, threads=False)
+                if not single.empty:
+                    # Fix single index columns
+                    if not isinstance(single.columns, pd.MultiIndex):
+                         single.columns = pd.MultiIndex.from_product([[b], single.columns])
+                    
+                    # Align dates
+                    single.index = pd.to_datetime(single.index)
+                    if single.index.tz is not None: single.index = single.index.tz_localize(None)
+                    single.index = single.index.date
+                    
+                    combined_df = pd.concat([combined_df, single], axis=1)
+            except:
+                pass
 
     # B. User Assets
     if user_tickers:

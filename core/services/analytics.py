@@ -303,7 +303,7 @@ def analyze_history(transactions, currency_rates):
 
     last_tx_id = transactions.last().id
     count_tx = transactions.count()
-    cache_key = f"history_v13_{last_tx_id}_{count_tx}_{start_date}_{end_date}"
+    cache_key = f"history_v21_{last_tx_id}_{count_tx}_{start_date}_{end_date}"
     cached = cache.get(cache_key)
     if cached: return cached
 
@@ -315,7 +315,7 @@ def analyze_history(transactions, currency_rates):
         'DKK': 'DKKPLN=X', 'CZK': 'CZKPLN=X', 'PLN': None
     }
     needed_currencies = [v for v in CURRENCY_MAP.values() if v]
-    benchmarks = ['^GSPC', 'WIG.WA']
+    benchmarks = ['SPY', 'WIG.WA', 'ACWI']
     full_ticker_list = list(set(user_tickers + needed_currencies + benchmarks))
 
     hist_data = fetch_historical_data_for_timeline(full_ticker_list, start_date)
@@ -400,7 +400,7 @@ def analyze_history(transactions, currency_rates):
     daily_deposits = df_tx[df_tx['type'] == 'DEPOSIT'].groupby('date')['amount'].sum().reindex(full_dates, fill_value=0)
 
     usd_bm = smart_fill(get_series('USDPLN=X'), full_dates).replace(0.0, currency_rates.get('USD', 4.0))
-    sp500_price = smart_fill(get_series('^GSPC'), full_dates)
+    sp500_price = smart_fill(get_series('SPY'), full_dates)
     denom_sp = usd_bm * sp500_price
     units_sp = daily_deposits / denom_sp
     units_sp = units_sp.fillna(0.0)
@@ -413,7 +413,16 @@ def analyze_history(transactions, currency_rates):
     units_wig = units_wig.fillna(0.0)
     units_wig[wig_price <= 0.001] = 0.0
     timeline_df['wig_val'] = units_wig.cumsum() * wig_price
+    timeline_df['wig_val'] = units_wig.cumsum() * wig_price
     timeline_df.loc[timeline_df['wig_val'] <= 0.01, 'wig_val'] = timeline_df['invested']
+
+    acwi_price = smart_fill(get_series('ACWI'), full_dates)
+    denom_acwi = usd_bm * acwi_price
+    units_acwi = daily_deposits / denom_acwi
+    units_acwi = units_acwi.fillna(0.0)
+    units_acwi[denom_acwi <= 0.001] = 0.0
+    timeline_df['acwi_val'] = units_acwi.cumsum() * denom_acwi
+    timeline_df.loc[timeline_df['acwi_val'] <= 0.01, 'acwi_val'] = timeline_df['invested']
 
     inf_series = []
     inf_cap = 0.0
@@ -438,6 +447,7 @@ def analyze_history(transactions, currency_rates):
     timeline_df['pct_user'] = calc_pct('user_value', 'invested')
     timeline_df['pct_sp'] = calc_pct('sp500_val', 'invested')
     timeline_df['pct_wig'] = calc_pct('wig_val', 'invested')
+    timeline_df['pct_acwi'] = calc_pct('acwi_val', 'invested')
     timeline_df['pct_inf'] = calc_pct('inf_val', 'invested')
 
     timeline_df['points'] = 0
@@ -446,16 +456,22 @@ def analyze_history(transactions, currency_rates):
     res = {
         'dates': timeline_df.index.map(lambda d: d.strftime("%Y-%m-%d")).tolist(),
         'points': timeline_df['points'].tolist(),
-        'val_user': timeline_df['user_value'].round(2).tolist(),
-        'val_inv': timeline_df['invested'].round(2).tolist(),
-        'val_sp': timeline_df['sp500_val'].round(2).tolist(),
-        'val_inf': timeline_df['inf_val'].round(2).tolist(),
-        'pct_user': timeline_df['pct_user'].tolist(),
-        'pct_sp': timeline_df['pct_sp'].tolist(),
-        'pct_wig': timeline_df['pct_wig'].tolist(),
-        'pct_inf': timeline_df['pct_inf'].tolist(),
+        'val_user': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['user_value'].round(2).tolist()],
+        'val_inv': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['invested'].round(2).tolist()],
+        'val_sp': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['sp500_val'].round(2).tolist()],
+        'val_wig': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['wig_val'].round(2).tolist()],
+        'val_acwi': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['acwi_val'].round(2).tolist()],
+        'val_inf': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['inf_val'].round(2).tolist()],
+        'pct_user': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['pct_user'].tolist()],
+        'pct_sp': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['pct_sp'].tolist()],
+        'pct_wig': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['pct_wig'].tolist()],
+        'pct_acwi': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['pct_acwi'].tolist()],
+        'pct_inf': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['pct_inf'].tolist()],
         'last_market_date': datetime.now() if not hist_data.empty else None
     }
 
     cache.set(cache_key, res, 900)
     return res
+
+
+

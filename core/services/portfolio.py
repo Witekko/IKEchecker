@@ -108,8 +108,11 @@ def get_dashboard_context(user, portfolio_id=None):
         'last_transactions': last_transactions,
         'timeline_dates': timeline['dates'], 'timeline_total_value': timeline['val_user'],
         'timeline_invested': timeline['val_inv'], 'timeline_deposit_points': timeline['points'],
+        'timeline_val_sp500': timeline['val_sp'], 'timeline_val_wig': timeline.get('val_wig', []),
+        'timeline_val_acwi': timeline.get('val_acwi', []),
         'timeline_pct_user': timeline['pct_user'], 'timeline_pct_wig': timeline.get('pct_wig', []),
         'timeline_pct_sp500': timeline['pct_sp'], 'timeline_pct_inflation': timeline['pct_inf'],
+        'timeline_pct_acwi': timeline.get('pct_acwi', []),
         'last_market_date': timeline['last_market_date'], 'rates': rates,
         'market_summary': market_data['summary']
     }

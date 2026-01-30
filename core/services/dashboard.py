@@ -67,7 +67,7 @@ def get_dashboard_stats_context(active_portfolio, range_mode='all'):
         'timeline_deposit_points': filtered_timeline.get('points', []),
         'timeline_pct_user': filtered_timeline.get('pct_user', []),
         'timeline_pct_wig': filtered_timeline.get('pct_wig', []),
-        'timeline_pct_sp500': filtered_timeline.get('pct_sp500', []),
+        'timeline_pct_sp500': filtered_timeline.get('pct_sp', []),
         'timeline_pct_inflation': filtered_timeline.get('pct_inf', []),
     }
 
