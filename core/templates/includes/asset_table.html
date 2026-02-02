@@ -1,0 +1,83 @@
+{% if assets %}
+<div class="d-flex align-items-center mb-3">
+    <span class="fs-4 me-2">{{ icon|safe }}</span> <h4 class="mb-0 fw-bold">{{ title }}</h4>
+</div>
+
+<div class="card border-secondary border-opacity-25 mb-5 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="{{ table_id }}">
+                <thead class="bg-dark">
+                    <tr>
+                        <th class="ps-4 sortable" data-sort-col="0" data-table-id="{{ table_id }}"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        {% if not is_closed %}
+                            <th class="text-end sortable" data-sort-col="1" data-table-id="{{ table_id }}"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end sortable" data-sort-col="2" data-table-id="{{ table_id }}"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end sortable" data-sort-col="3" data-table-id="{{ table_id }}"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end sortable" data-sort-col="4" data-table-id="{{ table_id }}"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end sortable" data-sort-col="5" data-table-id="{{ table_id }}"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end sortable" data-sort-col="6" data-table-id="{{ table_id }}"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end sortable" data-sort-col="7" data-table-id="{{ table_id }}"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end sortable" data-sort-col="8" data-table-id="{{ table_id }}"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end sortable" data-sort-col="9" data-table-id="{{ table_id }}"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        {% else %}
+                            <th class="text-end sortable" data-sort-col="1" data-table-id="{{ table_id }}"><div class="th-content">Close Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        {% endif %}
+                        <th class="text-end sortable" data-sort-col="{% if is_closed %}2{% else %}10{% endif %}" data-table-id="{{ table_id }}"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end pe-4 sortable" data-sort-col="{% if is_closed %}3{% else %}11{% endif %}" data-table-id="{{ table_id }}"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset in assets %}
+                    <tr style="cursor: pointer;" class="clickable-row" data-href="{% url 'asset_details' asset.symbol %}">
+                        <td class="ps-4" data-value="{{ asset.display_name }}">
+                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
+                            <div class="small text-muted" style="font-size: 0.7rem;">{{ asset.sector }} &bull; {{ asset.asset_type }}</div>
+                        </td>
+                        {% if not is_closed %}
+                            <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">{{ asset.day_change_pct }}%</td>
+                            <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
+                            <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
+                            <td class="text-end text-muted" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
+                            <td class="text-end text-white fw-bold" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
+                            <td class="text-end text-muted small" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
+                            <td class="text-end text-muted" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
+                            <td class="text-end text-white fw-bold" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
+                            <td class="text-end" data-value="{{ asset.share_pct_raw }}">
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
+                                    <div class="progress" style="height: 3px; width: 25px; background-color: #333;"><div class="progress-bar bg-success" data-width="{{ asset.share_pct_raw }}"></div></div>
+                                </div>
+                            </td>
+                        {% else %}
+                            <td class="text-end text-muted small" data-value="{{ asset.close_date|date:'Ymd' }}">
+                                {{ asset.close_date|date:"Y-m-d"|default:"--" }}
+                            </td>
+                        {% endif %}
+                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">{{ asset.gain_percent }}%</td>
+                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
+                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if stats %}
+                <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
+                    <tr class="fw-bold">
+                        {% if not is_closed %}
+                            <td colspan="8" class="text-end py-3 text-muted text-uppercase small">{{ title }} Summary:</td>
+                            <td class="text-end text-white fs-6">{{ stats.value }}</td>
+                            <td class="text-end text-white small">{{ stats.share_total }}%</td>
+                        {% else %}
+                            <td colspan="2" class="text-end py-3 text-muted text-uppercase small">Closed Summary:</td>
+                        {% endif %}
+                        <td class="text-end {% if stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ stats.return_pct }}%</td>
+                        <td class="text-end pe-4 {% if stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %} fs-6">{% if stats.gain_raw > 0 %}+{% endif %}{{ stats.gain }}</td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}

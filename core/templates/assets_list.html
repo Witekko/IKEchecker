@@ -14,325 +14,19 @@
 {% include 'includes/summary_tiles.html' %}
 
 {# --- SEKCJA 1.1: GPW STOCKS --- #}
-{% if pln_stocks %}
-<div class="d-flex align-items-center mb-3">
-    <span class="fs-4 me-2">🇵🇱</span> <h4 class="mb-0 fw-bold">GPW Stocks</h4>
-</div>
-
-<div class="card border-secondary border-opacity-25 mb-5 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="table-pln-stocks">
-                <thead class="bg-dark">
-                    <tr>
-                        <th class="ps-4 sortable" onclick="sortTable(0, 'table-pln-stocks')"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(1, 'table-pln-stocks')"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(2, 'table-pln-stocks')"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(3, 'table-pln-stocks')"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(4, 'table-pln-stocks')"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(5, 'table-pln-stocks')"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(6, 'table-pln-stocks')"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(7, 'table-pln-stocks')"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(8, 'table-pln-stocks')"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(9, 'table-pln-stocks')"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(10, 'table-pln-stocks')"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end pe-4 sortable" onclick="sortTable(11, 'table-pln-stocks')"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for asset in pln_stocks %}
-                    <tr style="cursor: pointer;" class="clickable-row" data-href="{% url 'asset_details' asset.symbol %}">
-                        <td class="ps-4" data-value="{{ asset.display_name }}">
-                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
-                            <div class="small text-muted" style="font-size: 0.7rem;">{{ asset.sector }} &bull; {{ asset.asset_type }}</div>
-                        </td>
-                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">{{ asset.day_change_pct }}%</td>
-                        <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
-                        <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
-                        <td class="text-end text-muted" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
-                        <td class="text-end text-white fw-bold" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
-                        <td class="text-end text-muted small" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
-                        <td class="text-end text-muted" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
-                        <td class="text-end text-white fw-bold" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
-                        <td class="text-end" data-value="{{ asset.share_pct_raw }}">
-                            <div class="d-flex align-items-center justify-content-end">
-                                <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
-                                <div class="progress" style="height: 3px; width: 25px; background-color: #333;"><div class="progress-bar bg-success" data-width="{{ asset.share_pct_raw }}"></div></div>
-                            </div>
-                        </td>
-                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">{{ asset.gain_percent }}%</td>
-                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
-                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
-                    <tr class="fw-bold">
-                        <td colspan="8" class="text-end py-3 text-muted text-uppercase small">Stocks Summary:</td>
-                        <td class="text-end text-white fs-6">{{ pln_stocks_stats.value }}</td>
-                        <td class="text-end text-white small">{{ pln_stocks_stats.share_total }}%</td>
-                        <td class="text-end {% if pln_stocks_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ pln_stocks_stats.return_pct }}%</td>
-                        <td class="text-end pe-4 {% if pln_stocks_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %} fs-6">{% if pln_stocks_stats.gain_raw > 0 %}+{% endif %}{{ pln_stocks_stats.gain }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
+{% include 'includes/asset_table.html' with assets=pln_stocks title="GPW Stocks" icon="🇵🇱" table_id="table-pln-stocks" stats=pln_stocks_stats %}
 
 {# --- SEKCJA 1.2: GPW ETFs --- #}
-{% if pln_etfs %}
-<div class="d-flex align-items-center mb-3">
-    <span class="fs-4 me-2">🇵🇱</span> <h4 class="mb-0 fw-bold">GPW ETFs</h4>
-</div>
-
-<div class="card border-secondary border-opacity-25 mb-5 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="table-pln-etfs">
-                <thead class="bg-dark">
-                    <tr>
-                        <th class="ps-4 sortable" onclick="sortTable(0, 'table-pln-etfs')"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(1, 'table-pln-etfs')"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(2, 'table-pln-etfs')"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(3, 'table-pln-etfs')"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(4, 'table-pln-etfs')"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(5, 'table-pln-etfs')"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(6, 'table-pln-etfs')"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(7, 'table-pln-etfs')"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(8, 'table-pln-etfs')"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(9, 'table-pln-etfs')"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(10, 'table-pln-etfs')"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end pe-4 sortable" onclick="sortTable(11, 'table-pln-etfs')"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for asset in pln_etfs %}
-                    <tr style="cursor: pointer;" class="clickable-row" data-href="{% url 'asset_details' asset.symbol %}">
-                        <td class="ps-4" data-value="{{ asset.display_name }}">
-                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
-                            <div class="small text-muted" style="font-size: 0.7rem;">{{ asset.sector }} &bull; {{ asset.asset_type }}</div>
-                        </td>
-                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">{{ asset.day_change_pct }}%</td>
-                        <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
-                        <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
-                        <td class="text-end text-muted" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
-                        <td class="text-end text-white fw-bold" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
-                        <td class="text-end text-muted small" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
-                        <td class="text-end text-muted" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
-                        <td class="text-end text-white fw-bold" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
-                        <td class="text-end" data-value="{{ asset.share_pct_raw }}">
-                            <div class="d-flex align-items-center justify-content-end">
-                                <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
-                                <div class="progress" style="height: 3px; width: 25px; background-color: #333;"><div class="progress-bar bg-success" data-width="{{ asset.share_pct_raw }}"></div></div>
-                            </div>
-                        </td>
-                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">{{ asset.gain_percent }}%</td>
-                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
-                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
-                    <tr class="fw-bold">
-                        <td colspan="8" class="text-end py-3 text-muted text-uppercase small">ETFs Summary:</td>
-                        <td class="text-end text-white fs-6">{{ pln_etfs_stats.value }}</td>
-                        <td class="text-end text-white small">{{ pln_etfs_stats.share_total }}%</td>
-                        <td class="text-end {% if pln_etfs_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ pln_etfs_stats.return_pct }}%</td>
-                        <td class="text-end pe-4 {% if pln_etfs_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %} fs-6">{% if pln_etfs_stats.gain_raw > 0 %}+{% endif %}{{ pln_etfs_stats.gain }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
+{% include 'includes/asset_table.html' with assets=pln_etfs title="GPW ETFs" icon="🇵🇱" table_id="table-pln-etfs" stats=pln_etfs_stats %}
 
 {# --- SEKCJA 2.1: GLOBAL STOCKS --- #}
-{% if foreign_stocks %}
-<div class="d-flex align-items-center mb-3">
-    <span class="fs-4 me-2">🌍</span> <h4 class="mb-0 fw-bold">Global Stocks</h4>
-</div>
-
-<div class="card border-secondary border-opacity-25 mb-5 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="table-foreign-stocks">
-                <thead class="bg-dark">
-                    <tr>
-                        <th class="ps-4 sortable" onclick="sortTable(0, 'table-foreign-stocks')"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(1, 'table-foreign-stocks')"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(2, 'table-foreign-stocks')"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(3, 'table-foreign-stocks')"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(4, 'table-foreign-stocks')"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(5, 'table-foreign-stocks')"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(6, 'table-foreign-stocks')"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(7, 'table-foreign-stocks')"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(8, 'table-foreign-stocks')"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(9, 'table-foreign-stocks')"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(10, 'table-foreign-stocks')"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end pe-4 sortable" onclick="sortTable(11, 'table-foreign-stocks')"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for asset in foreign_stocks %}
-                    <tr style="cursor: pointer;" class="clickable-row" data-href="{% url 'asset_details' asset.symbol %}">
-                        <td class="ps-4" data-value="{{ asset.display_name }}">
-                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
-                            <div class="small text-muted" style="font-size: 0.7rem;">{{ asset.sector }} &bull; {{ asset.asset_type }}</div>
-                        </td>
-                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">{{ asset.day_change_pct }}%</td>
-                        <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
-                        <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
-                        <td class="text-end text-muted" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
-                        <td class="text-end text-white fw-bold" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
-                        <td class="text-end text-muted small" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
-                        <td class="text-end text-muted" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
-                        <td class="text-end text-white fw-bold" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
-                        <td class="text-end" data-value="{{ asset.share_pct_raw }}">
-                            <div class="d-flex align-items-center justify-content-end">
-                                <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
-                                <div class="progress" style="height: 3px; width: 25px; background-color: #333;"><div class="progress-bar bg-success" data-width="{{ asset.share_pct_raw }}"></div></div>
-                            </div>
-                        </td>
-                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">{{ asset.gain_percent }}%</td>
-                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
-                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
-                    <tr class="fw-bold">
-                        <td colspan="8" class="text-end py-3 text-muted text-uppercase small">Global Stocks Summary:</td>
-                        <td class="text-end text-white fs-6">{{ foreign_stocks_stats.value }}</td>
-                        <td class="text-end text-white small">{{ foreign_stocks_stats.share_total }}%</td>
-                        <td class="text-end {% if foreign_stocks_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ foreign_stocks_stats.return_pct }}%</td>
-                        <td class="text-end pe-4 {% if foreign_stocks_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %} fs-6">{% if foreign_stocks_stats.gain_raw > 0 %}+{% endif %}{{ foreign_stocks_stats.gain }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
+{% include 'includes/asset_table.html' with assets=foreign_stocks title="Global Stocks" icon="🌍" table_id="table-foreign-stocks" stats=foreign_stocks_stats %}
 
 {# --- SEKCJA 2.2: GLOBAL ETFs --- #}
-{% if foreign_etfs %}
-<div class="d-flex align-items-center mb-3">
-    <span class="fs-4 me-2">🌍</span> <h4 class="mb-0 fw-bold">Global ETFs</h4>
-</div>
-
-<div class="card border-secondary border-opacity-25 mb-5 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="table-foreign-etfs">
-                <thead class="bg-dark">
-                    <tr>
-                        <th class="ps-4 sortable" onclick="sortTable(0, 'table-foreign-etfs')"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(1, 'table-foreign-etfs')"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(2, 'table-foreign-etfs')"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(3, 'table-foreign-etfs')"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(4, 'table-foreign-etfs')"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(5, 'table-foreign-etfs')"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(6, 'table-foreign-etfs')"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(7, 'table-foreign-etfs')"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(8, 'table-foreign-etfs')"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(9, 'table-foreign-etfs')"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(10, 'table-foreign-etfs')"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end pe-4 sortable" onclick="sortTable(11, 'table-foreign-etfs')"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for asset in foreign_etfs %}
-                    <tr style="cursor: pointer;" class="clickable-row" data-href="{% url 'asset_details' asset.symbol %}">
-                        <td class="ps-4" data-value="{{ asset.display_name }}">
-                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
-                            <div class="small text-muted" style="font-size: 0.7rem;">{{ asset.sector }} &bull; {{ asset.asset_type }}</div>
-                        </td>
-                        <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">{{ asset.day_change_pct }}%</td>
-                        <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
-                        <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
-                        <td class="text-end text-muted" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
-                        <td class="text-end text-white fw-bold" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
-                        <td class="text-end text-muted small" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
-                        <td class="text-end text-muted" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
-                        <td class="text-end text-white fw-bold" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
-                        <td class="text-end" data-value="{{ asset.share_pct_raw }}">
-                            <div class="d-flex align-items-center justify-content-end">
-                                <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
-                                <div class="progress" style="height: 3px; width: 25px; background-color: #333;"><div class="progress-bar bg-success" data-width="{{ asset.share_pct_raw }}"></div></div>
-                            </div>
-                        </td>
-                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">{{ asset.gain_percent }}%</td>
-                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
-                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot class="bg-dark border-top border-secondary border-opacity-25" style="border-top-width: 2px !important;">
-                    <tr class="fw-bold">
-                        <td colspan="8" class="text-end py-3 text-muted text-uppercase small">Global ETFs Summary:</td>
-                        <td class="text-end text-white fs-6">{{ foreign_etfs_stats.value }}</td>
-                        <td class="text-end text-white small">{{ foreign_etfs_stats.share_total }}%</td>
-                        <td class="text-end {% if foreign_etfs_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %}">{{ foreign_etfs_stats.return_pct }}%</td>
-                        <td class="text-end pe-4 {% if foreign_etfs_stats.gain_raw >= 0 %}text-success{% else %}text-danger{% endif %} fs-6">{% if foreign_etfs_stats.gain_raw > 0 %}+{% endif %}{{ foreign_etfs_stats.gain }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
+{% include 'includes/asset_table.html' with assets=foreign_etfs title="Global ETFs" icon="🌍" table_id="table-foreign-etfs" stats=foreign_etfs_stats %}
 
 {# --- SEKCJA 3: ZAMKNIĘTE (CLOSED) --- #}
-{% if closed_items %}
-<div class="d-flex align-items-center mb-3">
-    <span class="fs-4 me-2">🔒</span> <h4 class="mb-0 fw-bold">Closed Positions</h4>
-</div>
-
-<div class="card border-secondary border-opacity-25 mb-5 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="table-closed">
-                <thead class="bg-dark">
-                    <tr>
-                        <th class="ps-4 sortable" onclick="sortTable(0, 'table-closed')"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(1, 'table-closed')"><div class="th-content">Close Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end sortable" onclick="sortTable(2, 'table-closed')"><div class="th-content">Return % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end pe-4 sortable" onclick="sortTable(3, 'table-closed')"><div class="th-content">Realized Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for asset in closed_items %}
-                    <tr style="cursor: pointer;" class="clickable-row" data-href="{% url 'asset_details' asset.symbol %}">
-                        <td class="ps-4" data-value="{{ asset.display_name }}">
-                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
-                            <div class="small text-muted">{{ asset.asset_type }}</div>
-                        </td>
-                        <td class="text-end text-muted small" data-value="{{ asset.close_date|date:'Ymd' }}">
-                            {{ asset.close_date|date:"Y-m-d"|default:"--" }}
-                        </td>
-                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">
-                            {{ asset.gain_percent }}%
-                        </td>
-                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
-                            <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                {% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}
-                            </span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
+{% include 'includes/asset_table.html' with assets=closed_items title="Closed Positions" icon="🔒" table_id="table-closed" is_closed=True %}
 
 <script src="{% static 'js/tables.js' %}"></script>
 <script>
@@ -349,6 +43,18 @@
         const progressBars = document.querySelectorAll('.progress-bar[data-width]');
         progressBars.forEach(bar => {
             bar.style.width = bar.dataset.width + '%';
+        });
+
+        // Handle sortable headers
+        const sortableHeaders = document.querySelectorAll('th.sortable');
+        sortableHeaders.forEach(th => {
+            th.addEventListener('click', function() {
+                const colIndex = this.getAttribute('data-sort-col');
+                const tableId = this.getAttribute('data-table-id');
+                if (colIndex !== null && tableId) {
+                    sortTable(parseInt(colIndex), tableId);
+                }
+            });
         });
     });
 </script>
