@@ -121,10 +121,95 @@ def get_current_currency_rates():
     return data['rates']
 
 
+def update_prices_bulk(assets_list):
+    """
+    Sprawdza, które aktywa są 'przestarzałe' (>15 min) i pobiera ich ceny W JEDNYM zapytaniu.
+    Optymalizacja N+1 zapytań HTTP.
+    """
+    now = timezone.now()
+    stale_assets = []
+    
+    # 1. Filtrujemy tylko te, które wymagają aktualizacji
+    for asset in assets_list:
+        if not asset.yahoo_ticker: continue
+        needs_update = False
+        if not asset.last_updated:
+            needs_update = True
+        else:
+            diff = now - asset.last_updated
+            if diff.total_seconds() > 900: # 15 min
+                needs_update = True
+        
+        if needs_update:
+            stale_assets.append(asset)
+            
+    if not stale_assets:
+        return 0 # Nic do roboty, cache jest świeży
+        
+    tickers = [a.yahoo_ticker for a in stale_assets]
+    logger.info(f"BULK UPDATE: Fetching data for {len(tickers)} assets...")
+
+    try:
+        # 2. Jedno duże zapytanie
+        data = yf.download(tickers, period="5d", group_by='ticker', progress=False, threads=False)
+        
+        updated_count = 0
+        
+        # 3. Parsowanie wyników
+        for asset in stale_assets:
+            try:
+                tk = asset.yahoo_ticker
+                
+                # Obsługa MultiIndex (jeśli >1 ticker) lub Flat Index (jeśli 1 ticker)
+                if len(tickers) == 1:
+                     # yfinance zwraca płaski index przy 1 tickerze, wkurzające :)
+                     # Ale group_by='ticker' powinien to ogarnąć? Nie zawsze.
+                     # Spróbujmy uniwersalnie:
+                     if isinstance(data.columns, pd.MultiIndex):
+                         # Raczej nie wejdzie tutaj przy 1 elemencie ale na wszelki wypadek
+                         if tk in data.columns.levels[0]:
+                             df = data[tk]
+                         else:
+                             continue
+                     else:
+                         df = data # Cała ramka to ten ticker
+                else:
+                    if tk not in data.columns.levels[0]:
+                        continue
+                    df = data[tk]
+                
+                if 'Close' not in df.columns: continue
+                
+                valid = df['Close'].dropna()
+                if valid.empty: continue
+                
+                price = float(valid.iloc[-1])
+                prev_close = float(valid.iloc[-2]) if len(valid) >= 2 else price
+                
+                if price > 0:
+                    asset.last_price = price
+                    asset.previous_close = prev_close
+                    asset.last_updated = now
+                    asset.save()
+                    updated_count += 1
+                    
+            except Exception as e:
+                logger.warning(f"Bulk update error for {asset.symbol}: {e}")
+                continue
+                
+        logger.info(f"BULK UPDATE: Success for {updated_count}/{len(tickers)} assets.")
+        return updated_count
+
+    except Exception as e:
+        logger.error(f"BULK UPDATE FATAL: {e}")
+        return 0
+
+
 def get_cached_price(asset: Asset):
     """
     Pobiera cenę jednego aktywa.
-    FIX: Dodano fallback do ticker.info, naprawia 'Unrealized 0.00'.
+    Teraz ta funkcja powinna być wołana PO 'update_prices_bulk', więc trafi w świeże dane w bazie.
+    Jeśli nie, zrobi fallback do individual fetch (stara logika).
     """
     now = timezone.now()
     if asset.last_updated and asset.last_price > 0:

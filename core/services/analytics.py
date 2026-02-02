@@ -4,7 +4,7 @@ import math
 import pandas as pd
 from datetime import date, timedelta, datetime
 from .calculator import PortfolioCalculator
-from .market import get_cached_price, fetch_historical_data_for_timeline
+from .market import get_cached_price, fetch_historical_data_for_timeline, update_prices_bulk
 from django.core.cache import cache
 import logging
 from core.config import BENCHMARKS, CURRENCY_TICKERS, DAILY_INFLATION_RATE
@@ -102,7 +102,12 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
     gainers = 0
     losers = 0
 
-    # --- 2. GŁÓWNA PĘTLA PO AKTYWACH ---
+    # --- 2. OPTYMALIZACJA: BULK UPDATE CEN ---
+    # Zamiast wołać API w pętli dla każdego assetu, pobieramy raz dla wszystkich stale.
+    assets_to_update = [h['asset'] for h in holdings_data.values()]
+    update_prices_bulk(assets_to_update)
+
+    # --- 3. GŁÓWNA PĘTLA PO AKTYWACH ---
     for sym, data in holdings_data.items():
         qty = data['qty']
         asset = data['asset']
