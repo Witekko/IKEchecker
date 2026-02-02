@@ -164,7 +164,7 @@ class BaseImporter(ABC):
         if 'close' in raw or 'profit' in raw: return 'CLOSE'
         if 'deposit' in raw: return 'DEPOSIT'
         if 'withdrawal' in raw: return 'WITHDRAWAL'
-        if 'dividend' in raw: return 'DIVIDEND'
+        if 'dividend' in raw or 'divident' in raw: return 'DIVIDEND'
         if 'withholding tax' in raw: return 'TAX'
         if 'fee' in raw: return 'FEE'
         return 'OTHER'

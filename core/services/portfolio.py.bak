@@ -175,10 +175,7 @@ def _prepare_dashboard_charts(assets, cash):
 
 
 def enrich_assets_context(context, assets, total_portfolio_value):
-    pln_stocks, pln_etfs = [], []
-    foreign_stocks, foreign_etfs = [], []
-    closed_items = []
-
+    pln_items, foreign_items, closed_items = [], [], []
     for a in assets:
         if a['is_closed']:
             closed_items.append(
@@ -208,17 +205,13 @@ def enrich_assets_context(context, assets, total_portfolio_value):
             'cost_pln_raw': a['cost_pln'], 'days_held': days_held, 'price_date': a['price_date'],
             'is_foreign': a['is_foreign']
         }
-        
-        is_etf = item['asset_type'] == 'ETF'
         if a['is_foreign']:
-            if is_etf: foreign_etfs.append(item)
-            else: foreign_stocks.append(item)
+            foreign_items.append(item)
         else:
-            if is_etf: pln_etfs.append(item)
-            else: pln_stocks.append(item)
+            pln_items.append(item)
 
-    for lst in [pln_stocks, pln_etfs, foreign_stocks, foreign_etfs]:
-        lst.sort(key=lambda x: x['share_pct_raw'], reverse=True)
+    pln_items.sort(key=lambda x: x['share_pct_raw'], reverse=True)
+    foreign_items.sort(key=lambda x: x['share_pct_raw'], reverse=True)
     closed_items.sort(key=lambda x: x['gain_pln_raw'], reverse=True)
 
     def stats(items):
@@ -230,16 +223,11 @@ def enrich_assets_context(context, assets, total_portfolio_value):
         return {'value': fmt_2(v), 'gain': fmt_2(g), 'gain_raw': g, 'return_pct': fmt_2((g / c * 100) if c > 0 else 0),
                 'share_total': fmt_2((v / total_portfolio_value * 100) if total_portfolio_value > 0 else 0)}
 
-    context['pln_stocks'] = pln_stocks
-    context['pln_etfs'] = pln_etfs
-    context['foreign_stocks'] = foreign_stocks
-    context['foreign_etfs'] = foreign_etfs
+    context['pln_items'] = pln_items
+    context['foreign_items'] = foreign_items
     context['closed_items'] = closed_items
-    
-    context['pln_stocks_stats'] = stats(pln_stocks)
-    context['pln_etfs_stats'] = stats(pln_etfs)
-    context['foreign_stocks_stats'] = stats(foreign_stocks)
-    context['foreign_etfs_stats'] = stats(foreign_etfs)
+    context['pln_stats'] = stats(pln_items)
+    context['foreign_stats'] = stats(foreign_items)
 
 
 def _get_empty_dashboard_context():
