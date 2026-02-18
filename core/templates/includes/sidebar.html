@@ -29,8 +29,7 @@
                     <a class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}"
                         href="{% url 'switch_portfolio' p.id %}">
                         <span class="text-truncate me-2">{{ p.name }}</span>
-                        <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.6rem;">{{
-                            p.portfolio_type }}</span>
+                        <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.6rem;">{ p.portfolio_type }}</span>
                     </a>
                 </li>
                 {% endfor %}
