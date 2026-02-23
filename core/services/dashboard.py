@@ -94,8 +94,12 @@ def get_holdings_view_context(user, portfolio, range_mode='all'):
 
     dynamic_stats = analyze_holdings(transactions, rates, start_date=start_date)
 
+    # Nowa funkcjonalność: Pobieranie aktywów z Watchlisty użytkownika
+    from ..models import Asset
+    watchlist_assets = Asset.objects.filter(watchers__user=user).select_related()
+
     # 4. Wzbogacenie listy assetów (formatowanie, kolory) - korzystamy z istniejącego helpera
     from .portfolio import enrich_assets_context
-    enrich_assets_context(context, dynamic_stats['assets'], dynamic_stats['total_value'])
+    enrich_assets_context(context, dynamic_stats['assets'], dynamic_stats['total_value'], watchlist_assets=watchlist_assets)
 
     return context

@@ -233,12 +233,19 @@ def portfolio_settings_view(request):
     return render(request, 'portfolio_settings.html', context)
 
 
+from django.contrib.auth.decorators import login_required, user_passes_test
+
+def is_staff_check(user):
+    return user.is_staff
+
 @login_required
+@user_passes_test(is_staff_check)
 def manage_assets_view(request):
     """
     Widok zarządzania aktywami.
     Logika biznesowa (zapis/sync) przeniesiona do 'actions.py'.
     Pobieranie danych przeniesione do 'selectors.py'.
+    Restricted to Admins only.
     """
     active_portfolio = get_active_portfolio(request)
 
@@ -274,6 +281,88 @@ def manage_assets_view(request):
         'active_portfolio': active_portfolio
     }
     return render(request, 'manage_assets.html', context)
+
+@login_required
+def submit_asset_feedback_view(request, symbol):
+    if request.method == 'POST':
+        message = request.POST.get('feedback_message', '').strip()
+        if message:
+            asset = get_object_or_404(Asset, symbol=symbol)
+            from .models import AssetFeedback
+            AssetFeedback.objects.create(user=request.user, asset=asset, message=message)
+            messages.success(request, "Dziękujemy! Zgłoszenie błędu wyceny zostało wysłane. Administratorzy wkrótce je zweryfikują.")
+        else:
+            messages.error(request, "Wiadomość z błędem nie może być pusta.")
+    return redirect('asset_details', symbol=symbol)
+
+
+@login_required
+def add_to_watchlist_view(request):
+    if request.method == 'POST':
+        symbol = request.POST.get('symbol', '').strip().upper()
+        if symbol:
+            from .models import Watchlist, Asset
+            from .services.market import fetch_asset_metadata
+            from core.config import SUFFIX_MAP
+            
+            # Helper to create asset if missing in global DB
+            asset = Asset.objects.filter(symbol=symbol).first()
+            if not asset:
+                # Trzeba pobrać metadane
+                yahoo_ticker = symbol
+                currency = 'PLN'
+                name = symbol
+                asset_type = 'STOCK'
+                sector = 'OTHER'
+
+                # Guess suffix
+                for suffix, rule in SUFFIX_MAP.items():
+                    if symbol.endswith(suffix):
+                        base = symbol.replace(suffix, '')
+                        yahoo_suf = rule['yahoo_suffix'] if rule['yahoo_suffix'] is not None else ''
+                        yahoo_ticker = f"{base}{yahoo_suf}"
+                        currency = rule['default_currency']
+                        break
+                
+                try:
+                    meta = fetch_asset_metadata(yahoo_ticker)
+                    if meta['success']:
+                        name = meta.get('name', name)
+                        asset_type = meta.get('asset_type', asset_type)
+                        sector = meta.get('sector', sector)
+                        currency = meta.get('currency', currency)
+                except Exception as e:
+                    pass
+                
+                asset = Asset.objects.create(
+                    symbol=symbol,
+                    yahoo_ticker=yahoo_ticker,
+                    currency=currency,
+                    name=name,
+                    asset_type=asset_type,
+                    sector=sector
+                )
+            
+            # Dodaj do watchlisty
+            watchlist_obj, created = Watchlist.objects.get_or_create(user=request.user, asset=asset)
+            if created:
+                messages.success(request, f"Added {symbol} to your watchlist.")
+            else:
+                messages.info(request, f"{symbol} is already in your watchlist.")
+        else:
+            messages.error(request, "Symbol cannot be empty.")
+    return redirect('assets_list')
+
+
+@login_required
+def remove_from_watchlist_view(request, symbol):
+    if request.method == 'POST':
+        from .models import Watchlist, Asset
+        asset = get_object_or_404(Asset, symbol=symbol)
+        deleted, _ = Watchlist.objects.filter(user=request.user, asset=asset).delete()
+        if deleted:
+            messages.success(request, f"Removed {symbol} from your watchlist.")
+    return redirect('assets_list')
 
 
 def demo_login_view(request):

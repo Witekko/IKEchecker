@@ -174,7 +174,7 @@ def _prepare_dashboard_charts(assets, cash):
     return charts
 
 
-def enrich_assets_context(context, assets, total_portfolio_value):
+def enrich_assets_context(context, assets, total_portfolio_value, watchlist_assets=None):
     pln_stocks, pln_etfs = [], []
     foreign_stocks, foreign_etfs = [], []
     closed_items = []
@@ -241,6 +241,30 @@ def enrich_assets_context(context, assets, total_portfolio_value):
     context['foreign_stocks_stats'] = stats(foreign_stocks)
     context['foreign_etfs_stats'] = stats(foreign_etfs)
 
+    # --- WATCHLIST PROCESSING ---
+    watchlist_items = []
+    if watchlist_assets:
+        for w_asset in watchlist_assets:
+            # We need to fetch the current price for the watched asset
+            try:
+                cur_price, prev_close = get_cached_price(w_asset)
+                day_change_pct = ((cur_price - prev_close) / prev_close * 100) if prev_close > 0 else 0.0
+            except:
+                cur_price, prev_close, day_change_pct = 0.0, 0.0, 0.0
+                
+            watchlist_items.append({
+                'symbol': w_asset.symbol,
+                'name': w_asset.name or w_asset.symbol,
+                'display_name': w_asset.display_name,
+                'sector': w_asset.get_sector_display() if hasattr(w_asset, 'get_sector_display') else w_asset.sector,
+                'asset_type': w_asset.get_asset_type_display() if hasattr(w_asset, 'get_asset_type_display') else w_asset.asset_type,
+                'current_price_fmt': f"{fmt_2(cur_price)} {w_asset.currency}",
+                'day_change_pct': fmt_2(day_change_pct),
+                'day_change_pct_raw': day_change_pct,
+                'is_foreign': w_asset.currency != 'PLN'
+            })
+    context['watchlist_items'] = watchlist_items
+
 
 def _get_empty_dashboard_context():
     market_data = get_market_summary()
@@ -265,7 +289,13 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
     rates = get_current_currency_rates()
     multiplier = rates.get(asset.currency, 1.0) if asset.currency != 'PLN' else 1.0
     if asset.currency == 'JPY': multiplier /= 100.0
-    first_date = asset_trans.first().date.date() if asset_trans.exists() else date.today()
+    from datetime import timedelta
+    
+    qty, cost = asset_data['qty'], asset_data['cost']
+    has_trades = asset_trans.exists()
+    
+    # If no trades (watchlist), fetch all history for the chart
+    first_date = asset_trans.first().date.date() if has_trades else date(1970, 1, 1)
 
     current_price_orig, prev_close = 0.0, 0.0
     chart_dates, chart_prices = [], []
@@ -282,7 +312,6 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
     except:
         current_price_orig, prev_close = get_cached_price(asset)
 
-    qty, cost = asset_data['qty'], asset_data['cost']
     if current_price_orig <= 0: current_price_orig = (cost / qty) if qty > 0 else 0
     cur_val_pln = qty * current_price_orig * multiplier
     total_gain = (cur_val_pln - cost) + asset_data['realized']
@@ -295,13 +324,18 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
                               'price_original': f"{t.get('price', 0):.2f}", 'value_pln': fmt_2(abs(t['amount']))})
         d_str = t['date'].strftime("%Y-%m-%d")
         trade_events[d_str] = 'BUY' if 'BUY' in t['type'] else 'SELL'
-
+        
     chart_colors, chart_radius = [], []
     for d in chart_dates:
         col = '#00ff7f' if trade_events.get(d) == 'BUY' else (
             '#ff4d4d' if trade_events.get(d) == 'SELL' else 'rgba(0,0,0,0)')
         chart_colors.append(col);
         chart_radius.append(6 if trade_events.get(d) else 0)
+
+    from ..models import Watchlist
+    watchlist_item = Watchlist.objects.filter(user=user, asset=asset).first()
+    added_date = watchlist_item.added_at.date() if watchlist_item else date.today()
+    reference_date = asset_trans.first().date.date() if has_trades else added_date
 
     return {
         'symbol': symbol, 'asset_name': asset.name, 'current_value_pln': fmt_2(cur_val_pln),
@@ -314,9 +348,11 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
         'day_change_pln': fmt_2(day_change_pln), 'transactions': reversed(history_table),
         'chart_dates': chart_dates, 'chart_prices': chart_prices, 'chart_point_colors': chart_colors,
         'chart_point_radius': chart_radius,
-        'first_trade_date': first_date.strftime('%Y-%m-%d'),  # <-- NAPRAWIONE: Używamy first_date
-        'rates': rates
+        'first_trade_date': reference_date.strftime('%Y-%m-%d'),
+        'rates': rates,
+        'is_owned': has_trades,
     }
+
 
 
 # =========================================================

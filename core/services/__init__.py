@@ -1,6 +1,6 @@
 # core/services/__init__.py
 
-from .importer import process_xtb_file
+from .importers.runner import process_import as process_xtb_file
 from .portfolio import get_dashboard_context, get_asset_details_context, get_assets_view_context
 from .dividends import get_dividend_context
 from .taxes import get_taxes_context

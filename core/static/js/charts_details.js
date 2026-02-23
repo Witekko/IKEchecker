@@ -94,25 +94,55 @@ document.addEventListener('DOMContentLoaded', function() {
         const lbl = document.getElementById('dynamic-label');
         const val = document.getElementById('dynamic-value');
         const sub = document.getElementById('dynamic-sub');
-        if(!lbl || !val || !sub) return;
 
-        lbl.innerText = range.replace('_', ' ') + " Change %";
+        let displayRange = range.replace('_', ' ');
+        if (range === 'SINCE_BUY' && masterRadius.every(r => r === 0)) {
+            displayRange = 'SINCE ADDED';
+        }
 
+        if (lbl) lbl.innerText = displayRange + " Change %";
+
+        // Update main return percentage
         if (masterPrices.length > 0) {
-            const startPrice = masterPrices[startIndex];
-            const endPrice = masterPrices[masterPrices.length - 1];
+            const currentSlice = masterPrices.slice(startIndex);
+            const startPrice = currentSlice[0];
+            const endPrice = currentSlice[currentSlice.length - 1];
 
-            if (startPrice && startPrice > 0) {
-                const diff = endPrice - startPrice;
-                const pct = (diff / startPrice) * 100;
-                const sign = pct >= 0 ? '+' : '';
-                const colorClass = pct >= 0 ? 'text-success' : 'text-danger';
+            if (val && sub) {
+                if (startPrice && startPrice > 0) {
+                    const diff = endPrice - startPrice;
+                    const pct = (diff / startPrice) * 100;
+                    const sign = pct >= 0 ? '+' : '';
+                    const colorClass = pct >= 0 ? 'text-success' : 'text-danger';
 
-                val.className = `fw-bold mb-0 ${colorClass}`;
-                val.innerText = `${sign}${pct.toFixed(2)}%`;
-                sub.innerText = `Price: ${startPrice.toFixed(2)} -> ${endPrice.toFixed(2)}`;
-            } else {
-                val.innerText = "N/A";
+                    val.className = `fw-bold mb-0 ${colorClass}`;
+                    val.innerText = `${sign}${pct.toFixed(2)}%`;
+                    sub.innerText = `Price: ${startPrice.toFixed(2)} -> ${endPrice.toFixed(2)}`;
+                } else {
+                    val.innerText = "N/A";
+                }
+            }
+
+            // Update dynamic High/Low if they exist in the DOM (only on watchlist items)
+            const highVal = document.getElementById('dynamic-high-value');
+            const lowVal = document.getElementById('dynamic-low-value');
+            
+            if (highVal && lowVal && currentSlice.length > 0) {
+                let maxPrice = -Infinity;
+                let minPrice = Infinity;
+                for (let i = 0; i < currentSlice.length; i++) {
+                    const p = currentSlice[i];
+                    if (p > maxPrice) maxPrice = p;
+                    if (p < minPrice) minPrice = p;
+                }
+                
+                highVal.innerHTML = `${maxPrice.toFixed(2)} <small class="fs-6 text-muted">PLN</small>`;
+                lowVal.innerHTML = `${minPrice.toFixed(2)} <small class="fs-6 text-muted">PLN</small>`;
+                
+                const highLbl = document.getElementById('dynamic-high-label');
+                const lowLbl = document.getElementById('dynamic-low-label');
+                if (highLbl) highLbl.innerText = displayRange + " High";
+                if (lowLbl) lowLbl.innerText = displayRange + " Low";
             }
         }
     }
@@ -170,13 +200,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Export funkcji do globalnego scope (żeby przyciski działały)
     window.updateChartRange = function(range) {
         if (!assetChart) return;
 
         document.querySelectorAll('.btn-group button').forEach(btn => {
             btn.classList.remove('active');
-            if(btn.innerText === range.replace('_', ' ')) btn.classList.add('active');
+            let compareText = range.replace('_', ' ');
+            if (range === 'SINCE_BUY' && masterRadius.every(r => r === 0)) {
+                compareText = 'SINCE ADDED';
+            }
+            if(btn.innerText.trim() === compareText) btn.classList.add('active');
         });
 
         const chartStartIndex = getStartIndexForRange(range);

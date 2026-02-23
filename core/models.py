@@ -157,3 +157,34 @@ class PriceHistory(models.Model):
     class Meta:
         unique_together = ('asset', 'date')
         ordering = ['-date']
+
+
+class AssetFeedback(models.Model):
+    """
+    Store user feedback about incorrect asset metadata.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='asset_feedbacks')
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='feedbacks')
+    message = models.TextField(help_text="User's description of what is wrong with this asset.")
+    resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        status = "Resolved" if self.resolved else "Pending"
+        return f"Feedback for {self.asset.symbol} by {self.user.username} - {status}"
+
+
+class Watchlist(models.Model):
+    """
+    Allows users to track assets they don't currently own.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='watchlist')
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='watchers')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'asset')
+        ordering = ['-added_at']
+
+    def __str__(self):
+        return f"{self.user.username} watches {self.asset.symbol}"

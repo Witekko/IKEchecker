@@ -18,6 +18,9 @@ urlpatterns = [
     path('upload/', views.upload_view, name='upload'),
     path('dividends/', views.dividends_view, name='dividends'),
     path('asset/<str:symbol>/', views.asset_details_view, name='asset_details'),
+    path('asset/<str:symbol>/feedback/', views.submit_asset_feedback_view, name='submit_asset_feedback'),
+    path('watchlist/add/', views.add_to_watchlist_view, name='add_to_watchlist'),
+    path('watchlist/remove/<str:symbol>/', views.remove_from_watchlist_view, name='remove_from_watchlist'),
     path('taxes/', views.taxes_view, name='taxes'),
 
     # --- PORTFEL ---
