@@ -101,6 +101,8 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
     total_unrealized_pln = 0.0
     gainers = 0
     losers = 0
+    gainers_list = []
+    losers_list = []
 
     # --- 2. OPTYMALIZACJA: BULK UPDATE CEN ---
     # Zamiast wołać API w pętli dla każdego assetu, pobieramy raz dla wszystkich stale.
@@ -241,8 +243,10 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
 
         if day_change_pct > 0:
             gainers += 1
+            gainers_list.append({'symbol': sym, 'pct': day_change_pct})
         elif day_change_pct < 0:
             losers += 1
+            losers_list.append({'symbol': sym, 'pct': day_change_pct})
 
         processed_assets.append({
             'is_closed': False,
@@ -279,12 +283,17 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
             base = portfolio_value_stock if portfolio_value_stock > 0 else 1.0
             item['share_pct'] = (item['value_pln'] / base) * 100
 
+    gainers_list.sort(key=lambda x: x['pct'], reverse=True)
+    losers_list.sort(key=lambda x: x['pct'])
+
     return {
         'total_value': total_value, 'invested': total_invested, 'cash': cash,
         'total_profit': total_profit, 'unrealized_profit': total_unrealized_pln,
         'day_change_pln': total_day_change_pln,
         'assets': processed_assets,
-        'gainers': gainers, 'losers': losers, 'first_date': calc.first_date
+        'gainers': gainers, 'losers': losers, 
+        'gainers_list': gainers_list[:5], 'losers_list': losers_list[:5],
+        'first_date': calc.first_date
     }
 
 

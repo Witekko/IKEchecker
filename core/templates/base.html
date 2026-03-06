@@ -13,12 +13,24 @@
     <link href="{% static 'css/main.css' %}" rel="stylesheet">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/countup.js/2.8.0/countUp.umd.js"></script>
 </head>
 <body>
+    <!-- Background Animated Canvas -->
+    <canvas id="bg-chart-canvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;"></canvas>
 
-    <div id="page-loader">
-        <div class="spinner"></div>
-        <div class="loader-text">PROCESSING...</div>
+    <div id="page-loader" class="d-none">
+        <div class="main-content placeholder-glow" style="padding-top:20px; padding-left:20px; padding-right:20px;">
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-xl-3"><div class="skeleton" style="height: 100px;"></div></div>
+                <div class="col-6 col-md-3 col-xl-3"><div class="skeleton" style="height: 100px;"></div></div>
+                <div class="col-6 col-md-3 col-xl-2"><div class="skeleton" style="height: 100px;"></div></div>
+                <div class="col-6 col-md-3 col-xl-2"><div class="skeleton" style="height: 100px;"></div></div>
+                <div class="col-6 col-md-3 col-xl-2"><div class="skeleton" style="height: 100px;"></div></div>
+            </div>
+            <div class="skeleton" style="height: 400px; width: 100%; border-radius: 12px; margin-bottom: 2rem;"></div>
+            <div class="row"><div class="col-12"><div class="skeleton" style="height: 300px; border-radius: 12px;"></div></div></div>
+        </div>
     </div>
 
     {% include 'includes/sidebar.html' %}
@@ -46,7 +58,7 @@
             {% block content %}{% endblock %}
         </div>
 
-        <footer class="mt-auto py-4 text-center border-top border-secondary border-opacity-10">
+        <footer class="mt-auto py-4 text-center border-top border-secondary border-opacity-10 footer-reveal">
             <div class="container">
                 <div class="mb-2">
                     <a href="https://buymeacoffee.com/kabaczkowyb" target="_blank" class="text-decoration-none text-warning small fw-bold" style="letter-spacing: 0.5px;">

@@ -22,6 +22,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 padding: 25,
                 boxMain: 20,
                 boxSmall: 10
+            },
+            tooltip: { // Ulepszone Tooltipy Premium
+                backgroundColor: 'rgba(20, 20, 20, 0.95)',
+                titleColor: '#00ff7f',
+                bodyColor: '#e0e0e0',
+                borderColor: 'rgba(0, 255, 127, 0.2)',
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 8,
+                titleFont: { size: 14, weight: 'bold' },
+                bodyFont: { size: 13 },
+                displayColors: true,
+                boxPadding: 6
+            },
+            animation: { // Elegancka Animacja na Start
+                duration: 2000,
+                easing: 'easeOutQuart'
             }
         };
 
@@ -87,12 +104,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         responsive: true,
                         maintainAspectRatio: false,
                         cutout: '70%',
+                        animation: ChartDefaults.animation,
                         plugins: {
                             legend: {
                                 position: 'right',
                                 labels: { color: ChartDefaults.colors.text, usePointStyle: true, boxWidth: ChartDefaults.layout.boxSmall, padding: 15, font: { size: ChartDefaults.font.legendSmall } }
                             },
                             tooltip: {
+                                ...ChartDefaults.tooltip,
                                 callbacks: {
                                     label: function(context) {
                                         let label = context.label || '';
@@ -148,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (ctxWin && (wins + losses > 0)) {
             new Chart(ctxWin, {
                 type: 'doughnut', data: { labels: ['Wins', 'Losses'], datasets: [{ data: [wins, losses], backgroundColor: [NEON_GREEN, SOFT_RED], borderWidth: 0, hoverOffset: 5 }] },
-                options: { maintainAspectRatio: false, cutout: '80%', plugins: { legend: { display: false } } }
+                options: { maintainAspectRatio: false, cutout: '80%', animation: ChartDefaults.animation, plugins: { legend: { display: false }, tooltip: ChartDefaults.tooltip } }
             });
         }
 
@@ -193,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     responsive:true, 
                     maintainAspectRatio:false, 
                     interaction: { mode: 'index', intersect: false }, 
+                    animation: ChartDefaults.animation,
                     scales:{ x: { display: false }, y: { grid: { color: ChartDefaults.colors.grid } } }, 
                     plugins:{ 
                         legend: { 
@@ -200,6 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             labels: { color: ChartDefaults.colors.text, font: { size: ChartDefaults.font.legendMain, weight: 'bold' }, boxWidth: ChartDefaults.layout.boxMain, padding: ChartDefaults.layout.padding }
                         },
                         tooltip: {
+                            ...ChartDefaults.tooltip,
                             callbacks: {
                                 label: function(context) {
                                     let label = context.dataset.label || '';
@@ -235,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if(lPr.length>0) {
             new Chart(document.getElementById('profitChart'), {
                 type:'bar', data:{ labels:lPr, datasets:[{ label:'Gain/Loss', data:gd('d-prof'), backgroundColor:gd('d-prof').map(v=>v>=0? NEON_GREEN : SOFT_RED), borderRadius: 4 }] },
-                options: { maintainAspectRatio:false, scales: { x: { display: false }, y: { grid: { color: ChartDefaults.colors.grid } } }, plugins: { legend: { display: false } } }
+                options: { maintainAspectRatio:false, animation: ChartDefaults.animation, scales: { x: { display: false }, y: { grid: { color: ChartDefaults.colors.grid } } }, plugins: { legend: { display: false }, tooltip: ChartDefaults.tooltip } }
             });
         }
     });

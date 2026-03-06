@@ -62,6 +62,7 @@ def get_dashboard_context(user, portfolio_id=None):
     rates = market_data['rates']
     stats = analyze_holdings(transactions, rates)
     timeline = analyze_history(transactions, rates)
+    ath = max(timeline['val_user']) if timeline.get('val_user') else stats['total_value']
     charts = _prepare_dashboard_charts(stats['assets'], stats['cash'])
     annual_ret = _calculate_annual_return(stats['total_profit'], stats['invested'], stats['first_date'])
     last_transactions = transactions.order_by('-date')[:20]
@@ -86,6 +87,7 @@ def get_dashboard_context(user, portfolio_id=None):
 
     context = {
         'tile_value_str': fmt_2(stats['total_value']),
+        'tile_value_raw': stats['total_value'],
         'tile_total_profit_str': fmt_2(stats['total_profit']),
         'tile_total_profit_raw': stats['total_profit'],
         'tile_return_pct_str': fmt_2((stats['total_profit'] / stats['invested'] * 100) if stats['invested'] > 0 else 0),
@@ -93,7 +95,9 @@ def get_dashboard_context(user, portfolio_id=None):
         'tile_day_pln_str': fmt_2(day_pln), 'tile_day_pln_raw': day_pln,
         'tile_day_pct_str': fmt_2(day_pct), 'tile_day_pct_raw': day_pct,
         'tile_gainers': stats['gainers'], 'tile_losers': stats['losers'],
+        'tile_gainers_list': stats.get('gainers_list', []), 'tile_losers_list': stats.get('losers_list', []),
         'tile_current_profit_str': fmt_2(stats['unrealized_profit']),
+        'tile_ath_str': fmt_2(ath),
         'tile_current_profit_raw': stats['unrealized_profit'],
         'tile_annual_pct_str': fmt_2(annual_ret),
         'perf_win_rate': round(win_rate, 1), 'perf_win_count': win_count, 'perf_loss_count': loss_count,
@@ -268,7 +272,7 @@ def enrich_assets_context(context, assets, total_portfolio_value, watchlist_asse
 
 def _get_empty_dashboard_context():
     market_data = get_market_summary()
-    return {'invested': "0.00", 'tile_value_str': "0.00", 'tile_total_profit_str': "0.00",
+    return {'invested': "0.00", 'tile_value_str': "0.00", 'tile_value_raw': 0.0, 'tile_total_profit_str': "0.00",
             'rates': get_current_currency_rates(), 'market_summary': market_data['summary']}
 
 
@@ -369,12 +373,13 @@ def get_assets_view_context(user, portfolio_id=None):
     prev_val = stats['total_value'] - day_pln
 
     context = {
-        'tile_value_str': fmt_2(stats['total_value']),
+        'tile_value_str': fmt_2(stats['total_value']), 'tile_value_raw': stats['total_value'],
         'tile_total_profit_str': fmt_2(stats['total_profit']), 'tile_total_profit_raw': stats['total_profit'],
         'tile_return_pct_str': fmt_2((stats['total_profit'] / stats['invested'] * 100) if stats['invested'] > 0 else 0),
         'tile_return_pct_raw': (stats['total_profit'] / stats['invested'] * 100) if stats['invested'] > 0 else 0,
         'tile_day_pln_str': fmt_2(day_pln),
         'tile_day_pct_str': fmt_2((day_pln / prev_val * 100) if prev_val > 0.01 else 0),
+        'tile_gainers_list': stats.get('gainers_list', []), 'tile_losers_list': stats.get('losers_list', []),
         'tile_twr': "0.00", 'tile_mwr': "0.00", 'rates': rates
     }
     enrich_assets_context(context, stats['assets'], stats['total_value'])

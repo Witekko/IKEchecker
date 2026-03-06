@@ -26,6 +26,46 @@ body {
 .card { background-color: var(--card-bg) !important; border-color: rgba(255,255,255,0.05) !important; color: #e0e0e0; }
 .table { --bs-table-bg: transparent; --bs-table-color: #e0e0e0; --bs-table-hover-bg: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1); font-size: 0.9rem; }
 
+/* Custom Premium Tooltips */
+.tooltip {
+    --bs-tooltip-bg: rgba(20, 20, 20, 0.98) !important;
+    --bs-tooltip-color: #e0e0e0 !important;
+    --bs-tooltip-opacity: 1 !important;
+}
+.tooltip-inner {
+    background-color: var(--bs-tooltip-bg) !important;
+    border: 1px solid rgba(0, 255, 127, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8) !important;
+    font-size: 0.85rem !important;
+    color: var(--bs-tooltip-color) !important;
+    max-width: 250px !important;
+}
+.tooltip .tooltip-arrow::before { display: none !important; /* Hide defaults to avoid bright arrows */ }
+
+/* Interactive Cards */
+.card.card-hoverable {
+    transition: all 0.25s ease-out !important;
+    will-change: transform, box-shadow;
+}
+.card.card-hoverable:hover {
+    transform: translateY(-5px) scale(1.03) !important;
+    box-shadow: 0 12px 24px rgba(0, 255, 127, 0.15) !important;
+    z-index: 10;
+}
+
+/* Footer Reveal Animation */
+.footer-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.footer-reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* Tabela - Nagłówki */
 .table thead th {
     background-color: #1a1a1a !important; color: #adb5bd !important;
@@ -237,13 +277,19 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 }
 
 /* Inne */
-#page-loader {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(18, 18, 18, 0.9); z-index: 9999;
-    display: none; justify-content: center; align-items: center; flex-direction: column;
+/* Skeleton Loader z Shimmer */
+.skeleton {
+    background: #2a2a2a;
+    background-image: linear-gradient(90deg, #2a2a2a 0px, #3a3a3a 40px, #2a2a2a 80px);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: var(--radius);
 }
-.spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+
+#page-loader {
+    display: none; /* Ukryty szkielet inicjalnie */
+}
 
 /* Fix Green Filters */
 .btn-outline-secondary.active, .btn-check:checked + .btn-outline-secondary {
