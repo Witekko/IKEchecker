@@ -4,7 +4,8 @@ from django.contrib.auth import views as auth_views
 from core import views
 urlpatterns = [
     # --- PANEL ADMINA ---
-    path('admin/', admin.site.urls),
+    # Zmieniony URL admina dla bezpieczeństwa
+    path('management-portal-secure/', admin.site.urls),
 
     # --- APLIKACJA (CORE) ---
     path('', views.dashboard_view, name='dashboard'),
