@@ -23,8 +23,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-for-dev-
 # Debug: True tylko jeśli w .env jest wpisane 'True'
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# Hosty: Rozdzielamy przecinkami z .env, a na Renderze domyślnie akceptujemy wszystko ('*')
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+# Hosty: Rozdzielamy przecinkami z .env, domyślnie tylko localhost dla bezpieczeństwa
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -184,3 +184,11 @@ DEFAULT_CURRENCY_RATES = {
 
 # Fix dla Rendera (CSRF) - pozwala na przesyłanie formularzy z domeny onrender.com
 CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
+
+# --- SECURITY HEADERS & COOKIES (PRODUCTION) ---
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True 
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_SSL_REDIRECT = True
