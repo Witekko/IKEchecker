@@ -1,48 +1,42 @@
-{% extends 'base.html' %}
+{% extends 'base_landing.html' %}
 
-{% block content %}
-<div class="d-flex align-items-center justify-content-center" style="min-height: 80vh;">
-    <div class="card shadow-lg border-secondary border-opacity-25 bg-dark" style="width: 100%; max-width: 400px;">
-        <div class="card-body p-5">
-            <div class="text-center mb-4">
-                <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
-                <h3 class="fw-bold text-white">Log in</h3>
-                <p class="text-muted small">Welcome to IKE Dashboard</p>
-            </div>
+{% block auth_content %}
+<div class="text-center mb-5">
+    <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+    <h2 class="fw-bold text-white ls-1">IKE Tracker</h2>
+    <p class="text-muted small">Welcome back. Enter your credentials to continue.</p>
+</div>
 
-            <form method="post">
-                {% csrf_token %}
+<form method="post">
+    {% csrf_token %}
 
-                <div class="mb-3">
-                    <label class="text-muted small text-uppercase fw-bold mb-1">Username</label>
-                    <input type="text" name="username" class="form-control bg-dark text-white border-secondary" required autofocus>
-                </div>
-
-                <div class="mb-4">
-                    <label class="text-muted small text-uppercase fw-bold mb-1">Password</label>
-                    <input type="password" name="password" class="form-control bg-dark text-white border-secondary" required>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-success fw-bold py-2">Log in</button>
-                </div>
-                <div class="position-relative my-4">
-                    <hr class="border-secondary opacity-25">
-                    <span class="position-absolute top-50 start-50 translate-middle bg-dark px-2 text-muted small">OR</span>
-                </div>
-
-                <div class="d-grid gap-2 mb-3">
-                    <a href="{% url 'demo_login' %}" class="btn btn-outline-warning fw-bold py-2">
-                        <i class="fas fa-user-secret me-2"></i> Try DEMO
-                    </a>
-                </div>
-            </form>
-
-            <div class="text-center mt-4">
-                <span class="text-muted small">Don't have account?</span>
-                <a href="{% url 'register' %}" class="text-success fw-bold text-decoration-none ms-1">Sign up</a>
-            </div>
-        </div>
+    <div class="mb-3">
+        <label class="text-muted small text-uppercase fw-bold mb-1">Username</label>
+        <input type="text" name="username" class="form-control bg-dark text-white border-secondary" required autofocus>
     </div>
+
+    <div class="mb-4">
+        <label class="text-muted small text-uppercase fw-bold mb-1">Password</label>
+        <input type="password" name="password" class="form-control bg-dark text-white border-secondary" required>
+    </div>
+
+    <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-success fw-bold py-2">Log in</button>
+    </div>
+    <div class="position-relative my-4">
+        <hr class="border-secondary opacity-25">
+        <span class="position-absolute top-50 start-50 translate-middle px-2 text-muted small fw-bold" style="background-color: #0d0d0d;">OR</span>
+    </div>
+
+    <div class="d-grid gap-2 mb-3">
+        <a href="{% url 'demo_login' %}" class="btn btn-outline-warning fw-bold py-2">
+            <i class="fas fa-user-secret me-2"></i> Try DEMO
+        </a>
+    </div>
+</form>
+
+<div class="text-center mt-5">
+    <span class="text-muted small">Don't have an account?</span>
+    <a href="{% url 'register' %}" class="text-success fw-bold text-decoration-none ms-1">Sign up</a>
 </div>
 {% endblock %}

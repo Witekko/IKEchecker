@@ -69,10 +69,9 @@
             <i class="fas fa-database"></i> <span class="link-text">Manage Assets</span>
         </a>
         {% endif %}
+    </div>
 
-
-
-    <div class="user-profile-wrapper">
+    <div class="user-profile-wrapper mt-auto">
         <div class="dropdown w-100">
             <a href="#" class="user-profile dropdown-toggle px-2" data-bs-toggle="dropdown">
                 <div class="rounded-circle bg-dark border border-secondary d-flex align-items-center justify-content-center flex-shrink-0 me-3"
@@ -85,7 +84,7 @@
             </a>
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
                 <li>
-                    <form action="{% url 'login' %}" method="post">
+                    <form action="{% url 'logout' %}" method="post">
                         {% csrf_token %}
                         <button type="submit" class="dropdown-item text-danger"><i
                                 class="fas fa-sign-out-alt me-2"></i>Log out</button>

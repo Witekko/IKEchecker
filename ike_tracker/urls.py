@@ -8,9 +8,10 @@ urlpatterns = [
     path('management-portal-secure/', admin.site.urls),
 
     # --- APLIKACJA (CORE) ---
-    path('', views.dashboard_view, name='dashboard'),
+    path('', auth_views.LoginView.as_view(template_name='login.html', redirect_authenticated_user=True), name='login'),
+    path('dashboard/', views.dashboard_view, name='dashboard'),
     path('assets/', views.assets_list_view, name='assets_list'),
-    path('demo-login/', views.demo_login_view, name='demo_login'), # Dodaj to
+    path('demo-login/', views.demo_login_view, name='demo_login'),
 
     # --- NOWA ŚCIEŻKA: ZARZĄDZANIE AKTYWAMI ---
     path('assets/manage/', views.manage_assets_view, name='manage_assets'),
@@ -31,6 +32,5 @@ urlpatterns = [
     path('settings/delete-transaction/<int:transaction_id>/', views.delete_transaction_view, name='delete_transaction'),
     # --- AUTORYZACJA ---
     path('register/', views.register_view, name='register'),
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
 ]

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pl" data-bs-theme="dark">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IKE Tracker - Welcome</title>
+    
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/logo.svg' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    
+    <style>
+        /* Hide scrollbar completely */
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        html, body, * {
+            -ms-overflow-style: none !important;  /* IE and Edge */
+            scrollbar-width: none !important;     /* Firefox */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        .split-container {
+            min-height: 100vh;
+            width: 100vw;
+            /* Flex layout removed in favor of fixed and margin positioning */
+        }
+        .left-pane {
+            /* Mobile default: full width, normal flow */
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #0d0d0d;
+            padding: 2rem;
+            z-index: 10;
+        }
+        .right-pane {
+            display: none;
+            position: relative;
+        }
+        @media (min-width: 992px) {
+            .left-pane {
+                /* Desktop: True fixed positioning on the left side, reduced to 35% width */
+                width: 35%;
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                border-right: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+            }
+            .right-pane {
+                display: block;
+                /* Offset right pane by the exact width of the fixed left pane */
+                margin-left: 35%;
+                width: 65%;
+            }
+        }
+        .story-section {
+            /* Height dictates how long the scrub lasts */
+            height: 250vh; 
+            width: 100%;
+            position: relative;
+        }
+
+        .sticky-wrapper {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 15vh;
+            overflow: hidden;
+        }
+
+        .inline-scrub-canvas, .inline-static-img {
+            width: 80%;
+            max-width: 900px;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 255, 127, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: auto;
+            margin-bottom: 10vh;
+        }
+        .inline-scrub-canvas.mobile-sized {
+            max-width: 425px; /* Reduced by ~15% from 500px */
+        }
+
+        .typewriter-text {
+            color: #fff;
+            max-width: 600px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1.1s ease, transform 1.1s ease;
+        }
+
+        .showcase-active-text .typewriter-text {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Feature Intro/Outro Animation */
+        .anim-opt-1 { /* Cinematic Scale & Glow */
+            opacity: 0;
+            transform: scale(0.8) translateY(40px);
+            filter: blur(10px);
+            transition: all 1.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .showcase-active-text .anim-opt-1 {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            filter: blur(0);
+        }
+
+        .typewriter-text h4 {
+            font-size: 2.5rem;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            margin-bottom: 1rem;
+        }
+        
+        .typewriter-text p {
+            font-size: 1.2rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+        
+        .scroll-arrow {
+            font-size: 2.5rem;
+            color: rgba(0, 255, 127, 0.8);
+            animation: bounce 2.6s infinite;
+            margin-top: 2rem;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-15px); }
+            60% { transform: translateY(-7px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animated Canvas -->
+    <canvas id="bg-chart-canvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;"></canvas>
+
+    <div class="split-container">
+        <!-- LEFT PANE -->
+        <div class="left-pane shadow-lg border-end border-secondary border-opacity-25">
+            <div style="width: 100%; max-width: 400px;">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                {% block auth_content %}{% endblock %}
+            </div>
+        </div>
+
+        <!-- RIGHT PANE (SCROLL STORY) -->
+        <div class="right-pane" id="scroll-container">
+
+            <!-- 0: Intro Section -->
+            <div class="story-section" style="height: 100vh;">
+                <div class="sticky-wrapper showcase-active-text justify-content-center pt-0">
+                    <div class="anim-opt-1 text-center" style="max-width: 700px; color: #fff;">
+                        <h2 class="text-white fw-bold mb-3" style="font-size: 3rem; text-shadow: 0 4px 20px rgba(0,0,0,0.8);">Your entire financial life, illuminated.</h2>
+                        <p class="text-muted" style="font-size: 1.3rem;">Scroll down to explore the platform.</p>
+                        <i class="fas fa-chevron-down scroll-arrow mt-4"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1: Dashboard Overview -->
+            <div class="story-section" data-target="canvas-general" style="height: 260vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text">
+                        <h4 class="text-accent fw-bold">General Overview</h4>
+                        <p class="text-light">Watch your portfolio compound. Instant P&amp;L calculations and live asset valuations bring your static numbers directly to life.</p>
+                    </div>
+                    <canvas id="canvas-general" class="inline-scrub-canvas" data-frames="105" data-folder="frames_general"></canvas>
+                </div>
+            </div>
+
+            <!-- 2: XTB Import -->
+            <div class="story-section" data-target="canvas-import" style="height: 325vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text">
+                        <h4 class="text-warning fw-bold">1-Click Synchronization</h4>
+                        <p class="text-light">Upload your broker statement. In under one second, we parse thousands of rows and reconstruct your entire trading history flawlessly.</p>
+                    </div>
+                    <canvas id="canvas-import" class="inline-scrub-canvas" data-frames="150" data-folder="frames_import"></canvas>
+                </div>
+            </div>
+
+            <!-- 3: Asset Details -->
+            <div class="story-section" data-target="canvas-details" style="height: 650vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text">
+                        <h4 class="text-primary fw-bold">Granular Execution Metrics</h4>
+                        <p class="text-light">Examine any asset down to the exact average execution price, unrealized gains, and dynamic contextual market news.</p>
+                    </div>
+                    <canvas id="canvas-details" class="inline-scrub-canvas" data-frames="225" data-folder="frames_details"></canvas>
+                </div>
+            </div>
+
+            <!-- 4: Assets List -->
+            <div class="story-section" data-target="canvas-assets" style="height: 260vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text">
+                        <h4 class="text-info fw-bold">Absolute Position Control</h4>
+                        <p class="text-light">Never lose track. View your open positions alongside instantly calculating sector breakdowns and macro allocation charts.</p>
+                    </div>
+                    <canvas id="canvas-assets" class="inline-scrub-canvas" data-frames="125" data-folder="frames_assets"></canvas>
+                </div>
+            </div>
+
+            <!-- 5: Dashboard Summary -->
+            <div class="story-section" data-target="canvas-summary" style="height: 390vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text">
+                        <h4 class="text-white fw-bold">Compounding Visualized</h4>
+                        <p class="text-light">Analyze exact Time-Weighted and Money-Weighted returns through an immersive, interactive graphing engine.</p>
+                    </div>
+                    <canvas id="canvas-summary" class="inline-scrub-canvas" data-frames="225" data-folder="frames_summary"></canvas>
+                </div>
+            </div>
+
+            <!-- 6: Transaction History -->
+            <div class="story-section" data-target="canvas-historia" style="height: 195vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text">
+                        <h4 class="text-secondary fw-bold">The Unified Ledger</h4>
+                        <p class="text-light">Every deposit, dividend, and trade is cataloged into an interactive, beautifully formatted historical ledger.</p>
+                    </div>
+                    <canvas id="canvas-historia" class="inline-scrub-canvas" data-frames="75" data-folder="frames_historia"></canvas>
+                </div>
+            </div>
+
+            <!-- 7: Portfolio Dividing -->
+            <div class="story-section" data-target="canvas-portfolio" style="height: 455vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text">
+                        <h4 class="text-primary fw-bold">Infinite Portfolios</h4>
+                        <p class="text-light">Keep your strategies entirely sequestered. Run a Dividend Portfolio entirely separate from your Growth Portfolio.</p>
+                    </div>
+                    <canvas id="canvas-portfolio" class="inline-scrub-canvas" data-frames="275" data-folder="frames_portfolio"></canvas>
+                </div>
+            </div>
+
+            <!-- 8: Dividends (Screenshot) -->
+            <div class="story-section" style="height: 150vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text showcase-active-text">
+                        <h4 class="text-success fw-bold">The Dividend Engine</h4>
+                        <p class="text-light">Track every passive cent. From automated withholding tax calculations to beautifully rendered historical payout charts.</p>
+                    </div>
+                    <img id="img-divs" src="{% static 'img/dividend.png' %}" class="inline-static-img" style="max-height: 45vh;" alt="Dividends">
+                </div>
+            </div>
+
+            <!-- 9: Taxes (Screenshot) -->
+            <div class="story-section" style="height: 150vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text showcase-active-text">
+                        <h4 class="text-danger fw-bold">Automated Polish PIT-38</h4>
+                        <p class="text-light">Tax season solved. Instantly calculate your net profit, deductible costs, and exact 19% capital gains tax owed per calendar year.</p>
+                    </div>
+                    <img id="img-tax" src="{% static 'img/tax.png' %}" class="inline-static-img" style="max-height: 45vh;" alt="Taxes">
+                </div>
+            </div>
+
+            <!-- 10: Mobile Responsive -->
+            <div class="story-section" data-target="canvas-mobile" style="height: 455vh;">
+                <div class="sticky-wrapper">
+                    <div class="typewriter-text">
+                        <h4 class="text-white fw-bold">Perfectly Portable</h4>
+                        <p class="text-light">Everything works flawlessly on your phone. Stalk your portfolio anywhere, entirely on your own terms.</p>
+                    </div>
+                    <canvas id="canvas-mobile" class="inline-scrub-canvas mobile-sized" data-frames="163" data-folder="frames_mobile"></canvas>
+                </div>
+            </div>
+
+            <!-- Footer / Demo Prompt -->
+            <div class="story-section" style="height: 100vh;">
+                <div class="sticky-wrapper justify-content-center pt-0">
+                    <div class="anim-opt-1 text-center" style="max-width: 600px;">
+                        <h3 class="text-white fw-bold mb-4" style="text-shadow: 0 4px 20px rgba(0,0,0,0.8);">Ready to see it in action?</h3>
+                        <p class="text-muted mb-5" style="font-size: 1.1rem;">Create an account on the left panel or explore the live demo.</p>
+                        
+                        <div class="d-flex justify-content-center gap-4 mt-5">
+                            <a href="https://buymeacoffee.com/kabaczkowyb" target="_blank" class="text-decoration-none text-warning small fw-bold" style="letter-spacing: 0.5px;">
+                                <i class="fas fa-coffee me-2"></i>Support the project
+                            </a>
+                            <a href="https://witekko.github.io/Portfolio-site/" target="_blank" class="text-decoration-none text-info small fw-bold" style="letter-spacing: 0.5px;">
+                                <i class="fas fa-code me-2"></i>Creator's Portfolio
+                            </a>
+                        </div>
+                        <div class="text-muted small opacity-50 mt-4">
+                            &copy; {% now "Y" %} IKE Tracker | Not financial advice.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bootstrap & Canvas Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/core.js' %}"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configuration & State
+            const canvases = document.querySelectorAll('.inline-scrub-canvas');
+            const storySections = document.querySelectorAll('.story-section');
+            
+            // Image object caching for canvases
+            const scrubData = {};
+
+            // 1. Initialize Canvases (Hydration & Pre-loading of first frame)
+            canvases.forEach(canvas => {
+                const folder = canvas.getAttribute('data-folder');
+                const totalFrames = parseInt(canvas.getAttribute('data-frames'));
+                const ctx = canvas.getContext('2d');
+                
+                scrubData[canvas.id] = {
+                    ctx: ctx,
+                    totalFrames: totalFrames,
+                    folder: folder,
+                    images: [] // Array of preloaded Image objects
+                };
+
+                // Preload just the first frame to establish dimensions
+                const img = new Image();
+                img.src = `/static/img/story/${folder}/frame_0000.jpg`;
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                };
+                scrubData[canvas.id].images[0] = img;
+            });
+
+            // 2. Intersection Observer (Hydration & Text Fade)
+            const observerOptions = {
+                root: null,
+                rootMargin: '100% 0px 100% 0px', // Trigger hydration earlier
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const canvas = entry.target.querySelector('.inline-scrub-canvas');
+                    if(entry.isIntersecting) {
+                        // Text fade in
+                        const wrapper = entry.target.querySelector('.sticky-wrapper');
+                        if(wrapper) wrapper.classList.add('showcase-active-text');
+
+                        // Hydration triggered (Staggered Loading)
+                        if(canvas && scrubData[canvas.id] && !scrubData[canvas.id].loading) {
+                            scrubData[canvas.id].loading = true;
+                            let folder = scrubData[canvas.id].folder;
+                            let frames = scrubData[canvas.id].totalFrames;
+                            
+                            // Load in small batches to prevent main-thread locking
+                            let i = 1;
+                            const loadBatch = () => {
+                                let batchLimit = Math.min(i + 15, frames);
+                                for(; i < batchLimit; i++) {
+                                    let preImg = new Image();
+                                    preImg.src = `/static/img/story/${folder}/frame_${i.toString().padStart(4, '0')}.jpg`;
+                                    scrubData[canvas.id].images[i] = preImg;
+                                }
+                                if(i < frames) {
+                                    requestIdleCallback ? requestIdleCallback(loadBatch) : setTimeout(loadBatch, 10);
+                                }
+                            };
+                            loadBatch();
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            storySections.forEach(section => observer.observe(section));
+
+            // 3. Scroll Scrubbing Logic (Optimized with requestAnimationFrame ticking)
+            let ticking = false;
+
+            const updateCanvases = () => {
+                storySections.forEach(section => {
+                    const canvas = section.querySelector('.inline-scrub-canvas');
+                    if(!canvas) return;
+
+                    const rect = section.getBoundingClientRect();
+                    
+                    // The sticky wrapper sticks when rect.top <= 0
+                    // It unsticks when rect.bottom <= window.innerHeight
+                    const distanceScrolled = -rect.top;
+                    const totalScrollable = rect.height - window.innerHeight;
+
+                    // Only process sections that are actively being scrolled through
+                    if (distanceScrolled > -window.innerHeight && distanceScrolled < totalScrollable + window.innerHeight) {
+                        let scrollFraction = distanceScrolled / totalScrollable;
+                        scrollFraction = Math.max(0, Math.min(1, scrollFraction));
+
+                        const data = scrubData[canvas.id];
+                        const frameIndex = Math.min(
+                            data.totalFrames - 1,
+                            Math.floor(scrollFraction * data.totalFrames)
+                        );
+
+                        // Draw the preloaded frame if available
+                        if(data.images[frameIndex] && data.images[frameIndex].complete) {
+                            data.ctx.drawImage(data.images[frameIndex], 0, 0);
+                        }
+                    }
+                });
+                ticking = false;
+            };
+
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(updateCanvases);
+                    ticking = true;
+                }
+            }, { passive: true }); // Passive listener for better scroll performance
+        });
+    </script>
+</body>
+</html>
