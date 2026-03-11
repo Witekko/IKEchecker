@@ -1,22 +1,49 @@
-﻿# --- FRAMEWORK I SERWER ---
-Django
-gunicorn
-dj-database-url
-psycopg2-binary
-whitenoise
-python-dotenv
-
-# --- ANALIZA DANYCH ---
-pandas
-numpy
-numpy-financial
-pyxirr
-
-# --- ZEWNĘTRZNE API I NARZĘDZIA ---
-yfinance
-feedparser
-requests
-openpyxl
-beautifulsoup4
+﻿# --- FRAMEWORK I SERWER ---
+
+Django
+
+gunicorn
+
+dj-database-url
+
+psycopg2-binary
+
+whitenoise
+
+python-dotenv
+
+
+
+# --- ANALIZA DANYCH ---
+
+pandas
+
+numpy
+
+numpy-financial
+
+pyxirr
+
+# --- FRAMEWORK I SERWER ---
+Django
+gunicorn
+dj-database-url
+psycopg2-binary
+whitenoise
+python-dotenv
+
+# --- ANALIZA DANYCH ---
+pandas
+numpy
+numpy-financial
+pyxirr
+
+# --- ZEWNĘTRZNE API I NARZĘDZIA ---
+yfinance
+feedparser
+requests
+openpyxl
+beautifulsoup4
 lxml
-argon2-cffi
+argon2-cffi
+openai

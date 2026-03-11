@@ -15,7 +15,9 @@ urlpatterns = [
 
     # --- NOWA ŚCIEŻKA: ZARZĄDZANIE AKTYWAMI ---
     path('assets/manage/', views.manage_assets_view, name='manage_assets'),
-    # ------------------------------------------
+    # --- REST API ---
+    path('api/ai/morning-brief/', views.api_ai_morning_brief, name='api_ai_morning_brief'),
+    path('api/ai/explain/<str:symbol>/', views.api_ai_explain_asset, name='api_ai_explain_asset'),
 
     path('upload/', views.upload_view, name='upload'),
     path('dividends/', views.dividends_view, name='dividends'),

@@ -112,14 +112,72 @@
         </div>
     </div>
 </div>
+
+<!-- --- AI EXPLAIN MODAL --- -->
+<div class="modal fade" id="aiExplainModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-white" style="background: linear-gradient(145deg, rgba(20,20,20,0.98), rgba(15,15,15,1)); border: 1px solid rgba(0, 255, 127, 0.2); box-shadow: 0 0 30px rgba(0, 255, 127, 0.1);">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-sparkles text-success me-2"></i> 
+                    <span id="aiExplainSymbol"></span> Analysis
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3 pb-4">
+                <div id="aiExplainContent" class="fs-5" style="line-height: 1.5; font-weight: 300;">
+                    <!-- Content injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .cursor-pointer { cursor: pointer; }
     .transition-transform { transition: transform 0.3s ease; }
     [data-bs-toggle="collapse"][aria-expanded="true"] .fa-chevron-down { transform: rotate(180deg); }
+    .hover-scale { transition: transform 0.2s; }
+    .hover-scale:hover { transform: scale(1.2); }
 </style>
 
 <script src="{% static 'js/tables.js' %}"></script>
 <script>
+    function explainAsset(event, symbol, pctChange) {
+        event.stopPropagation(); // Ensure clicking the icon doesn't open the asset details page
+        
+        const explainModal = new bootstrap.Modal(document.getElementById('aiExplainModal'));
+        document.getElementById('aiExplainSymbol').innerText = symbol;
+        const contentBox = document.getElementById('aiExplainContent');
+        
+        // Render Skeleton Loader
+        contentBox.innerHTML = `
+            <div class="placeholder-glow">
+                <span class="placeholder col-12 rounded mb-2 bg-secondary opacity-50"></span>
+                <span class="placeholder col-10 rounded mb-2 bg-secondary opacity-50"></span>
+                <span class="placeholder col-8 rounded bg-secondary opacity-50"></span>
+            </div>
+        `;
+        
+        explainModal.show();
+        
+        fetch(`/api/ai/explain/${symbol}/?pct=${pctChange}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) {
+                    contentBox.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i> ${data.error}</span>`;
+                } else {
+                    contentBox.style.opacity = '0';
+                    contentBox.innerHTML = data.explanation;
+                    setTimeout(() => contentBox.style.transition = 'opacity 0.6s ease', 10);
+                    setTimeout(() => contentBox.style.opacity = '1', 50);
+                }
+            })
+            .catch(err => {
+                contentBox.innerHTML = `<span class="text-danger"><i class="fas fa-wifi me-1"></i> Cannot connect to AI provider.</span>`;
+            });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Handle clickable rows
         const rows = document.querySelectorAll('.clickable-row');

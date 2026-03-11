@@ -362,9 +362,11 @@
             });
 
             // 2. Intersection Observer (Hydration & Text Fade)
+            // Reduced rootMargin to delay hydration until the user actually scrolls near the section,
+            // preventing the browser from launching 100s of requests on initial page load.
             const observerOptions = {
                 root: null,
-                rootMargin: '100% 0px 100% 0px', // Trigger hydration earlier
+                rootMargin: '10% 0px 0px 0px', 
                 threshold: 0
             };
 
@@ -382,20 +384,21 @@
                             let folder = scrubData[canvas.id].folder;
                             let frames = scrubData[canvas.id].totalFrames;
                             
-                            // Load in small batches to prevent main-thread locking
+                            // Load in smaller batches, highly deferred
                             let i = 1;
                             const loadBatch = () => {
-                                let batchLimit = Math.min(i + 15, frames);
+                                let batchLimit = Math.min(i + 10, frames);
                                 for(; i < batchLimit; i++) {
                                     let preImg = new Image();
                                     preImg.src = `/static/img/story/${folder}/frame_${i.toString().padStart(4, '0')}.jpg`;
                                     scrubData[canvas.id].images[i] = preImg;
                                 }
                                 if(i < frames) {
-                                    requestIdleCallback ? requestIdleCallback(loadBatch) : setTimeout(loadBatch, 10);
+                                    setTimeout(loadBatch, 50); // Give the browser more breathing room between chunks
                                 }
                             };
-                            loadBatch();
+                            // Delay the start of hydration to prioritize initial page render
+                            setTimeout(loadBatch, 500);
                         }
                     }
                 });

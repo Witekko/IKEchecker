@@ -1,6 +1,6 @@
 # core/views.py
 
-from datetime import datetime
+from datetime import datetime, date
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -23,6 +23,8 @@ from .services import (
 # Importujemy nowe akcje bulkowe
 from .services.actions import update_assets_bulk, sync_all_assets_metadata
 from .services.dashboard import get_dashboard_stats_context, get_holdings_view_context
+from .services.ai_advisor import generate_morning_brief, generate_root_cause_analysis
+from django.http import JsonResponse
 
 
 # --- WIDOKI ---
@@ -389,3 +391,85 @@ def demo_login_view(request):
     except User.DoesNotExist:
         messages.error(request, "Błąd konfiguracji Demo. Użytkownik nie istnieje.")
         return redirect('login')
+
+
+@login_required
+def api_ai_morning_brief(request):
+    """
+    Returns a JSON string containing the AI-generated morning brief.
+    Caches the result for 6 hours so it doesn't run on every refresh.
+    """
+    from django.core.cache import cache
+
+    active_portfolio = get_active_portfolio(request)
+    if not active_portfolio:
+        return JsonResponse({'error': 'No portfolio selected.'}, status=400)
+
+    cache_key = f"ai_morning_brief_{active_portfolio.id}_{date.today().isoformat()}"
+    cached_brief = cache.get(cache_key)
+
+    if cached_brief:
+        return JsonResponse({'brief': cached_brief, 'cached': True})
+
+    try:
+        # We need the most recent day's data, which is essentially the dashboard context '1m' or 'all'
+        # To make it cheap and fast, we just grab the summary stats
+        stats = get_dashboard_stats_context(active_portfolio, 'all')
+
+        portfolio_data = {
+            "Total Portfolio Value (PLN)": stats.get('tile_total_value'),
+            "Today's Profit/Loss (PLN)": stats.get('tile_day_change_pln'),
+            "Today's Change (%)": stats.get('tile_day_change_pct'),
+            "Top Gainers Today": stats.get('gainers_list', [])[:2],
+            "Top Losers Today": stats.get('losers_list', [])[:2]
+        }
+
+        brief = generate_morning_brief(portfolio_data)
+
+
+        # Cache for 6 hours
+        cache.set(cache_key, brief, timeout=60 * 60 * 6)
+
+        return JsonResponse({'brief': brief, 'cached': False})
+    except Exception as e:
+        logger.error(f"Morning Brief Endpoint Error: {e}")
+        return JsonResponse({'error': 'Unable to generate brief.'}, status=500)
+
+
+@login_required
+def api_ai_explain_asset(request, symbol):
+    """
+    Returns a 1-sentence AI explanation of why an asset moved today,
+    based on the latest Yahoo Finance news headlines.
+    """
+    from django.core.cache import cache
+    
+    # 1. Sprawdzamy cache (12 godzin)
+    today_str = date.today().isoformat()
+    cache_key = f"ai_explain_{symbol}_{today_str}"
+    cached_explanation = cache.get(cache_key)
+
+    if cached_explanation:
+        return JsonResponse({'explanation': cached_explanation, 'cached': True})
+
+    try:
+        # Get the day change percent from the request args (passed effectively by JS)
+        change_pct = float(request.GET.get('pct', 0.0))
+
+        # 2. Pobieramy wiadomości z Yahoo (nasz istniejący serwis)
+        news_items = get_asset_news(symbol)
+        
+        # Ekstrahujemy tylko tytuły, maksimum 5 najnowszych
+        headlines = [item.get('title') for item in news_items[:5] if item.get('title')]
+
+        # 3. Pytamy OpenAI
+        explanation = generate_root_cause_analysis(symbol, change_pct, headlines)
+
+        # 4. Cachujemy wynik na 12 godzin (by oszczędzać API za to samo pytanie dziś)
+        cache.set(cache_key, explanation, timeout=60 * 60 * 12)
+
+        return JsonResponse({'explanation': explanation, 'cached': False})
+
+    except Exception as e:
+        logger.error(f"Explain Asset Endpoint Error for {symbol}: {e}")
+        return JsonResponse({'error': 'Analysis failed.'}, status=500)

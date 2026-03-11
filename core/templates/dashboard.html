@@ -70,6 +70,54 @@
 </div>
 
 <div class="d-flex justify-content-center mb-4">{% include 'includes/time_filters.html' %}</div>
+
+{# --- AI MORNING BRIEF --- #}
+<div class="card mb-4 border-success border-opacity-25" style="background: linear-gradient(145deg, rgba(20,20,20,0.95), rgba(10,10,10,1)); box-shadow: 0 4px 25px rgba(0, 255, 127, 0.05); overflow: hidden; position: relative;">
+    <div class="position-absolute top-0 start-0 w-100 h-100" style="background: radial-gradient(circle at top left, rgba(0, 255, 127, 0.05), transparent 50%); pointer-events: none;"></div>
+    <div class="card-body p-4 text-center position-relative" style="z-index: 1;">
+        <h5 class="fw-bold text-white mb-3 ls-1 text-uppercase" style="font-size: 0.95rem;">
+            <i class="fas fa-sparkles text-success me-2"></i> AI Advisor
+        </h5>
+        <div id="ai-brief-content" class="text-light" style="font-size: 1.15rem; line-height: 1.6; font-weight: 300;">
+            <button class="btn btn-outline-success rounded-pill px-5 py-2 fw-bold shadow-sm" style="letter-spacing: 0.5px;" onclick="fetchMorningBrief()">
+                <i class="fas fa-bolt me-2"></i> Generate Morning Brief
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function fetchMorningBrief() {
+    const container = document.getElementById('ai-brief-content');
+    
+    // Skeleton loader
+    container.innerHTML = `
+        <div class="placeholder-glow">
+            <span class="placeholder col-8 rounded mb-2 bg-secondary opacity-50"></span>
+            <span class="placeholder col-10 rounded mb-2 bg-secondary opacity-50"></span>
+            <span class="placeholder col-6 rounded bg-secondary opacity-50"></span>
+        </div>
+    `;
+
+    fetch('/api/ai/morning-brief/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                container.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i> ${data.error}</span>`;
+            } else {
+                // Fade in the text
+                container.style.opacity = '0';
+                container.innerHTML = `<span style="text-shadow: 0 2px 10px rgba(0,0,0,0.5);">${data.brief}</span>`;
+                setTimeout(() => container.style.transition = 'opacity 0.8s ease', 10);
+                setTimeout(() => container.style.opacity = '1', 50);
+            }
+        })
+        .catch(err => {
+            container.innerHTML = `<span class="text-danger"><i class="fas fa-wifi me-1"></i> Connection to AI systems failed.</span>`;
+        });
+}
+</script>
+
 {% include 'includes/summary_tiles.html' %}
 
 {# --- MAIN CHART --- #}
