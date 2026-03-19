@@ -243,10 +243,10 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
 
         if day_change_pct > 0:
             gainers += 1
-            gainers_list.append({'symbol': sym, 'pct': day_change_pct})
+            gainers_list.append({'symbol': sym, 'name': asset.name, 'pct': day_change_pct, 'pln': day_change_val})
         elif day_change_pct < 0:
             losers += 1
-            losers_list.append({'symbol': sym, 'pct': day_change_pct})
+            losers_list.append({'symbol': sym, 'name': asset.name, 'pct': day_change_pct, 'pln': day_change_val})
 
         processed_assets.append({
             'is_closed': False,

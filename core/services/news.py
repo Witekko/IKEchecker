@@ -29,6 +29,7 @@ def get_asset_news(symbol, name):
     clean_name = clean_name.replace(',', '').replace('.', '')
 
     query = ""
+    is_ambiguous = False
 
     if symbol.endswith('.PL'):
         ticker_clean = symbol.replace('.PL', '')

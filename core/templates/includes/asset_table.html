@@ -37,7 +37,7 @@
                         {% if not is_closed %}
                             <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">
                                 {{ asset.day_change_pct }}%
-                                <i class="fas fa-sparkles text-success ms-1 hover-scale" style="cursor: pointer; opacity: 0.9; font-size: 0.85rem;" onclick="explainAsset(event, '{{ asset.symbol|escapejs }}', {{ asset.day_change_pct_raw }})" title="AI Explain Movement"></i>
+                                <i class="fas fa-sparkles text-success ms-1 hover-scale" style="cursor: pointer; opacity: 0.9; font-size: 0.85rem;" onclick="explainAsset(event, '{{ asset.symbol|escapejs }}', this.parentElement.getAttribute('data-value').replace(',', '.'))" title="AI Explain Movement"></i>
                             </td>
                             <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
                             <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>

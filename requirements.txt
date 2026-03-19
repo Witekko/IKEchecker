@@ -1,4 +1,4 @@
-﻿# --- FRAMEWORK I SERWER ---
+# --- FRAMEWORK I SERWER ---
 
 Django
 
@@ -46,4 +46,4 @@ openpyxl
 beautifulsoup4
 lxml
 argon2-cffi
-openai
+google-generativeai

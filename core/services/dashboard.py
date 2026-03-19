@@ -35,7 +35,7 @@ def get_dashboard_stats_context(active_portfolio, range_mode='all'):
     # 1. Pobierz kursy i dane analityczne
     rates = get_current_currency_rates()
     full_timeline = analyze_history(transactions, rates)
-    stats = analyze_holdings(transactions, rates)  # stats['total_value'] potrzebne do MWR
+    stats = analyze_holdings(transactions, rates, start_date=start_date)  # stats['total_value'] potrzebne do MWR
     current_val = stats['total_value']
 
     # 2. Oblicz wskaźniki (Performance)
@@ -59,6 +59,8 @@ def get_dashboard_stats_context(active_portfolio, range_mode='all'):
         'tile_return_pct_raw': float(metrics['simple_return']),
         'tile_total_profit_str': fmt_2(metrics['profit']),
         'tile_total_profit_raw': float(metrics['profit']),
+        'tile_gainers_list': stats.get('gainers_list', []),
+        'tile_losers_list': stats.get('losers_list', []),
 
         # Wykres
         'timeline_dates': filtered_timeline.get('dates', []),

@@ -405,26 +405,67 @@ def api_ai_morning_brief(request):
     if not active_portfolio:
         return JsonResponse({'error': 'No portfolio selected.'}, status=400)
 
-    cache_key = f"ai_morning_brief_{active_portfolio.id}_{date.today().isoformat()}"
+    lang = request.META.get('HTTP_ACCEPT_LANGUAGE', 'en-US')
+    cache_key = f"ai_morning_brief_{active_portfolio.id}_{date.today().isoformat()}_{lang}"
     cached_brief = cache.get(cache_key)
 
     if cached_brief:
         return JsonResponse({'brief': cached_brief, 'cached': True})
 
     try:
-        # We need the most recent day's data, which is essentially the dashboard context '1m' or 'all'
-        # To make it cheap and fast, we just grab the summary stats
-        stats = get_dashboard_stats_context(active_portfolio, 'all')
+        from core.services.portfolio import get_dashboard_context
+        from core.services.dashboard import get_dashboard_stats_context
+
+        # 1. Base context (Daily/Last Login + Full Assets)
+        base_stats = get_dashboard_context(request.user, active_portfolio.id)
+        
+        # 2. Weekly context (Since Last Sunday/Monday)
+        weekly_stats = get_dashboard_stats_context(active_portfolio, 'wtd')
+        
+        # 3. Monthly context (Since Start of Month)
+        monthly_stats = get_dashboard_stats_context(active_portfolio, 'mtd')
+
+        top_3_gainers = base_stats.get('tile_gainers_list', [])[:3]
+        bot_3_losers = base_stats.get('tile_losers_list', [])[:3]
+
+        from core.services.news import get_asset_news
+        news_injection = {}
+        for asset in top_3_gainers + bot_3_losers:
+            symbol = asset.get('symbol')
+            name = asset.get('name')
+            asset_type = asset.get('asset_type', '')
+            
+            # Use strict database asset_type to prevent wasting news queries on index funds
+            is_etf = asset_type == 'ETF'
+            is_cash = asset_type == 'CASH'
+            
+            if symbol and name and not is_etf and not is_cash:
+                news_items = get_asset_news(symbol, name)
+                headlines = [
+                    {'title': item.get('title'), 'link': item.get('link'), 'date': item.get('date_label')}
+                    for item in news_items[:3] if item.get('title')
+                ]
+                if headlines:
+                    news_injection[symbol] = headlines
 
         portfolio_data = {
-            "Total Portfolio Value (PLN)": stats.get('tile_total_value'),
-            "Today's Profit/Loss (PLN)": stats.get('tile_day_change_pln'),
-            "Today's Change (%)": stats.get('tile_day_change_pct'),
-            "Top Gainers Today": stats.get('gainers_list', [])[:2],
-            "Top Losers Today": stats.get('losers_list', [])[:2]
+            "Daily/Last Login Profit/Loss (PLN)": base_stats.get('tile_day_pln_raw', 0),
+            "Daily/Last Login Change (%)": base_stats.get('tile_day_pct_raw', 0),
+            "This Week (WTD) Profit/Loss (PLN)": weekly_stats.get('tile_total_profit_raw', 0),
+            "This Week (WTD) Change (%)": weekly_stats.get('tile_return_pct_raw', 0),
+            "This Week Top 3 Gainers": weekly_stats.get('tile_gainers_list', [])[:3],
+            "This Week Bottom 3 Losers": weekly_stats.get('tile_losers_list', [])[:3],
+            "This Month (MTD) Profit/Loss (PLN)": monthly_stats.get('tile_total_profit_raw', 0),
+            "This Month (MTD) Change (%)": monthly_stats.get('tile_return_pct_raw', 0),
+            "This Month Top 3 Gainers": monthly_stats.get('tile_gainers_list', [])[:3],
+            "This Month Bottom 3 Losers": monthly_stats.get('tile_losers_list', [])[:3],
+            "Top 3 Gainers Today": top_3_gainers,
+            "Bottom 3 Losers Today": bot_3_losers,
+            "News Headlines for Volatile Assets": news_injection
         }
 
-        brief = generate_morning_brief(portfolio_data)
+        username = request.user.username if request.user.is_authenticated else "Client"
+        brief = generate_morning_brief(portfolio_data, username=username, language_hint=lang)
 
 
         # Cache for 6 hours
@@ -446,7 +487,8 @@ def api_ai_explain_asset(request, symbol):
     
     # 1. Sprawdzamy cache (12 godzin)
     today_str = date.today().isoformat()
-    cache_key = f"ai_explain_{symbol}_{today_str}"
+    lang = request.META.get('HTTP_ACCEPT_LANGUAGE', 'en-US')
+    cache_key = f"ai_explain_{symbol}_{today_str}_{lang}"
     cached_explanation = cache.get(cache_key)
 
     if cached_explanation:
@@ -463,7 +505,7 @@ def api_ai_explain_asset(request, symbol):
         headlines = [item.get('title') for item in news_items[:5] if item.get('title')]
 
         # 3. Pytamy OpenAI
-        explanation = generate_root_cause_analysis(symbol, change_pct, headlines)
+        explanation = generate_root_cause_analysis(symbol, change_pct, headlines, lang)
 
         # 4. Cachujemy wynik na 12 godzin (by oszczędzać API za to samo pytanie dziś)
         cache.set(cache_key, explanation, timeout=60 * 60 * 12)

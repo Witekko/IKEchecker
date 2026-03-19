@@ -8,8 +8,14 @@ def calculate_range_dates(range_mode):
     Zwraca datę początkową na podstawie wybranego zakresu (1m, 3m, ytd, etc.).
     """
     today = date.today()
-    if range_mode == '1m':
+    if range_mode == '1w':
+        return today - timedelta(days=7)
+    elif range_mode == 'wtd':
+        return today - timedelta(days=today.weekday())
+    elif range_mode == '1m':
         return today - timedelta(days=30)
+    elif range_mode == 'mtd':
+        return date(today.year, today.month, 1)
     elif range_mode == '3m':
         return today - timedelta(days=90)
     elif range_mode == '6m':
