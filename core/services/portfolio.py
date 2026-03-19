@@ -73,6 +73,7 @@ def get_dashboard_context(user, portfolio_id=None):
     total_closed = len(closed_assets)
     win_rate = (win_count / total_closed * 100) if total_closed > 0 else 0
     realized_pln = sum(a['gain_pln'] for a in closed_assets)
+    dividends_pln = float(sum(t.amount for t in transactions if t.type == 'DIVIDEND'))
 
     best_trade, worst_trade = None, None
     if closed_assets:
@@ -99,6 +100,8 @@ def get_dashboard_context(user, portfolio_id=None):
         'tile_current_profit_str': fmt_2(stats['unrealized_profit']),
         'tile_ath_str': fmt_2(ath),
         'tile_current_profit_raw': stats['unrealized_profit'],
+        'tile_realized_str': fmt_2(realized_pln), 'tile_realized_raw': realized_pln,
+        'tile_dividends_str': fmt_2(dividends_pln), 'tile_dividends_raw': dividends_pln,
         'tile_annual_pct_str': fmt_2(annual_ret),
         'perf_win_rate': round(win_rate, 1), 'perf_win_count': win_count, 'perf_loss_count': loss_count,
         'perf_total_realized': fmt_2(realized_pln), 'perf_total_realized_raw': realized_pln,

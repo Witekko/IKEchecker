@@ -58,11 +58,26 @@
     </div>
 
     <div class="col-6 col-md-3 col-xl-2">
-        <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark card-hoverable">
+        <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark card-hoverable"
+             style="cursor: pointer;" onclick="toggleProfitBreakdown()"
+             data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom"
+             title="<div class='text-start small'><div class='d-flex justify-content-between gap-3 mb-1'><span class='text-muted'>Unrealized:</span><span class='{% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold'>{{ tile_current_profit_str }} PLN</span></div><div class='d-flex justify-content-between gap-3 mb-1'><span class='text-muted'>Realized:</span><span class='{% if tile_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold'>{{ tile_realized_str }} PLN</span></div><div class='d-flex justify-content-between gap-3'><span class='text-muted'>Dividends:</span><span class='text-success fw-bold'>{{ tile_dividends_str }} PLN</span></div></div>">
             <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Unrealized</div>
-                <h5 class="mb-0 fw-bold {% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                <div class="d-flex justify-content-center gap-2 mb-1">
+                    <span id="lbl-unrealized" class="small fw-bold text-white text-uppercase" style="border-bottom: 2px solid #00ff7f; font-size: 0.65rem;">Unrealized</span>
+                    <span class="text-muted small">|</span>
+                    <span id="lbl-realized" class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Realized</span>
+                    <span class="text-muted small">|</span>
+                    <span id="lbl-dividends" class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Divs</span>
+                </div>
+                <h5 id="val-unrealized" class="mb-0 fw-bold {% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                     <span id="cu-unrealized">{{ tile_current_profit_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">PLN</span>
+                </h5>
+                <h5 id="val-realized" class="mb-0 fw-bold {% if tile_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %}" style="display: none;">
+                    <span id="cu-realized">{{ tile_realized_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">PLN</span>
+                </h5>
+                <h5 id="val-dividends" class="mb-0 fw-bold text-success" style="display: none;">
+                    <span id="cu-dividends">{{ tile_dividends_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">PLN</span>
                 </h5>
             </div>
         </div>
@@ -140,6 +155,27 @@
 </script>
 
 <script>
+    let profitBreakdownState = 0; // 0=Unrealized, 1=Realized, 2=Dividends
+    function toggleProfitBreakdown() {
+        profitBreakdownState = (profitBreakdownState + 1) % 3;
+        const ids = ['unrealized', 'realized', 'dividends'];
+        ids.forEach((id, i) => {
+            const val = document.getElementById('val-' + id);
+            const lbl = document.getElementById('lbl-' + id);
+            if (i === profitBreakdownState) {
+                val.style.display = 'block';
+                lbl.style.borderBottom = '2px solid #00ff7f';
+                lbl.classList.replace('text-muted', 'text-white');
+            } else {
+                val.style.display = 'none';
+                lbl.style.borderBottom = 'none';
+                lbl.classList.replace('text-white', 'text-muted');
+            }
+        });
+    }
+</script>
+
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     // Inicjalizacja CountUp.js 
     // Formatowanie zgodne z Polskim / Europejskim: spacja jako tysiące, kropka lub przecinek jako dziesiętne
@@ -174,6 +210,11 @@ document.addEventListener('DOMContentLoaded', function() {
         initCU('cu-twr', valTwr);
         initCU('cu-mwr', valMwr);
         initCU('cu-unrealized', valUnrealized);
+
+        let valRealized = parseFloat("{{ tile_realized_raw|default:0|stringformat:'f' }}");
+        let valDividends = parseFloat("{{ tile_dividends_raw|default:0|stringformat:'f' }}");
+        initCU('cu-realized', valRealized, valRealized > 0 ? '+' : '');
+        initCU('cu-dividends', valDividends, valDividends > 0 ? '+' : '');
     }
 });
 </script>
