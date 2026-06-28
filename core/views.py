@@ -224,14 +224,126 @@ def portfolio_settings_view(request):
         form = PortfolioSettingsForm(instance=active_portfolio)
 
     recent_transactions = Transaction.objects.filter(portfolio=active_portfolio).order_by('-date', '-id')[:20]
+    
+    # Get all unique assets owned in the current portfolio for the spin-off form dropdown
+    owned_assets = Asset.objects.filter(
+        transaction__portfolio=active_portfolio,
+        transaction__type__in=['BUY', 'OPEN BUY']
+    ).distinct().order_by('symbol')
 
     context = {
         'form': form,
         'active_portfolio': active_portfolio,
         'all_portfolios': get_user_portfolios(request.user),
-        'recent_transactions': recent_transactions
+        'recent_transactions': recent_transactions,
+        'owned_assets': owned_assets
     }
     return render(request, 'portfolio_settings.html', context)
+
+
+@login_required
+def corporate_action_spinoff_view(request):
+    if request.method != 'POST':
+        return redirect('portfolio_settings')
+        
+    active_portfolio = get_active_portfolio(request)
+    original_symbol = request.POST.get('original_asset')
+    new_symbol = request.POST.get('new_ticker', '').strip().upper()
+    new_name = request.POST.get('new_name', '').strip()
+    
+    try:
+        allocation_ratio = float(request.POST.get('allocation_ratio', 1.0))
+        retain_basis_pct = float(request.POST.get('retain_basis', 100.0))
+        move_basis_pct = float(request.POST.get('move_basis', 0.0))
+        cutoff_date_str = request.POST.get('cutoff_date')
+        cutoff_date = datetime.strptime(cutoff_date_str, "%Y-%m-%d")
+    except (ValueError, TypeError) as e:
+        messages.error(request, f"Błędne dane wejściowe: {e}")
+        return redirect('portfolio_settings')
+        
+    if abs(retain_basis_pct + move_basis_pct - 100.0) > 0.01:
+        messages.error(request, "Suma podziału kosztów musi wynosić dokładnie 100% (np. 92.27% i 7.73%).")
+        return redirect('portfolio_settings')
+        
+    original_asset = get_object_or_404(Asset, symbol=original_symbol)
+    
+    from django.db import transaction
+    with transaction.atomic():
+        # Get or create the new Asset
+        new_asset, created = Asset.objects.get_or_create(
+            symbol=new_symbol,
+            defaults={
+                'name': new_name,
+                'type': 'Stock',
+                'currency': original_asset.currency
+            }
+        )
+        
+        # Select all eligible buy transactions of the original asset in the active portfolio
+        from django.utils import timezone
+        cutoff_datetime = timezone.make_aware(datetime(cutoff_date.year, cutoff_date.month, cutoff_date.day, 23, 59, 59))
+        
+        orig_txs = Transaction.objects.filter(
+            portfolio=active_portfolio,
+            asset=original_asset,
+            type__in=['BUY', 'OPEN BUY'],
+            date__lte=cutoff_datetime
+        )
+        
+        if not orig_txs.exists():
+            messages.warning(request, f"Brak transakcji zakupu {original_symbol} do dnia {cutoff_date_str}.")
+            return redirect('portfolio_settings')
+            
+        from decimal import Decimal
+        allocation_ratio_dec = Decimal(str(allocation_ratio))
+
+        modified_count = 0
+        created_count = 0
+        
+        for t in orig_txs:
+            # Check if this transaction has already been split to avoid duplicate runs
+            already_split = Transaction.objects.filter(
+                portfolio=active_portfolio,
+                asset=new_asset,
+                date=t.date,
+                quantity=t.quantity * allocation_ratio_dec
+            ).exists()
+            
+            if already_split:
+                continue
+                
+            orig_amt = float(t.amount)
+            orig_price = float(t.price) if t.price else (abs(orig_amt) / float(t.quantity))
+            
+            # 1. Update original transaction
+            t.amount = round(orig_amt * (retain_basis_pct / 100.0), 2)
+            t.price = round(orig_price * (retain_basis_pct / 100.0), 4)
+            t.save()
+            modified_count += 1
+            
+            # 2. Create the new spinoff asset transaction
+            s2b_tx = Transaction.objects.create(
+                portfolio=active_portfolio,
+                asset=new_asset,
+                type=t.type,
+                date=t.date,
+                quantity=t.quantity * allocation_ratio_dec,
+                price=round((orig_price * (move_basis_pct / 100.0)) / allocation_ratio, 4),
+                amount=round(orig_amt * (move_basis_pct / 100.0), 2),
+                comment=f"Wydzielenie (Spin-off) z {original_symbol} (parytet {allocation_ratio}, koszt {move_basis_pct}%)"
+            )
+            created_count += 1
+            
+        if modified_count > 0:
+            messages.success(
+                request,
+                f"Pomyślnie przeprowadzono wydzielenie! Zaktualizowano {modified_count} transakcji {original_symbol} "
+                f"oraz utworzono {created_count} transakcji dla {new_symbol}."
+            )
+        else:
+            messages.info(request, "Wszystkie kwalifikujące się transakcje zostały już wcześniej rozdzielone.")
+            
+    return redirect('portfolio_settings')
 
 
 from django.contrib.auth.decorators import login_required, user_passes_test
