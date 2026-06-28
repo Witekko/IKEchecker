@@ -31,6 +31,7 @@ def get_taxes_context(user, portfolio_id=None):
 def _calculate_ike_tax_shield(transactions, current_value):
     total_deposits = 0.0
     total_withdrawals = 0.0
+    total_ike_taxes = 0.0
     dividend_tax_saved = 0.0
 
     for t in transactions:
@@ -39,12 +40,22 @@ def _calculate_ike_tax_shield(transactions, current_value):
             total_deposits += amt
         elif t.type == 'WITHDRAWAL':
             total_withdrawals += abs(amt)
+        elif t.type == 'TAX' and not t.asset:
+            total_ike_taxes += abs(amt)
         elif t.type == 'DIVIDEND' and t.asset and t.asset.currency == 'PLN':
             # Zakładamy 19% podatku Belki zaoszczędzonego na polskich dywidendach
             dividend_tax_saved += round(amt * 0.19, 2)
 
-    # Koszt uzyskania przychodu (tylko wpłaty netto)
-    cost_basis = max(0.0, total_deposits - total_withdrawals)
+    # Koszt uzyskania przychodu (wpłaty netto)
+    # Wyliczamy ile z wypłaconych środków stanowiło zwrot wkładu własnego (składek)
+    # Zgodnie z polskim prawem, dochód przy zwrocie częściowym IKE jest opodatkowany.
+    # Zysk = Podatek / 0.19
+    # Wkład własny zwrócony = Netto_Wycofane - Zysk_Netto = Netto_Wycofane - Podatek * (1/0.19 - 1)
+    contributions_withdrawn = total_withdrawals
+    if total_ike_taxes > 0:
+        contributions_withdrawn = max(0.0, total_withdrawals - total_ike_taxes * (1.0 / 0.19 - 1.0))
+
+    cost_basis = max(0.0, total_deposits - contributions_withdrawn)
     total_gain = current_value - cost_basis
 
     # Symulacja: Ile bym zapłacił podatku, gdybym wypłacił teraz?
@@ -62,6 +73,8 @@ def _calculate_ike_tax_shield(transactions, current_value):
         'total_deposits': fmt_2(cost_basis),
         'total_gain': fmt_2(total_gain),
         'total_gain_raw': total_gain,
+        'total_profit': fmt_2(total_gain),
+        'exit_tax': fmt_2(exit_tax),
         'exit_tax_amount': fmt_2(exit_tax),
         'net_after_exit': fmt_2(net_after_exit),
         'tax_saved_dividends': fmt_2(dividend_tax_saved),
@@ -75,6 +88,7 @@ def _calculate_standard_tax_report(transactions):
     # --- PASS 1: Calculate Raw Income/Loss per Year (FIFO) ---
     years_db = {}
     buy_queue = {}  # {symbol: [{'qty': 10, 'price': 100}, ...]}
+    tax_rows = []
 
     # Sortujemy rosnąco, żeby zachować FIFO
     sorted_trans = sorted(list(transactions), key=lambda x: x.date)
@@ -95,7 +109,8 @@ def _calculate_standard_tax_report(transactions):
         if t.type == 'DIVIDEND':
             years_db[year]['div_gross'] += amt
         elif t.type == 'TAX':
-            years_db[year]['div_tax_paid'] += abs(amt)
+            if t.asset:
+                years_db[year]['div_tax_paid'] += abs(amt)
         elif t.type == 'CLOSE':
             years_db[year]['income'] += amt
         elif t.type == 'BUY':
@@ -121,6 +136,17 @@ def _calculate_standard_tax_report(transactions):
             years_db[year]['revenue'] += revenue
             years_db[year]['cost'] += cost_of_sold
             years_db[year]['income'] += (revenue - cost_of_sold)
+            
+            profit = revenue - cost_of_sold
+            tax_amount = max(0.0, profit) * 0.19
+            tax_rows.append({
+                'date': t.date.strftime('%Y-%m-%d %H:%M:%S'),
+                'symbol': sym,
+                'revenue': fmt_2(revenue),
+                'cost': fmt_2(cost_of_sold),
+                'profit': fmt_2(profit),
+                'tax': fmt_2(tax_amount)
+            })
 
     # --- PASS 2: Loss Carryforward Logic (AGRESYWNE ODLICZANIE) ---
     # Zasada: Stratę można odliczyć w ciągu 5 kolejnych lat.
@@ -197,8 +223,10 @@ def _calculate_standard_tax_report(transactions):
             'total_tax_due': fmt_2(stock_tax + div_tax_surcharge)
         })
 
+    tax_rows.reverse()
     return {
         'is_ike': False,
         'portfolio_type': 'STANDARD',
-        'report': report_list
+        'report': report_list,
+        'tax_rows': tax_rows
     }

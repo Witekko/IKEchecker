@@ -25,7 +25,7 @@
                 <div class="card border-success border-opacity-25 h-100" style="background: rgba(25, 135, 84, 0.1);">
                     <div class="card-body text-center p-4">
                         <div class="text-success text-uppercase fw-bold mb-2 ls-1">Estimated Tax Shield</div>
-                        <h1 class="display-4 fw-bold text-white mb-0">{{ deferred_tax }} <small class="fs-6">PLN</small></h1>
+                        <h1 class="display-4 fw-bold text-white mb-0">{{ deferred_tax }} <small class="fs-6">{{ active_portfolio.currency }}</small></h1>
                         <p class="text-muted small mt-2">Money saved by using IKE wrapper.</p>
                     </div>
                 </div>
@@ -34,24 +34,89 @@
                 <div class="card border-secondary border-opacity-25 h-100">
                     <div class="card-body p-4">
                         <h5 class="fw-bold text-white mb-3">Early Exit Simulator</h5>
-                        <p class="text-muted small">If you withdraw today, you pay 19% tax on gains.</p>
-                        <hr class="border-secondary opacity-25">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Total Profit:</span>
-                            <span class="text-white fw-bold">{{ total_profit }} PLN</span>
+                        <p class="text-muted small">Simulate a partial or full withdrawal from your IKE account to calculate the 19% capital gains tax.</p>
+                        
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label text-muted small text-uppercase fw-bold mb-0">Withdrawal Amount</label>
+                                <div class="input-group input-group-sm" style="width: 170px;">
+                                    <input type="number" id="sim-input" class="form-control bg-dark text-white border-secondary text-end pe-2" min="0" max="{{ js_current_value }}" step="1" value="{{ js_current_value }}">
+                                    <span class="input-group-text bg-dark border-secondary text-muted">{{ active_portfolio.currency }}</span>
+                                </div>
+                            </div>
+                            <input type="range" id="sim-slider" class="form-range custom-slider" min="0" max="{{ js_current_value }}" step="1" value="{{ js_current_value }}">
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-danger">Exit Tax (19%):</span>
-                            <span class="text-danger fw-bold">-{{ exit_tax }} PLN</span>
+
+                        <hr class="border-secondary opacity-25">
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Contributions portion (Tax-free):</span>
+                            <span class="text-white fw-bold" id="sim-contrib-val">0.00 {{ active_portfolio.currency }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Gains portion (Taxable):</span>
+                            <span class="text-white fw-bold" id="sim-gain-val">0.00 {{ active_portfolio.currency }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-danger small fw-bold">Exit Tax (19%):</span>
+                            <span class="text-danger fw-bold" id="sim-tax-val">-0.00 {{ active_portfolio.currency }}</span>
+                        </div>
+                        
+                        <div class="border-top border-secondary border-opacity-25 pt-3 d-flex justify-content-between align-items-center">
+                            <span class="text-success fw-bold">Net Payout:</span>
+                            <h4 class="text-success fw-bold mb-0" id="sim-net-val">0.00 {{ active_portfolio.currency }}</h4>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     {% else %}
+        {# --- SEKCJA STANDARD (PIT-38 Summary Table) --- #}
+        <div class="card border-secondary border-opacity-25 mb-4">
+            <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 py-3">
+                <h5 class="fw-bold text-white mb-0">Yearly Tax Summary (PIT-38) - Values in {{ active_portfolio.currency }}</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-dark text-uppercase small text-muted">
+                            <tr>
+                                <th class="ps-4">Year</th>
+                                <th class="text-end">Stock Profit/Loss</th>
+                                <th class="text-end">Loss Deducted</th>
+                                <th class="text-end">Tax Base</th>
+                                <th class="text-end">Stock Tax (19%)</th>
+                                <th class="text-end">Div. Gross</th>
+                                <th class="text-end">Div. Tax Paid</th>
+                                <th class="text-end">Div. Surcharge</th>
+                                <th class="text-end pe-4">Total Tax Due</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report %}
+                            <tr>
+                                <td class="ps-4 fw-bold text-white">{{ row.year }}</td>
+                                <td class="text-end {% if row.stock_result|slice:':1' == '-' %}text-danger{% else %}text-success{% endif %}">{{ row.stock_result }}</td>
+                                <td class="text-end text-muted">{{ row.loss_deducted }}</td>
+                                <td class="text-end">{{ row.tax_base }}</td>
+                                <td class="text-end text-warning fw-bold">{{ row.stock_tax }}</td>
+                                <td class="text-end">{{ row.div_gross }}</td>
+                                <td class="text-end">{{ row.div_tax_paid }}</td>
+                                <td class="text-end text-danger">{{ row.div_tax_topup }}</td>
+                                <td class="text-end pe-4 text-success fw-bold">{{ row.total_tax_due }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="9" class="text-center py-4 text-muted">No yearly summaries.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         {# --- SEKCJA STANDARD (PIT-38 Table) --- #}
         <div class="card border-secondary border-opacity-25">
-            <div class="card-header bg-transparent border-0 pt-3">
+            <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 py-3">
                 <h5 class="fw-bold text-white mb-0">Taxable Events (FIFO)</h5>
             </div>
             <div class="card-body p-0">
@@ -88,4 +153,80 @@
     {% endif %}
 
 {% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const slider = document.getElementById('sim-slider');
+        const input = document.getElementById('sim-input');
+        const contribVal = document.getElementById('sim-contrib-val');
+        const gainVal = document.getElementById('sim-gain-val');
+        const taxVal = document.getElementById('sim-tax-val');
+        const netVal = document.getElementById('sim-net-val');
+
+        const currentValue = parseFloat("{{ js_current_value|default:0 }}");
+        const costBasis = parseFloat("{{ js_cost_basis|default:0 }}");
+        const currency = "{{ active_portfolio.currency }}";
+
+        function updateSimulation(val) {
+            val = Math.max(0, Math.min(currentValue, parseFloat(val) || 0));
+            
+            let contrib = 0;
+            let gain = 0;
+            let tax = 0;
+            let net = 0;
+
+            if (currentValue > 0 && val > 0) {
+                // Proporcja wypłaty do całkowitej wartości portfela
+                const ratio = val / currentValue;
+                contrib = costBasis * ratio;
+                gain = val - contrib;
+                if (gain < 0) gain = 0;
+                tax = gain * 0.19;
+                net = val - tax;
+            }
+
+            contribVal.textContent = contrib.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency;
+            gainVal.textContent = gain.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency;
+            taxVal.textContent = '-' + tax.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency;
+            netVal.textContent = net.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency;
+        }
+
+        if (slider && input) {
+            slider.addEventListener('input', function() {
+                input.value = slider.value;
+                updateSimulation(slider.value);
+            });
+
+            input.addEventListener('input', function() {
+                slider.value = input.value;
+                updateSimulation(input.value);
+            });
+
+            // Uruchomienie początkowe
+            updateSimulation(slider.value);
+        }
+    });
+</script>
+
+<style>
+    /* Styling dla suwaczka */
+    .custom-slider::-webkit-slider-runnable-track {
+        background: #2b3035;
+        border-radius: 5px;
+        height: 6px;
+    }
+    .custom-slider::-webkit-slider-thumb {
+        background: #00ff7f;
+        border: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-top: -5px;
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+    .custom-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+    }
+</style>
 {% endblock %}

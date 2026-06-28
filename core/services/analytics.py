@@ -12,7 +12,7 @@ from core.config import BENCHMARKS, CURRENCY_TICKERS, DAILY_INFLATION_RATE
 logger = logging.getLogger('core')
 
 
-def analyze_holdings(transactions, currency_rates, start_date=None):
+def analyze_holdings(transactions, currency_rates, start_date=None, portfolio_currency="PLN"):
     """
     Analizuje stan posiadania.
     Jeśli podano start_date, oblicza zyski względem tej daty (Period Profit).
@@ -122,7 +122,7 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
             # ale można by tu dodać filtrowanie po dacie zamknięcia.
 
             if abs(data['realized']) > 0.01:
-                is_foreign = asset.currency != 'PLN'
+                is_foreign = asset.currency != portfolio_currency
                 realized_pln = float(data['realized'])
 
                 revenue = 0.0
@@ -179,9 +179,11 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
         # Waluta
         multiplier = 1.0
         is_foreign = False
-        if asset.currency != 'PLN':
+        if asset.currency != portfolio_currency:
             is_foreign = True
-            multiplier = currency_rates.get(asset.currency, 1.0)
+            asset_to_pln = 1.0 if asset.currency == 'PLN' else currency_rates.get(asset.currency, 1.0)
+            portfolio_to_pln = 1.0 if portfolio_currency == 'PLN' else currency_rates.get(portfolio_currency, 1.0)
+            multiplier = float(asset_to_pln) / float(portfolio_to_pln) if portfolio_to_pln else 1.0
             if multiplier == 0: multiplier = 1.0
         if is_fallback_price: multiplier = 1.0
 
@@ -297,7 +299,7 @@ def analyze_holdings(transactions, currency_rates, start_date=None):
     }
 
 
-def analyze_history(transactions, currency_rates):
+def analyze_history(transactions, currency_rates, portfolio_currency="PLN"):
     """
     Generuje dane do wykresu historycznego.
     """
@@ -318,7 +320,7 @@ def analyze_history(transactions, currency_rates):
 
     last_tx_id = transactions.last().id
     count_tx = transactions.count()
-    cache_key = f"history_v21_{last_tx_id}_{count_tx}_{start_date}_{end_date}"
+    cache_key = f"history_v21_{last_tx_id}_{count_tx}_{start_date}_{end_date}_{portfolio_currency}"
     cached = cache.get(cache_key)
     if cached: return cached
 
@@ -396,15 +398,24 @@ def analyze_history(transactions, currency_rates):
     assets_in_chart = Asset.objects.filter(yahoo_ticker__in=daily_qty.columns)
     ticker_currency_map = {a.yahoo_ticker: a.currency for a in assets_in_chart}
 
-    mult_df = pd.DataFrame(1.0, index=full_dates, columns=price_df.columns)
-    for t_col in mult_df.columns:
-        c_code = ticker_currency_map.get(t_col, 'PLN')
+    def get_rate_series(c_code):
+        if c_code == 'PLN':
+            return pd.Series(1.0, index=full_dates)
         c_ticker = CURRENCY_MAP.get(c_code)
         if c_ticker:
             s = get_series(c_ticker)
             filled = smart_fill(s, full_dates)
             fallback = currency_rates.get(c_code, 1.0)
-            mult_df[t_col] = filled.replace(0.0, fallback)
+            return filled.replace(0.0, fallback)
+        return pd.Series(1.0, index=full_dates)
+
+    portfolio_rate_series = get_rate_series(portfolio_currency)
+
+    mult_df = pd.DataFrame(1.0, index=full_dates, columns=price_df.columns)
+    for t_col in mult_df.columns:
+        c_code = ticker_currency_map.get(t_col, 'PLN')
+        asset_rate_series = get_rate_series(c_code)
+        mult_df[t_col] = asset_rate_series / portfolio_rate_series
 
     common = daily_qty.columns.intersection(price_df.columns)
     stock_val = daily_qty[common] * price_df[common] * mult_df[common]
@@ -412,11 +423,12 @@ def analyze_history(transactions, currency_rates):
     timeline_df['user_value'] = timeline_df['cash_balance'] + stock_val.sum(axis=1)
     timeline_df['user_value'] = timeline_df['user_value'].clip(lower=0.0)
 
-    daily_deposits = df_tx[df_tx['type'] == 'DEPOSIT'].groupby('date')['amount'].sum().reindex(full_dates, fill_value=0)
+    mask_flow = df_tx['type'].isin(['DEPOSIT', 'WITHDRAWAL'])
+    daily_deposits = df_tx[mask_flow].groupby('date')['amount'].sum().reindex(full_dates, fill_value=0)
 
-    usd_bm = smart_fill(get_series(CURRENCY_TICKERS['USD']), full_dates).replace(0.0, currency_rates.get('USD', 4.0))
+    usd_bm = get_rate_series('USD')
     sp500_price = smart_fill(get_series(BENCHMARKS['SP500']), full_dates)
-    denom_sp = usd_bm * sp500_price
+    denom_sp = sp500_price * (usd_bm / portfolio_rate_series)
     units_sp = daily_deposits / denom_sp
     units_sp = units_sp.fillna(0.0)
     units_sp[denom_sp <= 0.001] = 0.0
@@ -424,15 +436,15 @@ def analyze_history(transactions, currency_rates):
     timeline_df.loc[timeline_df['sp500_val'] <= 0.01, 'sp500_val'] = timeline_df['invested']
 
     wig_price = smart_fill(get_series(BENCHMARKS['WIG']), full_dates)
-    units_wig = daily_deposits / wig_price
+    denom_wig = wig_price * (1.0 / portfolio_rate_series)
+    units_wig = daily_deposits / denom_wig
     units_wig = units_wig.fillna(0.0)
-    units_wig[wig_price <= 0.001] = 0.0
-    timeline_df['wig_val'] = units_wig.cumsum() * wig_price
-    timeline_df['wig_val'] = units_wig.cumsum() * wig_price
+    units_wig[denom_wig <= 0.001] = 0.0
+    timeline_df['wig_val'] = units_wig.cumsum() * denom_wig
     timeline_df.loc[timeline_df['wig_val'] <= 0.01, 'wig_val'] = timeline_df['invested']
 
     acwi_price = smart_fill(get_series(BENCHMARKS['ACWI']), full_dates)
-    denom_acwi = usd_bm * acwi_price
+    denom_acwi = acwi_price * (usd_bm / portfolio_rate_series)
     units_acwi = daily_deposits / denom_acwi
     units_acwi = units_acwi.fillna(0.0)
     units_acwi[denom_acwi <= 0.001] = 0.0

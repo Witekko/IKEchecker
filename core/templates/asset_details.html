@@ -52,9 +52,9 @@
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
             <div class="card-body p-3">
                 <div class="text-muted small text-uppercase fw-bold mb-1">Current Value</div>
-                <h4 class="fw-bold text-white mb-1">{{ current_value_pln }} <small class="fs-6 text-muted">PLN</small></h4>
+                <h4 class="fw-bold text-white mb-1">{{ current_value_pln }} <small class="fs-6 text-muted">{{ currency_sym }}</small></h4>
                 <div class="small fw-bold {% if total_gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {% if total_gain_pln_raw > 0 %}+{% endif %}{{ total_gain_pln }} PLN (Total)
+                    {% if total_gain_pln_raw > 0 %}+{% endif %}{{ total_gain_pln }} {{ currency_sym }} (Total)
                 </div>
             </div>
         </div>
@@ -64,7 +64,7 @@
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
             <div class="card-body p-3">
                 <div class="text-muted small text-uppercase fw-bold mb-1">Avg. Buy Price</div>
-                <h4 class="fw-bold text-white mb-1">{{ avg_price }} <small class="fs-6 text-muted">PLN</small></h4>
+                <h4 class="fw-bold text-white mb-1">{{ avg_price }} <small class="fs-6 text-muted">{{ currency_sym }}</small></h4>
                 <div class="small text-muted">Qty: <span class="text-white">{{ quantity }}</span></div>
             </div>
         </div>
@@ -74,7 +74,7 @@
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm">
             <div class="card-body p-3">
                 <div class="text-muted small text-uppercase fw-bold mb-1">Current Price</div>
-                <h4 class="fw-bold text-white mb-1">{{ current_price }} <small class="fs-6 text-muted">PLN</small></h4>
+                <h4 class="fw-bold text-white mb-1">{{ current_price }} <small class="fs-6 text-muted">{{ currency_sym }}</small></h4>
                 <div class="small fw-bold {% if day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                     {% if day_change_pct_raw > 0 %}+{% endif %}{{ day_change_pct }}% (1D)
                 </div>
@@ -110,7 +110,7 @@
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm border-warning border-opacity-50">
             <div class="card-body p-3">
                 <div class="text-warning small text-uppercase fw-bold mb-1"><i class="fas fa-star me-1"></i> Current Price</div>
-                <h4 class="fw-bold text-white mb-1">{{ current_price }} <small class="fs-6 text-muted">PLN</small></h4>
+                <h4 class="fw-bold text-white mb-1">{{ current_price }} <small class="fs-6 text-muted">{{ currency_sym }}</small></h4>
                 <div class="small fw-bold {% if day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                     {% if day_change_pct_raw > 0 %}+{% endif %}{{ day_change_pct }}% (1D)
                 </div>

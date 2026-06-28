@@ -34,8 +34,8 @@ def get_dashboard_stats_context(active_portfolio, range_mode='all'):
 
     # 1. Pobierz kursy i dane analityczne
     rates = get_current_currency_rates()
-    full_timeline = analyze_history(transactions, rates)
-    stats = analyze_holdings(transactions, rates)  # stats['total_value'] potrzebne do MWR
+    full_timeline = analyze_history(transactions, rates, portfolio_currency=active_portfolio.currency)
+    stats = analyze_holdings(transactions, rates, start_date=start_date, portfolio_currency=active_portfolio.currency)  # stats['total_value'] potrzebne do MWR
     current_val = stats['total_value']
 
     # 2. Oblicz wskaźniki (Performance)
@@ -92,7 +92,7 @@ def get_holdings_view_context(user, portfolio, range_mode='all'):
     transactions = Transaction.objects.filter(portfolio=portfolio)
     rates = get_current_currency_rates()
 
-    dynamic_stats = analyze_holdings(transactions, rates, start_date=start_date)
+    dynamic_stats = analyze_holdings(transactions, rates, start_date=start_date, portfolio_currency=portfolio.currency)
 
     # Nowa funkcjonalność: Pobieranie aktywów z Watchlisty użytkownika
     from ..models import Asset

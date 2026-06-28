@@ -58,10 +58,16 @@ def get_dashboard_context(user, portfolio_id=None):
     if not transactions.exists():
         return _get_empty_dashboard_context()
 
+    portfolio_currency = 'PLN'
+    if portfolio_id:
+        portfolio_obj = get_portfolio_by_id(user, portfolio_id)
+        if portfolio_obj:
+            portfolio_currency = portfolio_obj.currency
+
     market_data = get_market_summary()
     rates = market_data['rates']
-    stats = analyze_holdings(transactions, rates)
-    timeline = analyze_history(transactions, rates)
+    stats = analyze_holdings(transactions, rates, portfolio_currency=portfolio_currency)
+    timeline = analyze_history(transactions, rates, portfolio_currency=portfolio_currency)
     ath = max(timeline['val_user']) if timeline.get('val_user') else stats['total_value']
     charts = _prepare_dashboard_charts(stats['assets'], stats['cash'])
     annual_ret = _calculate_annual_return(stats['total_profit'], stats['invested'], stats['first_date'])
@@ -294,8 +300,14 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
     holdings = PortfolioCalculator(asset_trans).process().get_holdings()
     asset_data = holdings.get(symbol, {'qty': 0.0, 'cost': 0.0, 'realized': 0.0, 'trades': []})
     rates = get_current_currency_rates()
-    multiplier = rates.get(asset.currency, 1.0) if asset.currency != 'PLN' else 1.0
-    if asset.currency == 'JPY': multiplier /= 100.0
+    # Calculate conversion multiplier to portfolio currency
+    asset_to_pln = rates.get(asset.currency, 1.0) if asset.currency != 'PLN' else 1.0
+    if asset.currency == 'JPY': asset_to_pln /= 100.0
+    
+    portfolio_to_pln = rates.get(portfolio.currency, 1.0) if portfolio.currency != 'PLN' else 1.0
+    if portfolio.currency == 'JPY': portfolio_to_pln /= 100.0
+    
+    multiplier = float(asset_to_pln) / float(portfolio_to_pln) if portfolio_to_pln else 1.0
     from datetime import timedelta
     
     qty, cost = asset_data['qty'], asset_data['cost']
@@ -327,7 +339,7 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
     history_table = []
     trade_events = {}
     for t in asset_data['trades']:
-        history_table.append({'date': t['date'].strftime('%Y-%m-%d'), 'type': t['type'], 'quantity': fmt_4(t['qty']),
+        history_table.append({'date': t['date'].strftime('%Y-%m-%d %H:%M:%S'), 'type': t['type'], 'quantity': fmt_4(t['qty']),
                               'price_original': f"{t.get('price', 0):.2f}", 'value_pln': fmt_2(abs(t['amount']))})
         d_str = t['date'].strftime("%Y-%m-%d")
         trade_events[d_str] = 'BUY' if 'BUY' in t['type'] else 'SELL'
@@ -350,7 +362,7 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
         'gain_percent': fmt_2((total_gain / cost * 100) if cost > 0 else 0),
         'gain_percent_raw': (total_gain / cost * 100) if cost > 0 else 0,
         'total_gain_pln': fmt_2(total_gain), 'total_gain_pln_raw': total_gain,
-        'current_price': fmt_2(current_price_orig * multiplier), 'currency_sym': 'PLN',
+        'current_price': fmt_2(current_price_orig * multiplier), 'currency_sym': portfolio.currency,
         'day_change_pct': fmt_2(((current_price_orig - prev_close) / prev_close * 100) if prev_close > 0 else 0),
         'day_change_pln': fmt_2(day_change_pln), 'transactions': reversed(history_table),
         'chart_dates': chart_dates, 'chart_prices': chart_prices, 'chart_point_colors': chart_colors,

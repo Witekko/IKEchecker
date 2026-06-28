@@ -131,8 +131,9 @@ def create_portfolio_view(request):
     if request.method == 'POST':
         name = request.POST.get('name')
         p_type = request.POST.get('type')
+        currency = request.POST.get('currency', 'PLN')
         if name and p_type:
-            p = Portfolio.objects.create(user=request.user, name=name, portfolio_type=p_type)
+            p = Portfolio.objects.create(user=request.user, name=name, portfolio_type=p_type, currency=currency)
             request.session['active_portfolio_id'] = p.id
             request.session.modified = True
             messages.success(request, f"Created portfolio: {name}")

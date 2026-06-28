@@ -5,11 +5,11 @@
 
     <div class="col-12 col-xl-3">
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark card-hoverable"
-             {% if tile_ath_str %}data-bs-toggle="tooltip" data-bs-placement="bottom" title="All-Time High: {{ tile_ath_str }} PLN"{% endif %}>
+             {% if tile_ath_str %}data-bs-toggle="tooltip" data-bs-placement="bottom" title="All-Time High: {{ tile_ath_str }} {{ active_portfolio.currency }}"{% endif %}>
             <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
                 <div class="text-muted text-uppercase small fw-bold mb-1">Total Value</div>
                 <h3 class="mb-0 fw-bold text-white text-truncate">
-                    <span id="cu-total-value">{{ tile_value_str }}</span> <span class="fs-6 text-muted fw-normal">PLN</span>
+                    <span id="cu-total-value">{{ tile_value_str }}</span> <span class="fs-6 text-muted fw-normal">{{ active_portfolio.currency }}</span>
                 </h3>
             </div>
         </div>
@@ -21,7 +21,7 @@
                 <div class="text-muted small text-uppercase fw-bold mb-1">Total Profit</div>
                 <h4 class="mb-0 fw-bold {% if tile_total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                     <span id="cu-total-profit">{% if tile_total_profit_raw > 0 %}+{% endif %}{{ tile_total_profit_str }}</span>
-                    <small class="fs-6 opacity-50 d-none d-lg-inline text-muted">PLN</small>
+                    <small class="fs-6 opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</small>
                 </h4>
             </div>
         </div>
@@ -61,7 +61,7 @@
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark card-hoverable"
              style="cursor: pointer;" onclick="toggleProfitBreakdown()"
              data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom"
-             title="<div class='text-start small'><div class='d-flex justify-content-between gap-3 mb-1'><span class='text-muted'>Unrealized:</span><span class='{% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold'>{{ tile_current_profit_str }} PLN</span></div><div class='d-flex justify-content-between gap-3 mb-1'><span class='text-muted'>Realized:</span><span class='{% if tile_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold'>{{ tile_realized_str }} PLN</span></div><div class='d-flex justify-content-between gap-3'><span class='text-muted'>Dividends:</span><span class='text-success fw-bold'>{{ tile_dividends_str }} PLN</span></div></div>">
+             title="<div class='text-start small'><div class='d-flex justify-content-between gap-3 mb-1'><span class='text-muted'>Unrealized:</span><span class='{% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold'>{{ tile_current_profit_str }} {{ active_portfolio.currency }}</span></div><div class='d-flex justify-content-between gap-3 mb-1'><span class='text-muted'>Realized:</span><span class='{% if tile_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold'>{{ tile_realized_str }} {{ active_portfolio.currency }}</span></div><div class='d-flex justify-content-between gap-3'><span class='text-muted'>Dividends:</span><span class='text-success fw-bold'>{{ tile_dividends_str }} {{ active_portfolio.currency }}</span></div></div>">
             <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
                 <div class="d-flex justify-content-center gap-2 mb-1">
                     <span id="lbl-unrealized" class="small fw-bold text-white text-uppercase" style="border-bottom: 2px solid #00ff7f; font-size: 0.65rem;">Unrealized</span>
@@ -71,13 +71,13 @@
                     <span id="lbl-dividends" class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Divs</span>
                 </div>
                 <h5 id="val-unrealized" class="mb-0 fw-bold {% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    <span id="cu-unrealized">{{ tile_current_profit_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">PLN</span>
+                    <span id="cu-unrealized">{{ tile_current_profit_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
                 </h5>
                 <h5 id="val-realized" class="mb-0 fw-bold {% if tile_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %}" style="display: none;">
-                    <span id="cu-realized">{{ tile_realized_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">PLN</span>
+                    <span id="cu-realized">{{ tile_realized_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
                 </h5>
                 <h5 id="val-dividends" class="mb-0 fw-bold text-success" style="display: none;">
-                    <span id="cu-dividends">{{ tile_dividends_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">PLN</span>
+                    <span id="cu-dividends">{{ tile_dividends_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
                 </h5>
             </div>
         </div>
@@ -102,7 +102,7 @@
             <div class="card-body py-2">
                 <div class="text-muted small text-uppercase mb-1">1D Gain</div>
                 <div class="fw-bold fs-5 {% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {{ tile_day_pln_str }} <span class="small text-muted">PLN</span>
+                    {{ tile_day_pln_str }} <span class="small text-muted">{{ active_portfolio.currency }}</span>
                 </div>
             </div>
         </div>

@@ -29,7 +29,7 @@ class XtbExcelNewImporter(BaseImporter):
     def _find_header_row(self, df):
         for idx, row in df.iterrows():
             s = " ".join([str(v) for v in row.fillna('').values])
-            # New format specific: Instrument
-            if "ID" in s and "Type" in s and "Instrument" in s:
+            # New format specific: Instrument or Ticker
+            if "ID" in s and "Type" in s and ("Instrument" in s or "Ticker" in s):
                 return idx
         return None

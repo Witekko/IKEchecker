@@ -27,6 +27,10 @@ def get_dividend_context(user, portfolio_id=None):
     available_years = set()
 
     for t in txs:
+        # Ignore account-level tax operations (e.g. IKE tax)
+        if t.type == 'TAX' and not t.asset:
+            continue
+            
         amt = float(t.amount)
 
         # 3. Inteligentne przeliczanie walut

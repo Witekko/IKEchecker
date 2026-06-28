@@ -60,7 +60,7 @@ class BaseImporter(ABC):
             return
 
         # Resolve Asset
-        asset_obj = self._resolve_asset(data.get('symbol'))
+        asset_obj = self._resolve_asset(data.get('symbol'), name_hint=data.get('name_hint'))
 
         # UPSERT
         obj, created = Transaction.objects.update_or_create(
@@ -82,19 +82,19 @@ class BaseImporter(ABC):
         else:
             self.stats['updated'] += 1
 
-    def _resolve_asset(self, sym):
+    def _resolve_asset(self, sym, name_hint=None):
         if not sym or sym.lower() == 'nan': return None
 
         if sym in self.asset_cache:
             return self.asset_cache[sym]
 
-        asset_obj, created = self._get_or_create_asset_smart(sym)
+        asset_obj, created = self._get_or_create_asset_smart(sym, name_hint=name_hint)
         self.asset_cache[sym] = asset_obj
         if created:
             self.stats['new_assets'] += 1
         return asset_obj
 
-    def _get_or_create_asset_smart(self, xtb_symbol):
+    def _get_or_create_asset_smart(self, xtb_symbol, name_hint=None):
         # 1. Search by exact symbol
         existing = Asset.objects.filter(symbol=xtb_symbol).first()
         if existing: return existing, False
@@ -106,7 +106,7 @@ class BaseImporter(ABC):
         # 3. Create new
         yahoo_ticker = xtb_symbol
         currency = 'PLN'
-        name = xtb_symbol
+        name = name_hint if name_hint else xtb_symbol
         asset_type = 'STOCK'
         sector = 'OTHER'
 

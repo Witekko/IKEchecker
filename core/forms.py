@@ -29,5 +29,10 @@ class PortfolioSettingsForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control bg-dark text-white border-secondary'}),
             'portfolio_type': forms.Select(attrs={'class': 'form-select bg-dark text-white border-secondary'}),
-            'currency': forms.TextInput(attrs={'class': 'form-control bg-dark text-white border-secondary', 'readonly': 'readonly'}),
+            'currency': forms.Select(choices=[
+                ('PLN', 'PLN (Polish Złoty)'),
+                ('USD', 'USD (US Dollar)'),
+                ('EUR', 'EUR (Euro)'),
+                ('GBP', 'GBP (British Pound)'),
+            ], attrs={'class': 'form-select bg-dark text-white border-secondary'}),
         }

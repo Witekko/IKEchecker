@@ -58,8 +58,8 @@ class XtbParser(BaseParser):
     """Unified Parser for XTB (Old & New formats)."""
     
     def is_match(self, columns):
-        # Matches if either 'Symbol' (Old) or 'Instrument' (New) is present
-        return ('Symbol' in columns or 'Instrument' in columns) and 'Type' in columns
+        # Matches if either 'Symbol', 'Instrument', or 'Ticker' is present
+        return ('Symbol' in columns or 'Instrument' in columns or 'Ticker' in columns) and 'Type' in columns
 
     def parse_row(self, row):
         raw_type = str(row.get('Type', '')).strip()
@@ -67,8 +67,20 @@ class XtbParser(BaseParser):
         
         trans_type = self._map_type(raw_type)
         
-        # Handle Symbol/Instrument column difference
-        symbol = str(row.get('Instrument') if 'Instrument' in row else row.get('Symbol', '')).strip()
+        # Resolve symbol prioritizing Ticker -> Symbol -> Instrument
+        symbol = None
+        name_hint = None
+        
+        if 'Ticker' in row and pd.notna(row['Ticker']) and str(row['Ticker']).strip() != '':
+            symbol = str(row['Ticker']).strip()
+            if 'Instrument' in row and pd.notna(row['Instrument']) and str(row['Instrument']).strip() != '':
+                name_hint = str(row['Instrument']).strip()
+        elif 'Symbol' in row and pd.notna(row['Symbol']) and str(row['Symbol']).strip() != '':
+            symbol = str(row['Symbol']).strip()
+            if 'Instrument' in row and pd.notna(row['Instrument']) and str(row['Instrument']).strip() != '':
+                name_hint = str(row['Instrument']).strip()
+        elif 'Instrument' in row and pd.notna(row['Instrument']) and str(row['Instrument']).strip() != '':
+            symbol = str(row['Instrument']).strip()
 
         return {
             'xtb_id': str(int(row['ID'])) if isinstance(row['ID'], (int, float)) else str(row['ID']),
@@ -78,18 +90,19 @@ class XtbParser(BaseParser):
             'quantity': self._parse_quantity(trans_type, comment),
             'price': self._parse_price(comment),
             'comment': comment,
-            'symbol': symbol
+            'symbol': symbol,
+            'name_hint': name_hint
         }
 
     def _map_type(self, raw):
         raw = raw.lower()
         if 'stock' in raw and 'purchase' in raw: return 'BUY'
-        if 'stock' in raw and ('sale' in raw or 'sell' in raw): return 'SELL' # Handles both 'sale' and 'sell'
+        if 'stock' in raw and ('sale' in raw or 'sell' in raw): return 'SELL'
         if 'close' in raw or 'profit' in raw: return 'CLOSE'
+        if 'tax' in raw: return 'TAX'
+        if 'return' in raw or 'withdrawal' in raw: return 'WITHDRAWAL'
         if 'deposit' in raw: return 'DEPOSIT'
-        if 'withdrawal' in raw: return 'WITHDRAWAL'
-        if 'divident' in raw or 'dividend' in raw: return 'DIVIDEND' # Handles typo 'divident'
-        if 'withholding tax' in raw: return 'TAX'
+        if 'divident' in raw or 'dividend' in raw: return 'DIVIDEND'
         if 'fee' in raw: return 'FEE'
         if 'interest' in raw: return 'OTHER'
         return 'OTHER'

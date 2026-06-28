@@ -83,7 +83,7 @@
         <!-- Buttons -->
         <div class="btn-group position-relative" role="group" style="z-index: 1;">
             <button type="button" class="btn btn-sm btn-dark text-muted active rounded-start-pill px-3" id="btn-val"
-                onclick="switchMainChart('value')">PLN</button>
+                onclick="switchMainChart('value')">{{ active_portfolio.currency }}</button>
             <button type="button" class="btn btn-sm btn-dark text-muted rounded-end-pill px-3" id="btn-pct"
                 onclick="switchMainChart('percent')">%</button>
         </div>
@@ -164,7 +164,7 @@
                                 class="fas fa-arrow-up text-success me-2"></i>Best Trade</span>
                         <div class="text-end">
                             <div class="fw-bold text-white">{{ perf_best_trade.symbol }}</div>
-                            <div class="small text-success">+{{ perf_best_trade.gain_fmt }} PLN ({{ perf_best_trade.pct_fmt }}%)</div>
+                            <div class="small text-success">+{{ perf_best_trade.gain_fmt }} {{ active_portfolio.currency }} ({{ perf_best_trade.pct_fmt }}%)</div>
                         </div>
                     </div>
                     {% endif %}
@@ -174,7 +174,7 @@
                                 class="fas fa-arrow-down text-danger me-2"></i>Worst Trade</span>
                         <div class="text-end">
                             <div class="fw-bold text-white">{{ perf_worst_trade.symbol }}</div>
-                            <div class="small text-danger">{{ perf_worst_trade.gain_fmt }} PLN ({{ perf_worst_trade.pct_fmt }}%)</div>
+                            <div class="small text-danger">{{ perf_worst_trade.gain_fmt }} {{ active_portfolio.currency }} ({{ perf_worst_trade.pct_fmt }}%)</div>
                         </div>
                     </div>
                     {% endif %}
@@ -219,13 +219,13 @@
                                 <th class="text-muted small ps-4">Date</th>
                                 <th class="text-muted small">Type</th>
                                 <th class="text-muted small">Asset</th>
-                                <th class="text-end pe-4">Amount (PLN)</th>
+                                <th class="text-end pe-4">Amount ({{ active_portfolio.currency }})</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for t in last_transactions %}
                             <tr data-type="{{ t.type }}">
-                                <td class="ps-4 text-white-50">{{ t.date|date:"Y-m-d" }}</td>
+                                <td class="ps-4 text-white-50">{{ t.date|date:"Y-m-d H:i:s" }}</td>
                                 <td>
                                     {% if t.type == 'DEPOSIT' %}<span
                                         class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">DEP</span>
