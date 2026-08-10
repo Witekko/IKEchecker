@@ -54,10 +54,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     decimal: '.'
                 };
                 
-                const initCU = (id, val, prefix = '') => {
+                const initCU = (id, val, prefix = '', decimals = 2) => {
                     const el = document.getElementById(id);
                     if (el && !isNaN(val)) {
-                        let cuOptions = { ...options, prefix: prefix };
+                        let cuOptions = { ...options, prefix: prefix, decimalPlaces: decimals };
                         let cu = new countUp.CountUp(id, val, cuOptions);
                         if (!cu.error) cu.start();
                     }
@@ -155,10 +155,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (dayPlnContainer) {
                     if (valDayPln >= 0) {
                         dayPlnContainer.className = 'fw-bold fs-5 text-success';
-                        dayPlnContainer.innerHTML = `<span id="cu-day-pln">0.00</span> <span class="small text-muted">${data.tile_value_str ? data.tile_value_str.split(' ').pop() : 'PLN'}</span>`;
                     } else {
                         dayPlnContainer.className = 'fw-bold fs-5 text-danger';
-                        dayPlnContainer.innerHTML = `<span id="cu-day-pln">0.00</span> <span class="small text-muted">${data.tile_value_str ? data.tile_value_str.split(' ').pop() : 'PLN'}</span>`;
                     }
                 }
                 
@@ -168,8 +166,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const valGainers = parseFloat(data.tile_gainers || 0);
                 const valLosers = parseFloat(data.tile_losers || 0);
                 
-                initCU('cu-gainers', valGainers);
-                initCU('cu-losers', valLosers);
+                initCU('cu-gainers', valGainers, '', 0);
+                initCU('cu-losers', valLosers, '', 0);
             }
 
             // 2. Initialize Tooltips
