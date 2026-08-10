@@ -123,6 +123,7 @@ class Transaction(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.SET_NULL, null=True, blank=True)
 
     xtb_id = models.CharField(max_length=100, blank=True, null=True)  # Zwiększono limit znaków dla bezpieczeństwa
+    position_id = models.CharField(max_length=50, blank=True, null=True)
 
     date = models.DateTimeField()
     type = models.CharField(max_length=20, choices=TransactionType.choices)

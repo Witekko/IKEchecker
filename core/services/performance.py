@@ -144,9 +144,14 @@ class PerformanceCalculator:
             real_cash_flow = daily_flows.get(date_str, 0.0)
             start_of_day = prev_val + real_cash_flow
 
-            if abs(start_of_day) > 0.01:
+            if curr_val < 0.05:
+                daily_ret = 0.0
+            elif abs(start_of_day) > 0.01:
                 daily_ret = (curr_val - start_of_day) / start_of_day
-                twr_accumulated *= (1 + daily_ret)
+            else:
+                daily_ret = 0.0
+
+            twr_accumulated *= (1 + daily_ret)
 
             prev_val = curr_val
 

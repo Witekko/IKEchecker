@@ -55,7 +55,8 @@ class PortfolioCalculator:
                         'type': t.type,
                         'amount': amt,
                         'qty': qty,
-                        'asset_obj': t.asset
+                        'asset_obj': t.asset,
+                        'position_id': t.position_id
                     })
 
         for symbol, trades in asset_groups.items():
@@ -67,7 +68,7 @@ class PortfolioCalculator:
         total_qty = Decimal('0.0000')
         total_cost = Decimal('0.00')
         realized_pln = Decimal('0.00')
-        buy_queue = []
+        open_buys = []
 
         trades.sort(key=lambda x: x['date'])
         asset_obj = trades[0]['asset_obj']
@@ -75,6 +76,7 @@ class PortfolioCalculator:
         for t in trades:
             amt = t['amount']
             qty = t['qty']
+            pos_id = t.get('position_id')
 
             # Obsługa typu CLOSE (Zysk bez zmiany ilości akcji)
             if t['type'] == 'CLOSE':
@@ -91,7 +93,11 @@ class PortfolioCalculator:
                 cost_of_trade = abs(amt)
                 total_cost += cost_of_trade
                 price_per_unit = cost_of_trade / qty
-                buy_queue.append([price_per_unit, qty])
+                open_buys.append({
+                    'price': price_per_unit,
+                    'qty': qty,
+                    'position_id': pos_id
+                })
 
             elif t['type'] == 'SELL':
                 total_qty -= qty
@@ -99,19 +105,30 @@ class PortfolioCalculator:
                 cost_basis_for_sale = Decimal('0.00')
                 shares_to_sell = qty
 
-                while shares_to_sell > 0 and buy_queue:
-                    batch = buy_queue[0]
-                    batch_price = batch[0]
-                    batch_qty = batch[1]
+                # 1. Match by Position ID first (if position_id is present)
+                if pos_id:
+                    matching_buys = [b for b in open_buys if b['position_id'] == pos_id]
+                    for batch in matching_buys:
+                        if shares_to_sell <= 0:
+                            break
+                        take_qty = min(batch['qty'], shares_to_sell)
+                        cost_basis_for_sale += take_qty * batch['price']
+                        shares_to_sell -= take_qty
+                        batch['qty'] -= take_qty
 
-                    if batch_qty <= shares_to_sell:
-                        cost_basis_for_sale += batch_qty * batch_price
-                        shares_to_sell -= batch_qty
-                        buy_queue.pop(0)
-                    else:
-                        cost_basis_for_sale += shares_to_sell * batch_price
-                        batch[1] -= shares_to_sell
-                        shares_to_sell = 0
+                    # Filter out fully depleted batches
+                    open_buys = [b for b in open_buys if b['qty'] > 0]
+
+                # 2. Fallback: match any remaining shares to sell using standard FIFO
+                if shares_to_sell > 0:
+                    while shares_to_sell > 0 and open_buys:
+                        batch = open_buys[0]
+                        take_qty = min(batch['qty'], shares_to_sell)
+                        cost_basis_for_sale += take_qty * batch['price']
+                        shares_to_sell -= take_qty
+                        batch['qty'] -= take_qty
+                        if batch['qty'] <= 0:
+                            open_buys.pop(0)
 
                 total_cost -= cost_basis_for_sale
                 trade_profit = revenue - cost_basis_for_sale

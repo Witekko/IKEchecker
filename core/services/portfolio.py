@@ -78,7 +78,7 @@ def get_dashboard_context(user, portfolio_id=None):
     loss_count = sum(1 for a in closed_assets if a['gain_pln'] <= 0)
     total_closed = len(closed_assets)
     win_rate = (win_count / total_closed * 100) if total_closed > 0 else 0
-    realized_pln = sum(a['gain_pln'] for a in closed_assets)
+    realized_pln = sum(a['realized_pln'] for a in stats['assets'])
     dividends_pln = float(sum(t.amount for t in transactions if t.type == 'DIVIDEND'))
 
     best_trade, worst_trade = None, None
