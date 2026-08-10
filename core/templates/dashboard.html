@@ -5,7 +5,7 @@
 {% block content %}
 
 {# --- WELCOME SCREEN (If no transactions) --- #}
-{% if not last_transactions %}
+{% if not last_transactions and active_portfolio.portfolio_type != 'CONSOLIDATED' %}
 <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
     <div class="text-center">
         <div class="mb-4">
