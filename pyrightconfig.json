@@ -1,0 +1,8 @@
+{
+  "venvPath": "c:/Users/wajci/Projects/PycharmProjects/IKEchecker",
+  "venv": ".venv",
+  "extraPaths": [
+    ".venv/Lib/site-packages",
+    "c:/Users/wajci/Projects/PycharmProjects/IKEchecker/.venv/Lib/site-packages"
+  ]
+}

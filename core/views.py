@@ -14,7 +14,7 @@ from .models import Portfolio, Transaction, Asset, AssetSector, AssetType
 from .forms import UploadFileForm, CustomUserCreationForm, PortfolioSettingsForm
 
 # --- WARSTWA USŁUG (SERVICES & SELECTORS) ---
-from .services.selectors import get_active_portfolio, get_user_portfolios, get_all_assets
+from .services.db_selectors import get_active_portfolio, get_user_portfolios, get_all_assets
 from .services import (
     process_xtb_file, get_dashboard_context, get_dividend_context,
     get_asset_details_context, get_taxes_context,
@@ -40,6 +40,7 @@ def dashboard_view(request):
     context['all_portfolios'] = get_user_portfolios(request.user)
     context['active_portfolio'] = active_portfolio if active_portfolio else {'name': 'No Portfolio'}
     context['current_range'] = range_mode
+    context['consolidated_portfolio_ids'] = request.session.get('consolidated_portfolio_ids', [])
     if 'error' in context:
         return render(request, 'dashboard.html', {'error': context['error']})
 
@@ -57,6 +58,7 @@ def assets_list_view(request):
     context['all_portfolios'] = get_user_portfolios(request.user)
     context['active_portfolio'] = active_portfolio
     context['current_range'] = range_mode
+    context['consolidated_portfolio_ids'] = request.session.get('consolidated_portfolio_ids', [])
 
     if 'error' in context:
         return render(request, 'dashboard.html', {'error': context['error']})
@@ -70,6 +72,7 @@ def dividends_view(request):
     context = get_dividend_context(request.user, portfolio_id=active_portfolio.id)
     context['all_portfolios'] = get_user_portfolios(request.user)
     context['active_portfolio'] = active_portfolio
+    context['consolidated_portfolio_ids'] = request.session.get('consolidated_portfolio_ids', [])
     return render(request, 'dividends.html', context)
 
 
@@ -82,12 +85,14 @@ def asset_details_view(request, symbol):
         return render(request, 'dashboard.html',
                       {'error': context['error'],
                        'all_portfolios': get_user_portfolios(request.user),
-                       'active_portfolio': active_portfolio})
+                       'active_portfolio': active_portfolio,
+                       'consolidated_portfolio_ids': request.session.get('consolidated_portfolio_ids', [])})
 
     asset_name = context.get('asset_name', '')
     context['news'] = get_asset_news(symbol, asset_name)
     context['all_portfolios'] = get_user_portfolios(request.user)
     context['active_portfolio'] = active_portfolio
+    context['consolidated_portfolio_ids'] = request.session.get('consolidated_portfolio_ids', [])
 
     return render(request, 'asset_details.html', context)
 
@@ -119,11 +124,33 @@ def upload_view(request):
 
 @login_required
 def switch_portfolio_view(request, portfolio_id):
+    if portfolio_id == 0:
+        request.session['active_portfolio_id'] = 'consolidated'
+        all_p_ids = list(Portfolio.objects.filter(user=request.user).values_list('id', flat=True))
+        request.session['consolidated_portfolio_ids'] = all_p_ids
+        request.session.modified = True
+        messages.success(request, "Przełączono na widok skonsolidowany.")
+        return redirect('dashboard')
+
     portfolio = get_object_or_404(Portfolio, id=portfolio_id, user=request.user)
     request.session['active_portfolio_id'] = portfolio.id
     request.session.modified = True
     messages.success(request, f"Switched to: {portfolio.name}")
     return redirect('dashboard')
+
+
+@login_required
+def toggle_consolidated_portfolios_view(request):
+    if request.method == 'POST':
+        selected_ids = request.POST.getlist('portfolio_ids')
+        user_p_ids = set(Portfolio.objects.filter(user=request.user).values_list('id', flat=True))
+        validated_ids = [int(pid) for pid in selected_ids if int(pid) in user_p_ids]
+        
+        request.session['consolidated_portfolio_ids'] = validated_ids
+        request.session['active_portfolio_id'] = 'consolidated'
+        request.session.modified = True
+        messages.success(request, "Zaktualizowano wybrane portfele do sumowania.")
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
 
 
 @login_required
@@ -159,6 +186,9 @@ def register_view(request):
 
 def taxes_view(request):
     active_portfolio = get_active_portfolio(request)
+    if active_portfolio.portfolio_type == 'CONSOLIDATED':
+        messages.warning(request, "Centrum Podatkowe nie jest dostępne w widoku skonsolidowanym. Wybierz konkretny portfel.")
+        return redirect('dashboard')
     context = get_taxes_context(request.user, portfolio_id=active_portfolio.id)
     context['all_portfolios'] = get_user_portfolios(request.user)
     context['active_portfolio'] = active_portfolio
@@ -176,6 +206,9 @@ def delete_transaction_view(request, transaction_id):
 @login_required
 def portfolio_settings_view(request):
     active_portfolio = get_active_portfolio(request)
+    if active_portfolio.portfolio_type == 'CONSOLIDATED':
+        messages.warning(request, "Ustawienia nie są dostępne w widoku skonsolidowanym. Wybierz konkretny portfel.")
+        return redirect('dashboard')
 
     if request.method == 'POST':
         if 'manual_add' in request.POST:

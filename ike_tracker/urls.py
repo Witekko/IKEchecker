@@ -1,3 +1,4 @@
+
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
@@ -27,6 +28,7 @@ urlpatterns = [
 
     # --- PORTFEL ---
     path('portfolio/switch/<int:portfolio_id>/', views.switch_portfolio_view, name='switch_portfolio'),
+    path('portfolio/toggle-consolidated/', views.toggle_consolidated_portfolios_view, name='toggle_consolidated_portfolios'),
     path('portfolio/create/', views.create_portfolio_view, name='create_portfolio'),
     path('portfolio/settings/', views.portfolio_settings_view, name='portfolio_settings'),
     path('settings/corporate-action/spinoff/', views.corporate_action_spinoff_view, name='corporate_action_spinoff'),

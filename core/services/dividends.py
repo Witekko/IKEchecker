@@ -2,7 +2,7 @@
 
 from .market import get_current_currency_rates
 from core.config import fmt_2
-from .selectors import get_transactions  # <--- Używamy warstwy Selectors
+from .db_selectors import get_transactions  # <--- Używamy warstwy Selectors
 
 
 def get_dividend_context(user, portfolio_id=None):

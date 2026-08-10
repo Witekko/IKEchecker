@@ -16,7 +16,10 @@ def get_dashboard_stats_context(active_portfolio, range_mode='all'):
     dla wybranego zakresu czasu. Zwraca czysty słownik do contextu.
     """
     start_date = calculate_range_dates(range_mode)
-    transactions = Transaction.objects.filter(portfolio=active_portfolio)
+    if isinstance(active_portfolio.id, (list, tuple)):
+        transactions = Transaction.objects.filter(portfolio_id__in=active_portfolio.id)
+    else:
+        transactions = Transaction.objects.filter(portfolio=active_portfolio)
 
     # Jeśli brak transakcji, zwracamy puste dane
     if not transactions.exists():
@@ -89,7 +92,10 @@ def get_holdings_view_context(user, portfolio, range_mode='all'):
 
     # 3. Szczegółowa analiza holdings z uwzględnieniem start_date
     # To nadpisze niektóre pola w assets (np. gain_pln, gain_percent) jeśli start_date jest ustawione
-    transactions = Transaction.objects.filter(portfolio=portfolio)
+    if isinstance(portfolio.id, (list, tuple)):
+        transactions = Transaction.objects.filter(portfolio_id__in=portfolio.id)
+    else:
+        transactions = Transaction.objects.filter(portfolio=portfolio)
     rates = get_current_currency_rates()
 
     dynamic_stats = analyze_holdings(transactions, rates, start_date=start_date, portfolio_currency=portfolio.currency)

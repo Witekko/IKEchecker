@@ -1,0 +1,27 @@
+{% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}
+<div class="card border-info border-opacity-25 mb-5 bg-dark bg-opacity-25 shadow-sm rounded-3">
+    <div class="card-body py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center">
+            <div class="rounded-circle bg-info bg-opacity-10 p-2 me-3 d-inline-flex align-items-center justify-content-center">
+                <i class="fas fa-layer-group text-info" style="font-size: 1.25rem;"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold text-white mb-0">Podsumowanie wielu portfeli:</h6>
+                <p class="text-muted small mb-0">Zaznacz rachunki, które chcesz połączyć i zsumować w jedno zestawienie</p>
+            </div>
+        </div>
+        <form method="post" action="{% url 'toggle_consolidated_portfolios' %}" class="d-flex align-items-center flex-wrap gap-3">
+            {% csrf_token %}
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                {% for p in all_portfolios %}
+                <div class="form-check form-switch m-0 border border-secondary border-opacity-25 rounded-pill px-3 py-1 bg-dark bg-opacity-50 d-inline-flex align-items-center">
+                    <input class="form-check-input bg-dark border-secondary ms-0 me-2" type="checkbox" name="portfolio_ids" value="{{ p.id }}" id="p-check-{{ p.id }}"
+                           {% if p.id in consolidated_portfolio_ids %}checked{% endif %} onchange="this.form.submit()" style="cursor: pointer;">
+                    <label class="form-check-label text-white small cursor-pointer" for="p-check-{{ p.id }}">{{ p.name }}</label>
+                </div>
+                {% endfor %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}

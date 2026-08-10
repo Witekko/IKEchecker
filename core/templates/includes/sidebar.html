@@ -34,6 +34,13 @@
                 </li>
                 {% endfor %}
                 <li>
+                    <a class="dropdown-item d-flex justify-content-between align-items-center {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}active{% endif %}"
+                        href="{% url 'switch_portfolio' 0 %}">
+                        <span class="text-truncate me-2">Wszystkie portfele</span>
+                        <span class="badge bg-info bg-opacity-25 text-info" style="font-size: 0.6rem;">ALL</span>
+                    </a>
+                </li>
+                <li>
                     <hr class="dropdown-divider">
                 </li>
                 <li><a class="dropdown-item text-warning" href="#" data-bs-toggle="modal"
@@ -53,13 +60,13 @@
             class="nav-link {% if request.resolver_match.url_name == 'dividends' %}active{% endif %}"><i
                 class="fas fa-coins"></i> <span class="link-text">Dividends</span></a>
         <a href="{% url 'taxes' %}"
-            class="nav-link {% if request.resolver_match.url_name == 'taxes' %}active{% endif %}"><i
+            class="nav-link {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}disabled opacity-50{% endif %} {% if request.resolver_match.url_name == 'taxes' %}active{% endif %}"><i
                 class="fas fa-file-invoice-dollar"></i> <span class="link-text">Taxes</span></a>
         <a href="{% url 'portfolio_settings' %}"
-            class="nav-link {% if request.resolver_match.url_name == 'portfolio_settings' %}active{% endif %}"><i
+            class="nav-link {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}disabled opacity-50{% endif %} {% if request.resolver_match.url_name == 'portfolio_settings' %}active{% endif %}"><i
                 class="fas fa-cog"></i> <span class="link-text">Settings</span></a>
         <a href="{% url 'upload' %}"
-            class="nav-link {% if request.resolver_match.url_name == 'upload' %}active{% endif %}"><i
+            class="nav-link {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}disabled opacity-50{% endif %} {% if request.resolver_match.url_name == 'upload' %}active{% endif %}"><i
                 class="fas fa-file-excel"></i> <span class="link-text">Import XTB</span></a>
 
         {% if user.is_staff %}
