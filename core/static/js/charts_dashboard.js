@@ -489,7 +489,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             responsive: true,
                             maintainAspectRatio: false,
                             interaction: { mode: 'index', intersect: false },
-                            animation: ChartDefaults.animation,
+                            animation: {
+                                x: {
+                                    type: 'number',
+                                    easing: 'easeOutQuart',
+                                    duration: 2500,
+                                    from: NaN
+                                },
+                                y: {
+                                    type: 'number',
+                                    easing: 'easeOutQuart',
+                                    duration: 2500,
+                                    from: NaN
+                                }
+                            },
                             scales: { x: { display: false }, y: { grid: { color: ChartDefaults.colors.grid } } },
                             plugins: {
                                 legend: {

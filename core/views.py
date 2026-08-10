@@ -75,16 +75,40 @@ def dashboard_data_api(request):
             'amount': float(t.amount)
         })
 
-    serializable = {}
-    for k, v in context.items():
-        if k == 'last_transactions':
-            serializable[k] = tx_list
-        elif k in ['active_portfolio', 'all_portfolios', 'rates', 'market_summary']:
-            continue
-        else:
-            serializable[k] = v
+    serializable = {'last_transactions': tx_list}
+    
+    allowed_keys = [
+        'tile_value_raw', 'tile_value_str',
+        'tile_total_profit_raw', 'tile_total_profit_str',
+        'tile_return_pct_raw', 'tile_return_pct_str',
+        'tile_twr', 'tile_mwr',
+        'tile_current_profit_raw', 'tile_current_profit_str',
+        'tile_realized_raw', 'tile_realized_str',
+        'tile_dividends_raw', 'tile_dividends_str',
+        'tile_day_pct_raw', 'tile_day_pct_str',
+        'tile_day_pln_raw', 'tile_day_pln_str',
+        'tile_gainers', 'tile_losers',
+        'tile_gainers_list', 'tile_losers_list',
+        'tile_ath_str',
+        'perf_total_closed',
+        'perf_win_rate', 'perf_win_count', 'perf_loss_count',
+        'perf_total_realized', 'perf_total_realized_raw',
+        'perf_best_trade', 'perf_worst_trade',
+        'chart_labels', 'chart_allocation', 'chart_colors',
+        'chart_sector_labels', 'chart_sector_values', 'chart_sector_colors',
+        'chart_type_labels', 'chart_type_values', 'chart_type_colors',
+        'chart_profit_labels', 'chart_profit_values',
+        'timeline_dates', 'timeline_total_value', 'timeline_invested', 'timeline_deposit_points',
+        'timeline_val_wig', 'timeline_val_sp500', 'timeline_val_acwi',
+        'timeline_pct_user', 'timeline_pct_wig', 'timeline_pct_sp500', 'timeline_pct_acwi', 'timeline_pct_inflation'
+    ]
 
-    return JsonResponse(serializable)
+    for k in allowed_keys:
+        if k in context:
+            serializable[k] = context[k]
+
+    from django.core.serializers.json import DjangoJSONEncoder
+    return JsonResponse(serializable, encoder=DjangoJSONEncoder)
 
 
 @login_required
