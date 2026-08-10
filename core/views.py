@@ -598,4 +598,3 @@ def demo_login_view(request):
 
     except User.DoesNotExist:
         messages.error(request, "Błąd konfiguracji Demo. Użytkownik nie istnieje.")
-        return redirect('login')
