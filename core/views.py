@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
@@ -14,7 +15,8 @@ from .models import Portfolio, Transaction, Asset, AssetSector, AssetType
 from .forms import UploadFileForm, CustomUserCreationForm, PortfolioSettingsForm
 
 # --- WARSTWA USŁUG (SERVICES & SELECTORS) ---
-from .services.db_selectors import get_active_portfolio, get_user_portfolios, get_all_assets
+from .services.db_selectors import get_active_portfolio, get_user_portfolios, get_all_assets, get_transactions
+from .services.market import get_market_summary
 from .services import (
     process_xtb_file, get_dashboard_context, get_dividend_context,
     get_asset_details_context, get_taxes_context,
@@ -33,18 +35,56 @@ def dashboard_view(request):
     active_portfolio = get_active_portfolio(request)
     range_mode = request.GET.get('range', 'all')
 
-    context = get_dashboard_context(request.user, portfolio_id=active_portfolio.id)
-    stats_context = get_dashboard_stats_context(active_portfolio, range_mode)
-    context.update(stats_context)
-
+    context = {}
     context['all_portfolios'] = get_user_portfolios(request.user)
     context['active_portfolio'] = active_portfolio if active_portfolio else {'name': 'No Portfolio'}
     context['current_range'] = range_mode
     context['consolidated_portfolio_ids'] = request.session.get('consolidated_portfolio_ids', [])
-    if 'error' in context:
-        return render(request, 'dashboard.html', {'error': context['error']})
+
+    # Fetch market summary fast for the ticker
+    market_data = get_market_summary()
+    context['market_summary'] = market_data['summary']
+
+    # Fast transaction check to decide if we show welcome screen or skeleton dashboard
+    if active_portfolio.portfolio_type == 'CONSOLIDATED':
+        context['has_transactions'] = True
+    else:
+        transactions = get_transactions(request.user, active_portfolio.id)
+        context['has_transactions'] = transactions.exists()
 
     return render(request, 'dashboard.html', context)
+
+
+@login_required
+def dashboard_data_api(request):
+    active_portfolio = get_active_portfolio(request)
+    range_mode = request.GET.get('range', 'all')
+
+    context = get_dashboard_context(request.user, portfolio_id=active_portfolio.id)
+    stats_context = get_dashboard_stats_context(active_portfolio, range_mode)
+    context.update(stats_context)
+
+    # Format last_transactions to JSON
+    tx_list = []
+    for t in context.get('last_transactions', []):
+        tx_list.append({
+            'date': t.date.isoformat(),
+            'type': t.type,
+            'asset_symbol': t.asset.symbol if t.asset else None,
+            'asset_display_name': t.asset.display_name if t.asset else '--',
+            'amount': float(t.amount)
+        })
+
+    serializable = {}
+    for k, v in context.items():
+        if k == 'last_transactions':
+            serializable[k] = tx_list
+        elif k in ['active_portfolio', 'all_portfolios', 'rates', 'market_summary']:
+            continue
+        else:
+            serializable[k] = v
+
+    return JsonResponse(serializable)
 
 
 @login_required

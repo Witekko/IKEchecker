@@ -118,3 +118,51 @@ class XtbParserTests(TestCase):
         }
         res_in = parser.parse_row(row_in)
         self.assertEqual(res_in['type'], 'DEPOSIT')
+
+
+from django.urls import reverse
+
+class DashboardApiTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="apiuser", password="apipassword")
+        self.portfolio = Portfolio.objects.create(
+            user=self.user,
+            name="API Portfolio",
+            portfolio_type=PortfolioType.STANDARD,
+            currency="PLN"
+        )
+        self.asset = Asset.objects.create(
+            symbol="API.PL",
+            name="API Asset",
+            currency="PLN"
+        )
+        # Add a buy transaction to give it some data
+        Transaction.objects.create(
+            portfolio=self.portfolio,
+            asset=self.asset,
+            date=timezone.now(),
+            type=TransactionType.BUY,
+            amount=Decimal('-100.00'),
+            quantity=Decimal('1.0000')
+        )
+
+    def test_dashboard_data_api_unauthorized(self):
+        url = reverse('dashboard_data_api')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # Redirect to login
+
+    def test_dashboard_data_api_authorized(self):
+        self.client.login(username="apiuser", password="apipassword")
+        url = reverse('dashboard_data_api')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        self.assertIn('tile_value_raw', data)
+        self.assertIn('tile_total_profit_raw', data)
+        self.assertIn('last_transactions', data)
+        
+        # Verify the transactions serialization
+        txs = data['last_transactions']
+        self.assertEqual(len(txs), 1)
+        self.assertEqual(txs[0]['asset_symbol'], "API.PL")

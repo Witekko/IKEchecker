@@ -11,6 +11,7 @@ urlpatterns = [
     # --- APLIKACJA (CORE) ---
     path('', auth_views.LoginView.as_view(template_name='login.html', redirect_authenticated_user=True), name='login'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
+    path('dashboard/api/data/', views.dashboard_data_api, name='dashboard_data_api'),
     path('assets/', views.assets_list_view, name='assets_list'),
     path('demo-login/', views.demo_login_view, name='demo_login'),
 

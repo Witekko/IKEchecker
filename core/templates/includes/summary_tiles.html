@@ -4,12 +4,11 @@
 <div class="row g-3 mb-4">
 
     <div class="col-12 col-xl-3">
-        <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark card-hoverable"
-             {% if tile_ath_str %}data-bs-toggle="tooltip" data-bs-placement="bottom" title="All-Time High: {{ tile_ath_str }} {{ active_portfolio.currency }}"{% endif %}>
+        <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark card-hoverable" id="tile-value-card">
             <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
                 <div class="text-muted text-uppercase small fw-bold mb-1">Total Value</div>
                 <h3 class="mb-0 fw-bold text-white text-truncate">
-                    <span id="cu-total-value">{{ tile_value_str }}</span> <span class="fs-6 text-muted fw-normal">{{ active_portfolio.currency }}</span>
+                    <span id="cu-total-value"><div class="skeleton d-inline-block rounded" style="width: 90px; height: 2rem;"></div></span> <span class="fs-6 text-muted fw-normal">{{ active_portfolio.currency }}</span>
                 </h3>
             </div>
         </div>
@@ -19,8 +18,8 @@
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm card-hoverable">
             <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
                 <div class="text-muted small text-uppercase fw-bold mb-1">Total Profit</div>
-                <h4 class="mb-0 fw-bold {% if tile_total_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    <span id="cu-total-profit">{% if tile_total_profit_raw > 0 %}+{% endif %}{{ tile_total_profit_str }}</span>
+                <h4 class="mb-0 fw-bold text-success" id="val-total-profit-container">
+                    <span id="cu-total-profit"><div class="skeleton d-inline-block rounded" style="width: 80px; height: 1.8rem;"></div></span>
                     <small class="fs-6 opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</small>
                 </h4>
             </div>
@@ -31,8 +30,8 @@
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm card-hoverable">
             <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
                 <div class="text-muted small text-uppercase fw-bold mb-1">Return</div>
-                <h4 class="mb-0 fw-bold {% if tile_return_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    <span id="cu-return-pct">{% if tile_return_pct_raw > 0 %}+{% endif %}{{ tile_return_pct_str }}</span>%
+                <h4 class="mb-0 fw-bold text-success" id="val-return-pct-container">
+                    <span id="cu-return-pct"><div class="skeleton d-inline-block rounded" style="width: 60px; height: 1.8rem;"></div></span>%
                 </h4>
             </div>
         </div>
@@ -47,11 +46,11 @@
                     <span class="text-muted small">|</span>
                     <span id="lbl-mwr" class="small fw-bold text-muted text-uppercase">MWR</span>
                 </div>
-                <h4 id="val-twr" class="mb-0 fw-bold {% if tile_twr|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}">
-                    <span id="cu-twr">{{ tile_twr }}</span>%
+                <h4 id="val-twr" class="mb-0 fw-bold text-success">
+                    <span id="cu-twr"><div class="skeleton d-inline-block rounded" style="width: 55px; height: 1.8rem;"></div></span>%
                 </h4>
-                <h4 id="val-mwr" class="mb-0 fw-bold {% if tile_mwr|slice:':1' != '-' %}text-success{% else %}text-danger{% endif %}" style="display: none;">
-                    <span id="cu-mwr">{{ tile_mwr }}</span>%
+                <h4 id="val-mwr" class="mb-0 fw-bold text-success" style="display: none;">
+                    <span id="cu-mwr"><div class="skeleton d-inline-block rounded" style="width: 55px; height: 1.8rem;"></div></span>%
                 </h4>
             </div>
         </div>
@@ -59,9 +58,7 @@
 
     <div class="col-6 col-md-3 col-xl-2">
         <div class="card h-100 border-secondary border-opacity-25 shadow-sm bg-dark card-hoverable"
-             style="cursor: pointer;" onclick="toggleProfitBreakdown()"
-             data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom"
-             title="<div class='text-start small'><div class='d-flex justify-content-between gap-3 mb-1'><span class='text-muted'>Unrealized:</span><span class='{% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold'>{{ tile_current_profit_str }} {{ active_portfolio.currency }}</span></div><div class='d-flex justify-content-between gap-3 mb-1'><span class='text-muted'>Realized:</span><span class='{% if tile_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold'>{{ tile_realized_str }} {{ active_portfolio.currency }}</span></div><div class='d-flex justify-content-between gap-3'><span class='text-muted'>Dividends:</span><span class='text-success fw-bold'>{{ tile_dividends_str }} {{ active_portfolio.currency }}</span></div></div>">
+             style="cursor: pointer;" onclick="toggleProfitBreakdown()" id="tile-breakdown-card">
             <div class="card-body d-flex flex-column justify-content-center py-3 text-center">
                 <div class="d-flex justify-content-center gap-2 mb-1">
                     <span id="lbl-unrealized" class="small fw-bold text-white text-uppercase" style="border-bottom: 2px solid #00ff7f; font-size: 0.65rem;">Unrealized</span>
@@ -70,14 +67,14 @@
                     <span class="text-muted small">|</span>
                     <span id="lbl-dividends" class="small fw-bold text-muted text-uppercase" style="font-size: 0.65rem;">Divs</span>
                 </div>
-                <h5 id="val-unrealized" class="mb-0 fw-bold {% if tile_current_profit_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    <span id="cu-unrealized">{{ tile_current_profit_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
+                <h5 id="val-unrealized" class="mb-0 fw-bold text-success">
+                    <span id="cu-unrealized"><div class="skeleton d-inline-block rounded" style="width: 60px; height: 1.6rem;"></div></span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
                 </h5>
-                <h5 id="val-realized" class="mb-0 fw-bold {% if tile_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %}" style="display: none;">
-                    <span id="cu-realized">{{ tile_realized_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
+                <h5 id="val-realized" class="mb-0 fw-bold text-success" style="display: none;">
+                    <span id="cu-realized"><div class="skeleton d-inline-block rounded" style="width: 60px; height: 1.6rem;"></div></span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
                 </h5>
                 <h5 id="val-dividends" class="mb-0 fw-bold text-success" style="display: none;">
-                    <span id="cu-dividends">{{ tile_dividends_str }}</span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
+                    <span id="cu-dividends"><div class="skeleton d-inline-block rounded" style="width: 60px; height: 1.6rem;"></div></span> <span class="small opacity-50 d-none d-lg-inline text-muted">{{ active_portfolio.currency }}</span>
                 </h5>
             </div>
         </div>
@@ -90,9 +87,8 @@
         <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center card-hoverable">
             <div class="card-body py-2">
                 <div class="text-muted small text-uppercase mb-1">1D Change</div>
-                <div class="fw-bold fs-5 {% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {% if tile_day_pct_raw > 0 %}<i class="fas fa-caret-up text-accent me-1"></i>{% else %}<i class="fas fa-caret-down text-danger me-1"></i>{% endif %}
-                    {{ tile_day_pct_str }}%
+                <div class="fw-bold fs-5 text-success" id="val-day-pct-container">
+                    <span id="cu-day-pct"><div class="skeleton d-inline-block rounded" style="width: 50px; height: 1.4rem;"></div></span>%
                 </div>
             </div>
         </div>
@@ -101,33 +97,29 @@
         <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center card-hoverable">
             <div class="card-body py-2">
                 <div class="text-muted small text-uppercase mb-1">1D Gain</div>
-                <div class="fw-bold fs-5 {% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {{ tile_day_pln_str }} <span class="small text-muted">{{ active_portfolio.currency }}</span>
+                <div class="fw-bold fs-5 text-success" id="val-day-pln-container">
+                    <span id="cu-day-pln"><div class="skeleton d-inline-block rounded" style="width: 60px; height: 1.4rem;"></div></span> <span class="small text-muted">{{ active_portfolio.currency }}</span>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center card-hoverable"
-             {% if tile_gainers_list %}
-             data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom" 
-             title="<div class='text-start small fw-bold mb-1 border-bottom border-light border-opacity-25 pb-1'>Top Gainers</div><ul class='text-start small mb-0 ps-3'>{% for g in tile_gainers_list %}<li>{{ g.symbol }}: <span class='text-success'>+{{ g.pct|floatformat:2 }}%</span></li>{% endfor %}</ul>"
-             {% endif %}>
+        <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center card-hoverable" id="tile-gainers-card">
             <div class="card-body py-2">
                 <div class="text-muted small text-uppercase mb-1"><i class="fas fa-arrow-up text-accent me-1"></i>Gainers</div>
-                <div class="fw-bold fs-5 text-white">{{ tile_gainers }}</div>
+                <div class="fw-bold fs-5 text-white" id="val-gainers-container">
+                    <span id="cu-gainers"><div class="skeleton d-inline-block rounded" style="width: 25px; height: 1.4rem;"></div></span>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center card-hoverable"
-             {% if tile_losers_list %}
-             data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom" 
-             title="<div class='text-start small fw-bold mb-1 border-bottom border-light border-opacity-25 pb-1'>Top Losers</div><ul class='text-start small mb-0 ps-3'>{% for l in tile_losers_list %}<li>{{ l.symbol }}: <span class='text-danger'>{{ l.pct|floatformat:2 }}%</span></li>{% endfor %}</ul>"
-             {% endif %}>
+        <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center card-hoverable" id="tile-losers-card">
             <div class="card-body py-2">
                 <div class="text-muted small text-uppercase mb-1"><i class="fas fa-arrow-down text-danger me-1"></i>Losers</div>
-                <div class="fw-bold fs-5 text-white">{{ tile_losers }}</div>
+                <div class="fw-bold fs-5 text-white" id="val-losers-container">
+                    <span id="cu-losers"><div class="skeleton d-inline-block rounded" style="width: 25px; height: 1.4rem;"></div></span>
+                </div>
             </div>
         </div>
     </div>
@@ -174,47 +166,4 @@
         });
     }
 </script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicjalizacja CountUp.js 
-    // Formatowanie zgodne z Polskim / Europejskim: spacja jako tysiące, kropka lub przecinek jako dziesiętne
-    if (typeof countUp !== 'undefined') {
-        const options = {
-            decimalPlaces: 2,
-            duration: 2,
-            useGrouping: true,
-            separator: ' ',
-            decimal: '.'
-        };
-        
-        let valValue = parseFloat("{{ tile_value_raw|default:0|stringformat:'f' }}");
-        let valProfit = parseFloat("{{ tile_total_profit_raw|default:0|stringformat:'f' }}");
-        let valReturn = parseFloat("{{ tile_return_pct_raw|default:0|stringformat:'f' }}");
-        let valTwr = parseFloat("{{ tile_twr|default:0|stringformat:'f' }}");
-        let valMwr = parseFloat("{{ tile_mwr|default:0|stringformat:'f' }}");
-        let valUnrealized = parseFloat("{{ tile_current_profit_raw|default:0|stringformat:'f' }}");
-
-        const initCU = (id, val, prefix = '') => {
-            const el = document.getElementById(id);
-            if (el && !isNaN(val)) {
-                let cuOptions = { ...options, prefix: prefix };
-                let cu = new countUp.CountUp(id, val, cuOptions);
-                if (!cu.error) cu.start();
-            }
-        };
-
-        initCU('cu-total-value', valValue);
-        initCU('cu-total-profit', valProfit, valProfit > 0 ? '+' : '');
-        initCU('cu-return-pct', valReturn, valReturn > 0 ? '+' : '');
-        initCU('cu-twr', valTwr);
-        initCU('cu-mwr', valMwr);
-        initCU('cu-unrealized', valUnrealized);
-
-        let valRealized = parseFloat("{{ tile_realized_raw|default:0|stringformat:'f' }}");
-        let valDividends = parseFloat("{{ tile_dividends_raw|default:0|stringformat:'f' }}");
-        initCU('cu-realized', valRealized, valRealized > 0 ? '+' : '');
-        initCU('cu-dividends', valDividends, valDividends > 0 ? '+' : '');
-    }
-});
-</script>
+

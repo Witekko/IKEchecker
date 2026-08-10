@@ -5,7 +5,7 @@
 {% block content %}
 
 {# --- WELCOME SCREEN (If no transactions) --- #}
-{% if not last_transactions and active_portfolio.portfolio_type != 'CONSOLIDATED' %}
+{% if not has_transactions %}
 <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
     <div class="text-center">
         <div class="mb-4">
@@ -90,8 +90,13 @@
                 onclick="switchMainChart('percent')">%</button>
         </div>
     </div>
-    <div class="card-body pt-2 px-3">
-        <div class="chart-container-wide"><canvas id="timelineChart"></canvas></div>
+    <div class="card-body pt-2 px-3 position-relative">
+        <div class="skeleton-loader chart-container-wide">
+            <div class="skeleton rounded w-100 h-100"></div>
+        </div>
+        <div class="chart-wrapper d-none chart-container-wide">
+            <canvas id="timelineChart"></canvas>
+        </div>
     </div>
 </div>
 
@@ -107,8 +112,13 @@
                     <button type="button" class="btn btn-outline-secondary" data-mode="type">Type</button>
                 </div>
             </div>
-            <div class="card-body">
-                <div class="chart-container"><canvas id="allocationChart"></canvas></div>
+            <div class="card-body position-relative">
+                <div class="skeleton-loader chart-container">
+                    <div class="skeleton rounded w-100 h-100"></div>
+                </div>
+                <div class="chart-wrapper d-none chart-container">
+                    <canvas id="allocationChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -116,8 +126,13 @@
         <div class="card h-100 border-secondary border-opacity-25">
             <div class="card-header border-0 pt-4 px-4 bg-transparent"><span
                     class="text-muted text-uppercase fw-bold ls-1 small">Profit by Asset</span></div>
-            <div class="card-body">
-                <div class="chart-container"><canvas id="profitChart"></canvas></div>
+            <div class="card-body position-relative">
+                <div class="skeleton-loader chart-container">
+                    <div class="skeleton rounded w-100 h-100"></div>
+                </div>
+                <div class="chart-wrapper d-none chart-container">
+                    <canvas id="profitChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -130,63 +145,60 @@
                 <h5 class="fw-bold text-white mb-0"><i class="fas fa-trophy text-warning me-2"></i>Performance</h5>
                 <p class="text-muted small mb-0">Closed positions stats</p>
             </div>
-            <div class="card-body p-4 d-flex flex-column">
-                {% if perf_total_closed > 0 %}
-                <div class="d-flex align-items-center justify-content-center mb-4 position-relative"
-                    style="height: 180px;">
-                    <canvas id="winRateChart"></canvas>
-                    <div class="position-absolute text-center"
-                        style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                        <div class="h3 fw-bold text-white mb-0">{{ perf_win_rate }}%</div>
-                        <div class="small text-muted text-uppercase" style="font-size: 0.6rem;">Win Rate</div>
-                    </div>
+            <div class="card-body p-4 d-flex flex-column position-relative animate-fade-in" id="perf-card-body">
+                <!-- Skeleton Loader -->
+                <div class="skeleton-loader d-flex flex-column gap-3 w-100 h-100" style="min-height: 250px;">
+                    <div class="skeleton rounded-circle mx-auto" style="width: 140px; height: 140px;"></div>
+                    <div class="skeleton rounded w-75 mx-auto" style="height: 1.5rem;"></div>
+                    <div class="skeleton rounded w-50 mx-auto" style="height: 1.2rem;"></div>
                 </div>
-                <div class="row g-3 mb-4">
-                    <div class="col-6">
-                        <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 text-center">
-                            <div class="small text-muted text-uppercase mb-1">Realized</div>
-                            <div
-                                class="fw-bold {% if perf_total_realized_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                {{ perf_total_realized }}</div>
+                
+                <!-- Content: Has closed positions (Initially hidden) -->
+                <div id="perf-content" class="d-none w-100 h-100 flex-column">
+                    <div class="d-flex align-items-center justify-content-center mb-4 position-relative" style="height: 180px;">
+                        <canvas id="winRateChart"></canvas>
+                        <div class="position-absolute text-center" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                            <div class="h3 fw-bold text-white mb-0"><span id="perf-win-rate">0</span>%</div>
+                            <div class="small text-muted text-uppercase" style="font-size: 0.6rem;">Win Rate</div>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 text-center">
-                            <div class="small text-muted text-uppercase mb-1">Count</div>
-                            <div class="fw-bold text-white"><span class="text-success">{{ perf_win_count }}W</span> -
-                                <span class="text-danger">{{ perf_loss_count }}L</span>
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 text-center">
+                                <div class="small text-muted text-uppercase mb-1">Realized</div>
+                                <div id="perf-total-realized" class="fw-bold">0.00 PLN</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 text-center">
+                                <div class="small text-muted text-uppercase mb-1">Count</div>
+                                <div class="fw-bold text-white"><span class="text-success" id="perf-wins">0W</span> - <span class="text-danger" id="perf-losses">0L</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-top border-secondary border-opacity-25 pt-3" id="perf-trades-list">
+                        <div class="d-flex justify-content-between align-items-center mb-2" id="perf-best-row">
+                            <span class="small text-muted text-uppercase fw-bold"><i class="fas fa-arrow-up text-success me-2"></i>Best Trade</span>
+                            <div class="text-end">
+                                <div class="fw-bold text-white" id="perf-best-symbol">--</div>
+                                <div class="small text-success" id="perf-best-gain">+0.00 PLN (0%)</div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center" id="perf-worst-row">
+                            <span class="small text-muted text-uppercase fw-bold"><i class="fas fa-arrow-down text-danger me-2"></i>Worst Trade</span>
+                            <div class="text-end">
+                                <div class="fw-bold text-white" id="perf-worst-symbol">--</div>
+                                <div class="small text-danger" id="perf-worst-gain">-0.00 PLN (0%)</div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="border-top border-secondary border-opacity-25 pt-3">
-                    {% if perf_best_trade %}
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="small text-muted text-uppercase fw-bold"><i
-                                class="fas fa-arrow-up text-success me-2"></i>Best Trade</span>
-                        <div class="text-end">
-                            <div class="fw-bold text-white">{{ perf_best_trade.symbol }}</div>
-                            <div class="small text-success">+{{ perf_best_trade.gain_fmt }} {{ active_portfolio.currency }} ({{ perf_best_trade.pct_fmt }}%)</div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% if perf_worst_trade %}
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="small text-muted text-uppercase fw-bold"><i
-                                class="fas fa-arrow-down text-danger me-2"></i>Worst Trade</span>
-                        <div class="text-end">
-                            <div class="fw-bold text-white">{{ perf_worst_trade.symbol }}</div>
-                            <div class="small text-danger">{{ perf_worst_trade.gain_fmt }} {{ active_portfolio.currency }} ({{ perf_worst_trade.pct_fmt }}%)</div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                {% else %}
-                <div class="text-center py-5 my-auto">
+                
+                <!-- Content: Empty state (Initially hidden) -->
+                <div id="perf-empty" class="d-none text-center py-5 my-auto">
                     <i class="fas fa-ghost fa-3x text-muted opacity-25 mb-3"></i>
                     <p class="text-muted">No closed positions yet.</p>
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -224,40 +236,25 @@
                                 <th class="text-end pe-4">Amount ({{ active_portfolio.currency }})</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for t in last_transactions %}
-                            <tr data-type="{{ t.type }}">
-                                <td class="ps-4 text-white-50">{{ t.date|date:"Y-m-d H:i:s" }}</td>
-                                <td>
-                                    {% if t.type == 'DEPOSIT' %}<span
-                                        class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">DEP</span>
-                                    {% elif t.type == 'WITHDRAWAL' %}<span class="badge bg-secondary">WITH</span>
-                                    {% elif t.type == 'BUY' %}<span
-                                        class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">BUY</span>
-                                    {% elif t.type == 'SELL' %}<span
-                                        class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-25">SELL</span>
-                                    {% elif t.type == 'CLOSE' %}<span
-                                        class="badge bg-success bg-opacity-25 text-success">CLOSE</span>
-                                    {% elif t.type == 'DIVIDEND' %}<span
-                                        class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25">DIV</span>
-                                    {% elif t.type == 'TAX' %}<span
-                                        class="badge bg-danger bg-opacity-25 text-danger">TAX</span>
-                                    {% else %}<span class="badge bg-secondary">{{ t.type }}</span>{% endif %}
-                                </td>
-                                <td class="text-white small">
-                                    {% if t.asset %}{{ t.asset.display_name }}{% else %}<span
-                                        class="text-muted">--</span>{% endif %}
-                                </td>
-                                <td
-                                    class="text-end pe-4 fw-bold {% if t.amount > 0 %}text-success{% else %}text-danger{% endif %}">
-                                    {{ t.amount|intcomma }}
-                                </td>
+                        <tbody id="tx-tbody">
+                            <tr class="tx-skeleton-row">
+                                <td class="ps-4"><div class="skeleton rounded" style="width: 130px; height: 1.2rem;"></div></td>
+                                <td><div class="skeleton rounded" style="width: 55px; height: 1.2rem;"></div></td>
+                                <td><div class="skeleton rounded" style="width: 100px; height: 1.2rem;"></div></td>
+                                <td class="pe-4"><div class="skeleton rounded ms-auto" style="width: 80px; height: 1.2rem;"></div></td>
                             </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-5">No transactions.</td>
+                            <tr class="tx-skeleton-row">
+                                <td class="ps-4"><div class="skeleton rounded" style="width: 130px; height: 1.2rem;"></div></td>
+                                <td><div class="skeleton rounded" style="width: 55px; height: 1.2rem;"></div></td>
+                                <td><div class="skeleton rounded" style="width: 100px; height: 1.2rem;"></div></td>
+                                <td class="pe-4"><div class="skeleton rounded ms-auto" style="width: 80px; height: 1.2rem;"></div></td>
                             </tr>
-                            {% endfor %}
+                            <tr class="tx-skeleton-row">
+                                <td class="ps-4"><div class="skeleton rounded" style="width: 130px; height: 1.2rem;"></div></td>
+                                <td><div class="skeleton rounded" style="width: 55px; height: 1.2rem;"></div></td>
+                                <td><div class="skeleton rounded" style="width: 100px; height: 1.2rem;"></div></td>
+                                <td class="pe-4"><div class="skeleton rounded ms-auto" style="width: 80px; height: 1.2rem;"></div></td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -266,41 +263,14 @@
     </div>
 </div>
 
-{% endif %}
-
-{# --- SCRIPTS DATA & CONFIG --- #}
-{# 1. Wykres Główny (Assets) #}
-{{ chart_labels|json_script:"l-alloc" }}
-{{ chart_allocation|json_script:"d-alloc" }}
-{{ chart_colors|json_script:"d-colors" }}
-
-{# 2. Sektory (Z KOLORAMI!) #}
-{{ chart_sector_labels|json_script:"l-sec" }}
-{{ chart_sector_values|json_script:"d-sec" }}
-{{ chart_sector_colors|json_script:"d-sec-col" }} {# 3. Typy (Z KOLORAMI!) #}
-{{ chart_type_labels|json_script:"l-typ" }}
-{{ chart_type_values|json_script:"d-typ" }}
-{{ chart_type_colors|json_script:"d-typ-col" }} {# 4. Reszta danych #}
-{{ chart_profit_labels|json_script:"l-prof" }}
-{{ chart_profit_values|json_script:"d-prof" }}
-{{ closed_labels|json_script:"l-closed" }}
-{{ closed_values|json_script:"d-closed" }}
-{{ timeline_dates|json_script:"t-dates" }}
-{{ timeline_total_value|json_script:"t-user" }}
-{{ timeline_invested|json_script:"t-inv" }}
-{{ timeline_deposit_points|json_script:"t-points" }}
-{{ timeline_val_wig|json_script:"t-wig" }}
-{{ timeline_val_sp500|json_script:"t-sp500" }}
-{{ timeline_val_acwi|json_script:"t-acwi" }}
-{{ timeline_pct_user|json_script:"p-user" }}
-{{ timeline_pct_wig|json_script:"p-wig" }}
-{{ timeline_pct_sp500|json_script:"p-sp500" }}
-{{ timeline_pct_acwi|json_script:"p-acwi" }}
-{{ timeline_pct_inflation|json_script:"p-inf" }}
-{{ perf_win_count|json_script:"p-wins" }}
-{{ perf_loss_count|json_script:"p-losses" }}
-
-<style>
+{% endif %}<style>
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-in-out forwards;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
     .ls-1 {
         letter-spacing: 1px;
     }
