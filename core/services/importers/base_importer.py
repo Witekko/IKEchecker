@@ -60,41 +60,80 @@ class BaseImporter(ABC):
             return
 
         # Resolve Asset
-        asset_obj = self._resolve_asset(data.get('symbol'), name_hint=data.get('name_hint'))
+        asset_obj = self._resolve_asset(data.get('symbol'), name_hint=data.get('name_hint'), category_hint=data.get('category'))
 
-        # UPSERT
-        obj, created = Transaction.objects.update_or_create(
+        # Check for similar transaction to avoid duplicates with different xtb_id (e.g. CSV vs Excel differences of 1)
+        # or rounding in timestamp (within 2 seconds).
+        from datetime import timedelta
+        
+        min_date = data['date'] - timedelta(seconds=2)
+        max_date = data['date'] + timedelta(seconds=2)
+        
+        existing_txs = Transaction.objects.filter(
             portfolio=self.portfolio,
-            xtb_id=data['xtb_id'],
-            defaults={
-                'asset': asset_obj,
-                'date': data['date'],
-                'type': data['type'],
-                'amount': data['amount'],
-                'quantity': data['quantity'],
-                'price': data['price'],
-                'comment': data['comment']
-            }
+            type=data['type'],
+            amount=data['amount'],
+            quantity=data['quantity'],
+            asset=asset_obj,
+            date__range=(min_date, max_date)
         )
+        
+        existing_tx = None
+        for tx in existing_txs:
+            if tx.xtb_id == data['xtb_id']:
+                existing_tx = tx
+                break
+            try:
+                # XTB CSV/HTML order IDs often differ from Excel IDs by exactly 1
+                if abs(int(tx.xtb_id) - int(data['xtb_id'])) <= 1:
+                    existing_tx = tx
+                    break
+            except ValueError:
+                pass
+
+        if existing_tx:
+            # If the duplicate exists, update its details (including xtb_id to the newer one if it differs)
+            existing_tx.xtb_id = data['xtb_id']
+            existing_tx.position_id = data.get('position_id')
+            existing_tx.price = data['price']
+            existing_tx.comment = data['comment']
+            existing_tx.date = data['date']
+            existing_tx.save()
+            created = False
+        else:
+            obj, created = Transaction.objects.update_or_create(
+                portfolio=self.portfolio,
+                xtb_id=data['xtb_id'],
+                defaults={
+                    'asset': asset_obj,
+                    'position_id': data.get('position_id'),
+                    'date': data['date'],
+                    'type': data['type'],
+                    'amount': data['amount'],
+                    'quantity': data['quantity'],
+                    'price': data['price'],
+                    'comment': data['comment']
+                }
+            )
 
         if created:
             self.stats['added'] += 1
         else:
             self.stats['updated'] += 1
 
-    def _resolve_asset(self, sym, name_hint=None):
+    def _resolve_asset(self, sym, name_hint=None, category_hint=None):
         if not sym or sym.lower() == 'nan': return None
 
         if sym in self.asset_cache:
             return self.asset_cache[sym]
 
-        asset_obj, created = self._get_or_create_asset_smart(sym, name_hint=name_hint)
+        asset_obj, created = self._get_or_create_asset_smart(sym, name_hint=name_hint, category_hint=category_hint)
         self.asset_cache[sym] = asset_obj
         if created:
             self.stats['new_assets'] += 1
         return asset_obj
 
-    def _get_or_create_asset_smart(self, xtb_symbol, name_hint=None):
+    def _get_or_create_asset_smart(self, xtb_symbol, name_hint=None, category_hint=None):
         # 1. Search by exact symbol
         existing = Asset.objects.filter(symbol=xtb_symbol).first()
         if existing: return existing, False
@@ -108,6 +147,8 @@ class BaseImporter(ABC):
         currency = 'PLN'
         name = name_hint if name_hint else xtb_symbol
         asset_type = 'STOCK'
+        if category_hint in ['STOCK', 'ETF']:
+            asset_type = category_hint
         sector = 'OTHER'
 
         # Guess suffix

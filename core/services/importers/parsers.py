@@ -64,9 +64,22 @@ class XtbParser(BaseParser):
     def parse_row(self, row):
         raw_type = str(row.get('Type', '')).strip()
         comment = str(row.get('Comment', ''))
+        amount = self._parse_amount(row.get('Amount'))
         
         trans_type = self._map_type(raw_type)
-        
+        if trans_type == 'OTHER' and 'transfer' in raw_type.lower():
+            trans_type = 'DEPOSIT' if amount > 0 else 'WITHDRAWAL'
+
+        # Extract Position ID
+        position_id = None
+        if 'Position ID' in row and pd.notna(row['Position ID']):
+            position_id = str(int(row['Position ID'])) if isinstance(row['Position ID'], (int, float)) else str(row['Position ID']).strip()
+
+        # Extract Category
+        category = None
+        if 'Category' in row and pd.notna(row['Category']):
+            category = str(row['Category']).strip().upper()
+
         # Resolve symbol prioritizing Ticker -> Symbol -> Instrument
         symbol = None
         name_hint = None
@@ -84,9 +97,11 @@ class XtbParser(BaseParser):
 
         return {
             'xtb_id': str(int(row['ID'])) if isinstance(row['ID'], (int, float)) else str(row['ID']),
+            'position_id': position_id,
+            'category': category,
             'date': self._parse_date(row.get('Time')),
             'type': trans_type,
-            'amount': self._parse_amount(row.get('Amount')),
+            'amount': amount,
             'quantity': self._parse_quantity(trans_type, comment),
             'price': self._parse_price(comment),
             'comment': comment,
