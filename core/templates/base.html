@@ -36,11 +36,47 @@
     {% include 'includes/sidebar.html' %}
 
     <div class="main-content">
-        <div class="d-flex d-md-none justify-content-between align-items-center p-3 mb-3 bg-dark border-bottom border-secondary border-opacity-25 sticky-top shadow-sm">
-            <a href="/" class="text-white text-decoration-none fw-bold">IKE Tracker</a>
+        <div class="d-flex d-md-none justify-content-between align-items-center p-2 px-3 mb-3 bg-dark border-bottom border-secondary border-opacity-25 sticky-top shadow-sm" style="z-index: 1020;">
+            <a href="/" class="text-white text-decoration-none fw-bold flex-shrink-0">IKE Tracker</a>
             {% if user.is_authenticated %}
-                <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                    {{ user.username|slice:":1"|upper }}
+                <div class="d-flex align-items-center gap-2 overflow-hidden" style="max-width: 70%;">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle text-white border-secondary border-opacity-25 py-1 px-2 d-flex align-items-center bg-dark bg-opacity-50"
+                            type="button" data-bs-toggle="dropdown" style="font-size: 0.8rem; max-width: 140px;">
+                            <i class="fas fa-wallet text-warning me-2" style="font-size: 0.9rem;"></i>
+                            <span class="text-truncate" style="font-weight: 600;">{{ active_portfolio.name }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" style="min-width: 200px;">
+                            <li class="px-3 py-2 text-muted small text-uppercase fw-bold" style="font-size: 0.65rem;">Switch Portfolio</li>
+                            {% for p in all_portfolios %}
+                            <li>
+                                <a class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}"
+                                    href="{% url 'switch_portfolio' p.id %}" style="font-size: 0.85rem;">
+                                    <span class="text-truncate me-2">{{ p.name }}</span>
+                                    <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.55rem;">{{ p.portfolio_type }}</span>
+                                </a>
+                            </li>
+                            {% endfor %}
+                            <li>
+                                <a class="dropdown-item d-flex justify-content-between align-items-center {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}active{% endif %}"
+                                    href="{% url 'switch_portfolio' 0 %}" style="font-size: 0.85rem;">
+                                    <span class="text-truncate me-2">Wszystkie portfele</span>
+                                    <span class="badge bg-info bg-opacity-25 text-info" style="font-size: 0.55rem;">ALL</span>
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#createPortfolioModal" style="font-size: 0.85rem;">
+                                    <i class="fas fa-plus-circle me-2"></i> Create New
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px; font-size: 0.9rem; font-weight: 600; color: #fff;">
+                        {{ user.username|slice:":1"|upper }}
+                    </div>
                 </div>
             {% endif %}
         </div>

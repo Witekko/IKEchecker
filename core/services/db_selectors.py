@@ -29,8 +29,8 @@ def get_active_portfolio(request):
 
     active_id = request.session.get('active_portfolio_id')
     if active_id == 'consolidated':
-        selected_ids = request.session.get('consolidated_portfolio_ids', [])
-        if not selected_ids:
+        selected_ids = request.session.get('consolidated_portfolio_ids')
+        if selected_ids is None:
             selected_ids = list(user_portfolios.values_list('id', flat=True))
             request.session['consolidated_portfolio_ids'] = selected_ids
             request.session.modified = True
