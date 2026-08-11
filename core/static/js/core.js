@@ -8,14 +8,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const href = this.getAttribute('href');
             const target = this.getAttribute('target');
             if (href && href !== '#' && !href.startsWith('#') && !href.includes('javascript') && target !== '_blank' && !href.includes('logout')) {
-                loader.style.display = 'flex';
+                if (loader) {
+                    loader.style.display = 'flex';
+                }
             }
         });
     });
 
     // Pokaż loader przy wysyłaniu formularzy
     document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', () => loader.style.display = 'flex');
+        form.addEventListener('submit', () => {
+            if (loader) {
+                loader.style.display = 'flex';
+            }
+        });
     });
 
     // 2. SIDEBAR DROPDOWN FIX (Zamykanie przy zwijaniu)
