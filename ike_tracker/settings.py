@@ -24,7 +24,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-for-dev-
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Hosty: Rozdzielamy przecinkami z .env, domyślnie tylko localhost dla bezpieczeństwa
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,ike-tracker.wkinfo.xyz').split(',')
 
 
 # Application definition
@@ -198,8 +198,8 @@ DEFAULT_CURRENCY_RATES = {
     'AUD': 2.60
 }
 
-# Fix dla Rendera (CSRF) - pozwala na przesyłanie formularzy z domeny onrender.com
-CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
+# Fix dla CSRF - pozwala na przesyłanie formularzy z domeny onrender.com oraz wkinfo.xyz
+CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com', 'https://*.wkinfo.xyz']
 
 # --- SECURITY HEADERS & COOKIES (PRODUCTION) ---
 if not DEBUG:
