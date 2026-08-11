@@ -20,4 +20,5 @@ openpyxl
 beautifulsoup4
 lxml
 argon2-cffi
-django-allauth
+django-allauth
+PyJWT
