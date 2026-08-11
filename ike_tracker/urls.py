@@ -3,6 +3,7 @@ import os
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
+from allauth.account.views import LoginView as AllauthLoginView
 from core import views
 
 # Zmieniony URL admina dla bezpieczeństwa - z możliwością nadpisania zmienną środowiskową w produkcji
@@ -16,7 +17,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
 
     # --- APLIKACJA (CORE) ---
-    path('', auth_views.LoginView.as_view(template_name='login.html', redirect_authenticated_user=True), name='login'),
+    path('', AllauthLoginView.as_view(template_name='login.html'), name='login'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('dashboard/api/data/', views.dashboard_data_api, name='dashboard_data_api'),
     path('dashboard/api/force-refresh/', views.dashboard_force_refresh_api, name='dashboard_force_refresh_api'),
