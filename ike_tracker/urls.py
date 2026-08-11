@@ -1,12 +1,19 @@
 
+import os
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from core import views
+
+# Zmieniony URL admina dla bezpieczeństwa - z możliwością nadpisania zmienną środowiskową w produkcji
+ADMIN_URL = os.environ.get('DJANGO_ADMIN_URL', 'management-portal-secure/')
+
 urlpatterns = [
     # --- PANEL ADMINA ---
-    # Zmieniony URL admina dla bezpieczeństwa
-    path('management-portal-secure/', admin.site.urls),
+    path(ADMIN_URL, admin.site.urls),
+
+    # --- AUTORYZACJA SSO OAUTH ---
+    path('accounts/', include('allauth.urls')),
 
     # --- APLIKACJA (CORE) ---
     path('', auth_views.LoginView.as_view(template_name='login.html', redirect_authenticated_user=True), name='login'),

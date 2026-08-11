@@ -1,4 +1,4 @@
-﻿# --- FRAMEWORK I SERWER ---
+# --- FRAMEWORK I SERWER ---
 Django
 gunicorn
 dj-database-url
@@ -19,4 +19,5 @@ requests
 openpyxl
 beautifulsoup4
 lxml
-argon2-cffi
+argon2-cffi
+django-allauth

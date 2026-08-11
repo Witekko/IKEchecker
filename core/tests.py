@@ -188,3 +188,14 @@ class DashboardApiTests(TestCase):
         data = response.json()
         self.assertTrue(data['success'])
         self.assertIn('updated_assets_count', data)
+
+
+from django.conf import settings
+
+class SecuritySettingsTests(TestCase):
+    def test_security_settings_active(self):
+        self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
+        self.assertEqual(settings.SESSION_COOKIE_SAMESITE, 'Lax')
+        self.assertEqual(settings.CSRF_COOKIE_SAMESITE, 'Lax')
+        self.assertEqual(settings.X_FRAME_OPTIONS, 'DENY')
+        self.assertEqual(settings.SECURE_REFERRER_POLICY, 'same-origin')
