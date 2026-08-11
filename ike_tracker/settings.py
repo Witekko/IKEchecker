@@ -24,7 +24,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-for-dev-
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Hosty: Rozdzielamy przecinkami z .env, domyślnie tylko localhost dla bezpieczeństwa
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,ike-tracker.wkinfo.xyz').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+if 'ike-tracker.wkinfo.xyz' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('ike-tracker.wkinfo.xyz')
 
 
 # Application definition
