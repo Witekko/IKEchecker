@@ -166,3 +166,25 @@ class DashboardApiTests(TestCase):
         txs = data['last_transactions']
         self.assertEqual(len(txs), 1)
         self.assertEqual(txs[0]['asset_symbol'], "API.PL")
+
+    def test_force_refresh_api_unauthorized(self):
+        url = reverse('dashboard_force_refresh_api')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302) # Redirect to login
+
+    def test_force_refresh_api_non_staff(self):
+        self.client.login(username="apiuser", password="apipassword")
+        url = reverse('dashboard_force_refresh_api')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403) # Unauthorized for non-staff
+
+    def test_force_refresh_api_staff(self):
+        # Create a staff user
+        staff_user = User.objects.create_user(username="staffuser", password="staffpassword", is_staff=True)
+        self.client.login(username="staffuser", password="staffpassword")
+        url = reverse('dashboard_force_refresh_api')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertIn('updated_assets_count', data)

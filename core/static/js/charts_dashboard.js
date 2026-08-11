@@ -170,6 +170,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 initCU('cu-losers', valLosers, '', 0);
             }
 
+            // Initialize Last Market Date in local timezone
+            const marketDateEl = document.getElementById('last-market-date-val');
+            if (marketDateEl) {
+                if (data.last_market_date) {
+                    const dateObj = new Date(data.last_market_date);
+                    if (!isNaN(dateObj)) {
+                        const formattedDate = dateObj.toLocaleDateString('pl-PL') + ' ' + dateObj.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                        marketDateEl.textContent = formattedDate;
+                        
+                        const spinner = document.getElementById('market-date-spinner');
+                        if (spinner) {
+                            const year = dateObj.getFullYear();
+                            if (year >= 2025) {
+                                spinner.className = 'spinner-grow text-success me-2';
+                            } else {
+                                spinner.className = 'spinner-grow text-warning me-2';
+                            }
+                        }
+                    } else {
+                        marketDateEl.textContent = 'N/A';
+                    }
+                } else {
+                    marketDateEl.textContent = 'N/A';
+                }
+            }
+
             // 2. Initialize Tooltips
             const valueCard = document.getElementById('tile-value-card');
             if (valueCard && data.tile_ath_str) {
@@ -583,4 +609,61 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     window.filterTx = filterTx;
+
+    // Admin force refresh cache & prices function
+    window.forceRefreshCache = function() {
+        const btn = document.getElementById('admin-force-refresh-btn');
+        const spinner = document.getElementById('market-date-spinner');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> Updating...`;
+        }
+        if (spinner) {
+            spinner.className = 'spinner-grow text-info me-2';
+        }
+
+        fetch('/dashboard/api/force-refresh/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Failed to refresh: ' + (data.error || 'Unknown error'));
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fas fa-sync-alt me-1"></i> Force Update`;
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error in forceRefreshCache:', err);
+            alert('Error updating prices. Please try again.');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-sync-alt me-1"></i> Force Update`;
+            }
+        });
+    };
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 });

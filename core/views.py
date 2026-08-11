@@ -100,7 +100,8 @@ def dashboard_data_api(request):
         'chart_profit_labels', 'chart_profit_values',
         'timeline_dates', 'timeline_total_value', 'timeline_invested', 'timeline_deposit_points',
         'timeline_val_wig', 'timeline_val_sp500', 'timeline_val_acwi',
-        'timeline_pct_user', 'timeline_pct_wig', 'timeline_pct_sp500', 'timeline_pct_acwi', 'timeline_pct_inflation'
+        'timeline_pct_user', 'timeline_pct_wig', 'timeline_pct_sp500', 'timeline_pct_acwi', 'timeline_pct_inflation',
+        'last_market_date'
     ]
 
     for k in allowed_keys:
@@ -109,6 +110,25 @@ def dashboard_data_api(request):
 
     from django.core.serializers.json import DjangoJSONEncoder
     return JsonResponse(serializable, encoder=DjangoJSONEncoder)
+
+
+@login_required
+def dashboard_force_refresh_api(request):
+    """API dla admina do wymuszenia odświeżenia cen i czyszczenia cache."""
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+
+    from django.core.cache import cache
+    from core.services.market import update_prices_bulk
+
+    # 1. Czyszczenie całego cache Django
+    cache.clear()
+
+    # 2. Pobranie wszystkich aktywnych aktywów z bazy i wymuszenie ich pobrania z yfinance
+    assets = Asset.objects.exclude(yahoo_ticker__isnull=True).exclude(yahoo_ticker='')
+    updated_count = update_prices_bulk(assets, force=True)
+
+    return JsonResponse({'success': True, 'updated_assets_count': updated_count})
 
 
 @login_required

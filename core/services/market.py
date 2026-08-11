@@ -121,7 +121,7 @@ def get_current_currency_rates():
     return data['rates']
 
 
-def update_prices_bulk(assets_list):
+def update_prices_bulk(assets_list, force=False):
     """
     Sprawdza, które aktywa są 'przestarzałe' (>15 min) i pobiera ich ceny W JEDNYM zapytaniu.
     Optymalizacja N+1 zapytań HTTP.
@@ -133,7 +133,7 @@ def update_prices_bulk(assets_list):
     for asset in assets_list:
         if not asset.yahoo_ticker: continue
         needs_update = False
-        if not asset.last_updated:
+        if force or not asset.last_updated:
             needs_update = True
         else:
             diff = now - asset.last_updated
