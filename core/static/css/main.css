@@ -298,62 +298,73 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 }
 .nav-pills .nav-link.active { background-color: var(--accent-green) !important; color: #121212 !important; font-weight: bold; }
 
-/* --- ANNOUNCEMENT BANNER STYLES --- */
-.announcement-banner {
+/* --- ANNOUNCEMENT MODAL OVERLAY STYLES --- */
+.announcement-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 12px 20px;
-    background: rgba(245, 158, 11, 0.15); /* Amber Accent */
+    justify-content: center;
+    transition: opacity 0.25s ease;
+}
+
+.announcement-modal-card {
+    background: rgba(30, 30, 30, 0.95);
     border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: 12px;
-    color: #fef08a;
-    font-size: 0.95rem;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    animation: modalSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.announcement-banner.hidden {
-    display: none !important;
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
-.announcement-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.announcement-modal-header {
+    margin-bottom: 20px;
 }
 
-.announcement-icon {
-    font-size: 1.2rem;
+.announcement-modal-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fbbf24;
 }
 
-.announcement-text {
-    font-weight: 500;
+.announcement-modal-body {
+    font-size: 1rem;
+    color: #e0e0e0;
+    line-height: 1.6;
+    margin-bottom: 25px;
 }
 
-.announcement-text a {
+.announcement-modal-body a {
     color: #fbbf24;
     text-decoration: underline;
     font-weight: 600;
 }
 
-.announcement-text a:hover {
+.announcement-modal-body a:hover {
     color: #f59e0b;
 }
 
-.announcement-dismiss {
-    background: none;
-    border: none;
-    color: rgba(254, 240, 138, 0.7);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
+.announcement-modal-footer {
     display: flex;
-    align-items: center;
-    transition: background 0.2s, color 0.2s;
-}
-
-.announcement-dismiss:hover {
-    background: rgba(245, 158, 11, 0.2);
-    color: #ffffff;
+    justify-content: center;
 }

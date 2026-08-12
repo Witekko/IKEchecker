@@ -24,6 +24,7 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('dashboard/api/data/', views.dashboard_data_api, name='dashboard_data_api'),
     path('dashboard/api/force-refresh/', views.dashboard_force_refresh_api, name='dashboard_force_refresh_api'),
+    path('dashboard/api/announcement/<int:announcement_id>/dismiss/', views.dismiss_announcement_api, name='dismiss_announcement'),
     path('assets/', views.assets_list_view, name='assets_list'),
     path('demo-login/', views.demo_login_view, name='demo_login'),
 

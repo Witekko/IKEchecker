@@ -308,3 +308,29 @@ class AnnouncementTests(TestCase):
         context = active_announcement(request)
         self.assertIsNotNone(context['active_announcement'])
         self.assertEqual(context['active_announcement'].message, "Latest active")
+
+    def test_dismiss_announcement_api(self):
+        ann = Announcement.objects.create(message="Critical alert", is_active=True)
+        self.client.login(username="testuser", password="testpassword")
+        url = reverse('dismiss_announcement', args=[ann.id])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        
+        # Verify read state is created in DB
+        from core.models import UserAnnouncementRead
+        self.assertTrue(UserAnnouncementRead.objects.filter(user=self.user, announcement=ann).exists())
+
+    def test_context_processor_hides_read_announcements(self):
+        ann = Announcement.objects.create(message="Verify reset", is_active=True)
+        from core.models import UserAnnouncementRead
+        UserAnnouncementRead.objects.create(user=self.user, announcement=ann)
+        
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        request = factory.get('/')
+        request.user = self.user
+        
+        context = active_announcement(request)
+        # Should be None because the user has already read the announcement
+        self.assertIsNone(context['active_announcement'])

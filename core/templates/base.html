@@ -96,36 +96,39 @@
 
         <div class="content-wrapper">
             {% if active_announcement %}
-                <div id="announcement-banner-{{ active_announcement.id }}" class="announcement-banner hidden mb-4">
-                    <div class="announcement-content">
-                        <span class="announcement-icon">📢</span>
-                        <div class="announcement-text">{{ active_announcement.message|safe }}</div>
+                <div id="announcement-modal-overlay" class="announcement-modal-overlay">
+                    <div class="announcement-modal-card">
+                        <div class="announcement-modal-header">
+                            <span class="announcement-modal-title">📢 Komunikat Systemowy</span>
+                        </div>
+                        <div class="announcement-modal-body text-center">
+                            {{ active_announcement.message|safe }}
+                        </div>
+                        <div class="announcement-modal-footer">
+                            <button class="btn btn-warning px-5 py-2" onclick="dismissModal({{ active_announcement.id }})" style="font-weight: 600; border-radius: 8px;">
+                                Zrozumiałem
+                            </button>
+                        </div>
                     </div>
-                    <button class="announcement-dismiss" onclick="dismissAnnouncement({{ active_announcement.id }})">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
                 </div>
                 <script>
-                    (function() {
-                        const annId = {{ active_announcement.id }};
-                        const dismissed = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
-                        if (!dismissed.includes(annId)) {
-                            document.getElementById('announcement-banner-' + annId).classList.remove('hidden');
-                        }
-                    })();
-
-                    function dismissAnnouncement(id) {
-                        const dismissed = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
-                        if (!dismissed.includes(id)) {
-                            dismissed.push(id);
-                            localStorage.setItem('dismissed_announcements', JSON.stringify(dismissed));
-                        }
-                        const banner = document.getElementById('announcement-banner-' + id);
-                        banner.style.opacity = '0';
-                        banner.style.transform = 'translateY(-10px)';
-                        setTimeout(() => banner.remove(), 300);
+                    function dismissModal(id) {
+                        fetch(`/dashboard/api/announcement/${id}/dismiss/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': '{{ csrf_token }}',
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                const overlay = document.getElementById('announcement-modal-overlay');
+                                overlay.style.opacity = '0';
+                                overlay.style.transition = 'opacity 0.25s ease';
+                                setTimeout(() => overlay.remove(), 250);
+                            }
+                        });
                     }
                 </script>
             {% endif %}

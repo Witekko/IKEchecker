@@ -641,3 +641,14 @@ def profile_view(request):
         'all_portfolios': all_portfolios,
     }
     return render(request, 'profile.html', context)
+
+
+from django.views.decorators.http import require_POST
+
+@login_required
+@require_POST
+def dismiss_announcement_api(request, announcement_id):
+    from .models import Announcement, UserAnnouncementRead
+    announcement = get_object_or_404(Announcement, id=announcement_id, is_active=True)
+    UserAnnouncementRead.objects.get_or_create(user=request.user, announcement=announcement)
+    return JsonResponse({'success': True})

@@ -200,3 +200,15 @@ class Announcement(models.Model):
     def __str__(self):
         status = "Active" if self.is_active else "Inactive"
         return f"Announcement #{self.id} ({status}) - {self.message[:30]}..."
+
+
+class UserAnnouncementRead(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='announcement_reads')
+    announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE, related_name='reads')
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'announcement')
+
+    def __str__(self):
+        return f"{self.user.username} read Announcement #{self.announcement_id}"
