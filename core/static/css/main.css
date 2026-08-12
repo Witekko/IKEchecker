@@ -301,27 +301,39 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 /* --- ANNOUNCEMENT MASCOT HELPER STYLES --- */
 .announcement-mascot-wrapper {
     position: fixed;
-    bottom: -20px;
-    right: 40px;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
     z-index: 9999;
     display: flex;
-    align-items: flex-end;
-    gap: 15px;
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    animation: mascotPeepIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease;
 }
 
 .announcement-mascot-wrapper.exiting {
-    transform: translateY(200px);
     opacity: 0;
+    pointer-events: none;
 }
 
-/* Mascot SVG Container */
+/* Mascot Container (Peeking from the right) */
 .announcement-mascot {
-    width: 90px;
-    height: 90px;
-    filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.5));
-    animation: floatMascot 4s ease-in-out infinite alternate;
+    position: fixed;
+    right: -25px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-90deg);
+    width: 100px;
+    height: 100px;
+    filter: drop-shadow(-4px 0 15px rgba(0, 0, 0, 0.5));
+    animation: mascotPeepIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.announcement-mascot-wrapper.exiting .announcement-mascot {
+    transform: translateY(-50%) rotate(-90deg) translateX(150px) !important;
+    transition: transform 0.5s ease;
 }
 
 .helper-robot {
@@ -329,31 +341,39 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
     height: 100%;
 }
 
-/* Speech Bubble */
+/* Centered Speech Bubble (Notification) */
 .announcement-speech-bubble {
     background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: 16px;
-    padding: 20px;
-    width: 320px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(0, 255, 127, 0.3); /* Green Accent border matches dashboard */
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
     position: relative;
-    margin-bottom: 50px;
-    transform-origin: bottom right;
-    animation: bubblePopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s forwards;
+    transform-origin: center;
+    animation: bubblePopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards;
     opacity: 0;
-    transform: scale(0);
+    transform: scale(0.9);
+    text-align: center;
 }
 
-/* Bubble Arrow pointing to the robot */
+.announcement-mascot-wrapper.exiting .announcement-speech-bubble {
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+/* Bubble Arrow pointing to the right (mascot) */
 .announcement-speech-bubble::after {
     content: '';
     position: absolute;
-    bottom: -10px;
-    right: 35px;
-    border-width: 10px 10px 0;
+    right: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 15px 0 15px 15px;
     border-style: solid;
-    border-color: rgba(30, 30, 30, 0.95) transparent;
+    border-color: transparent transparent transparent rgba(30, 30, 30, 0.95);
     display: block;
     width: 0;
 }
@@ -362,63 +382,62 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 .announcement-speech-bubble::before {
     content: '';
     position: absolute;
-    bottom: -11px;
-    right: 34px;
-    border-width: 11px 11px 0;
+    right: -17px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 17px 0 17px 17px;
     border-style: solid;
-    border-color: rgba(245, 158, 11, 0.3) transparent;
+    border-color: transparent transparent transparent rgba(0, 255, 127, 0.3);
     display: block;
     width: 0;
     z-index: -1;
 }
 
 .bubble-header {
-    font-size: 0.85rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    color: #fbbf24;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 10px;
+    color: var(--accent-green);
+    margin-bottom: 15px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding-bottom: 5px;
+    padding-bottom: 8px;
 }
 
 .bubble-body {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: #e0e0e0;
-    line-height: 1.5;
-    margin-bottom: 15px;
+    line-height: 1.6;
+    margin-bottom: 25px;
 }
 
 .bubble-body a {
-    color: #fbbf24;
+    color: var(--accent-green);
     text-decoration: underline;
     font-weight: 600;
 }
 
 .bubble-body a:hover {
-    color: #f59e0b;
+    color: #00e676;
 }
 
 .bubble-footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
 }
 
 /* Keyframe Animations */
 @keyframes mascotPeepIn {
     0% {
-        transform: translateY(150px);
+        transform: translateY(-50%) rotate(-90deg) translateX(150px);
     }
     100% {
-        transform: translateY(0);
+        transform: translateY(-50%) rotate(-90deg) translateX(0);
     }
 }
 
 @keyframes bubblePopIn {
     0% {
         opacity: 0;
-        transform: scale(0);
+        transform: scale(0.9);
     }
     100% {
         opacity: 1;
@@ -426,63 +445,53 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
     }
 }
 
-@keyframes floatMascot {
-    0% {
-        transform: translateY(0);
-    }
-    100% {
-        transform: translateY(-8px);
-    }
-}
-
 /* Mobile Responsive Adjustments */
 @media (max-width: 767.98px) {
-    .announcement-mascot-wrapper {
+    /* Mascot Container (Peeking from bottom center) */
+    .announcement-mascot {
         right: 50% !important;
-        transform: translateX(50%) !important;
-        bottom: -10px !important;
-        flex-direction: column-reverse !important;
-        align-items: center !important;
-        gap: 8px !important;
-        width: 90% !important;
-        max-width: 340px !important;
+        left: auto !important;
+        top: auto !important;
+        bottom: -20px !important;
+        transform: translateX(50%) rotate(0deg) !important;
         animation: mascotPeepInMobile 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
     }
 
-    .announcement-mascot-wrapper.exiting {
-        transform: translate(50%, 200px) !important;
-        opacity: 0 !important;
+    .announcement-mascot-wrapper.exiting .announcement-mascot {
+        transform: translateX(50%) rotate(0deg) translateY(150px) !important;
     }
 
     .announcement-speech-bubble {
-        margin-bottom: 0px !important;
-        width: 100% !important;
-        transform-origin: bottom center !important;
+        max-width: 360px !important;
     }
 
+    /* Bubble Arrow pointing down */
     .announcement-speech-bubble::after {
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        right: auto !important;
+        right: 50% !important;
+        left: auto !important;
+        top: auto !important;
+        bottom: -15px !important;
+        transform: translateX(50%) !important;
+        border-width: 15px 15px 0 !important;
+        border-color: rgba(30, 30, 30, 0.95) transparent !important;
     }
 
     .announcement-speech-bubble::before {
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        right: auto !important;
-    }
-
-    .announcement-mascot {
-        width: 75px !important;
-        height: 75px !important;
+        right: 50% !important;
+        left: auto !important;
+        top: auto !important;
+        bottom: -17px !important;
+        transform: translateX(50%) !important;
+        border-width: 17px 17px 0 !important;
+        border-color: rgba(0, 255, 127, 0.3) transparent !important;
     }
 
     @keyframes mascotPeepInMobile {
         0% {
-            transform: translate(50%, 150px);
+            transform: translateX(50%) rotate(0deg) translateY(150px);
         }
         100% {
-            transform: translate(50%, 0);
+            transform: translateX(50%) rotate(0deg) translateY(0);
         }
     }
 }
