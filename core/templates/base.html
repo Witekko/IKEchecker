@@ -96,6 +96,209 @@
 
         <div class="content-wrapper">
             {% if active_announcement %}
+                <style>
+                    /* --- ANNOUNCEMENT MASCOT HELPER STYLES --- */
+                    .announcement-mascot-wrapper {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        background: rgba(0, 0, 0, 0.7);
+                        backdrop-filter: blur(8px);
+                        z-index: 9999;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: opacity 0.5s ease;
+                    }
+
+                    .announcement-mascot-wrapper.exiting {
+                        opacity: 0;
+                        pointer-events: none;
+                    }
+
+                    /* Mascot Container (Peeking from the right) */
+                    .announcement-mascot {
+                        position: fixed;
+                        right: -50px;
+                        top: 50%;
+                        transform: translateY(-50%) rotate(-90deg);
+                        width: 200px;
+                        height: 200px;
+                        filter: drop-shadow(-4px 0 15px rgba(0, 0, 0, 0.5));
+                        animation: mascotPeepIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                    }
+
+                    .announcement-mascot-wrapper.exiting .announcement-mascot {
+                        transform: translateY(-50%) rotate(-90deg) translateX(300px) !important;
+                        transition: transform 0.5s ease;
+                    }
+
+                    .helper-robot {
+                        width: 100%;
+                        height: 100%;
+                    }
+
+                    /* Centered Speech Bubble (Notification) */
+                    .announcement-speech-bubble {
+                        background: rgba(30, 30, 30, 0.95);
+                        border: 2px solid rgba(0, 255, 127, 0.3); /* Green Accent border matches dashboard */
+                        border-radius: 20px;
+                        padding: 30px;
+                        width: 90%;
+                        max-width: 480px;
+                        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+                        position: relative;
+                        transform-origin: center right;
+                        animation: bubblePopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards;
+                        opacity: 0;
+                        transform: scale(0.9);
+                        text-align: center;
+                    }
+
+                    .announcement-mascot-wrapper.exiting .announcement-speech-bubble {
+                        transform: scale(0.9);
+                        opacity: 0;
+                        transition: transform 0.4s ease, opacity 0.4s ease;
+                    }
+
+                    /* Bubble Arrow pointing to the right (mascot) */
+                    .announcement-speech-bubble::after {
+                        content: '';
+                        position: absolute;
+                        right: -15px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        border-width: 15px 0 15px 15px;
+                        border-style: solid;
+                        border-color: transparent transparent transparent rgba(30, 30, 30, 0.95);
+                        display: block;
+                        width: 0;
+                    }
+
+                    /* Bubble Arrow Border */
+                    .announcement-speech-bubble::before {
+                        content: '';
+                        position: absolute;
+                        right: -17px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        border-width: 17px 0 17px 17px;
+                        border-style: solid;
+                        border-color: transparent transparent transparent rgba(0, 255, 127, 0.3);
+                        display: block;
+                        width: 0;
+                        z-index: -1;
+                    }
+
+                    .bubble-header {
+                        font-size: 1.2rem;
+                        font-weight: 700;
+                        color: var(--accent-green);
+                        margin-bottom: 15px;
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                        padding-bottom: 8px;
+                    }
+
+                    .bubble-body {
+                        font-size: 1rem;
+                        color: #e0e0e0;
+                        line-height: 1.6;
+                        margin-bottom: 25px;
+                    }
+
+                    .bubble-body a {
+                        color: var(--accent-green);
+                        text-decoration: underline;
+                        font-weight: 600;
+                    }
+
+                    .bubble-body a:hover {
+                        color: #00e676;
+                    }
+
+                    .bubble-footer {
+                        display: flex;
+                        justify-content: center;
+                    }
+
+                    /* Keyframe Animations */
+                    @keyframes mascotPeepIn {
+                        0% {
+                            transform: translateY(-50%) rotate(-90deg) translateX(300px);
+                        }
+                        100% {
+                            transform: translateY(-50%) rotate(-90deg) translateX(0);
+                        }
+                    }
+
+                    @keyframes bubblePopIn {
+                        0% {
+                            opacity: 0;
+                            transform: scale(0.9);
+                        }
+                        100% {
+                            opacity: 1;
+                            transform: scale(1);
+                        }
+                    }
+
+                    /* Mobile Responsive Adjustments */
+                    @media (max-width: 767.98px) {
+                        /* Mascot Container (Peeking from bottom center) */
+                        .announcement-mascot {
+                            right: 50% !important;
+                            left: auto !important;
+                            top: auto !important;
+                            bottom: -40px !important;
+                            width: 150px !important;
+                            height: 150px !important;
+                            transform: translateX(50%) rotate(0deg) !important;
+                            animation: mascotPeepInMobile 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+                        }
+
+                        .announcement-mascot-wrapper.exiting .announcement-mascot {
+                            transform: translateX(50%) rotate(0deg) translateY(250px) !important;
+                        }
+
+                        .announcement-speech-bubble {
+                            max-width: 360px !important;
+                            transform-origin: bottom center !important;
+                        }
+
+                        /* Bubble Arrow pointing down */
+                        .announcement-speech-bubble::after {
+                            right: 50% !important;
+                            left: auto !important;
+                            top: auto !important;
+                            bottom: -15px !important;
+                            transform: translateX(50%) !important;
+                            border-width: 15px 15px 0 !important;
+                            border-color: rgba(30, 30, 30, 0.95) transparent !important;
+                        }
+
+                        .announcement-speech-bubble::before {
+                            right: 50% !important;
+                            left: auto !important;
+                            top: auto !important;
+                            bottom: -17px !important;
+                            transform: translateX(50%) !important;
+                            border-width: 17px 17px 0 !important;
+                            border-color: rgba(0, 255, 127, 0.3) transparent !important;
+                        }
+
+                        @keyframes mascotPeepInMobile {
+                            0% {
+                                transform: translateX(50%) rotate(0deg) translateY(250px);
+                            }
+                            100% {
+                                transform: translateX(50%) rotate(0deg) translateY(0);
+                            }
+                        }
+                    }
+                </style>
+
                 <div id="announcement-mascot-wrapper" class="announcement-mascot-wrapper">
                     <!-- The Speech Bubble -->
                     <div id="announcement-speech-bubble" class="announcement-speech-bubble">
@@ -104,7 +307,7 @@
                             {{ active_announcement.message|safe }}
                         </div>
                         <div class="bubble-footer">
-                            <button class="btn btn-warning btn-sm px-3" onclick="dismissMascot({{ active_announcement.id }})" style="font-weight: 600; border-radius: 6px;">
+                            <button class="btn btn-warning btn-sm px-4 py-2" onclick="dismissMascot({{ active_announcement.id }})" style="font-weight: 600; border-radius: 8px;">
                                 Zrozumiałem
                             </button>
                         </div>
