@@ -146,19 +146,20 @@
                         border: 2px solid rgba(0, 255, 127, 0.3); /* Green Accent border matches dashboard */
                         border-radius: 20px;
                         padding: 30px;
-                        width: 90%;
-                        max-width: 480px;
+                        width: 380px;
                         box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
-                        position: relative;
+                        position: fixed;
+                        right: 140px; /* Aligned next to the robot */
+                        top: 50%;
+                        transform: translateY(-50%) scale(0.9);
                         transform-origin: center right;
                         animation: bubblePopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards;
                         opacity: 0;
-                        transform: scale(0.9);
                         text-align: center;
                     }
 
                     .announcement-mascot-wrapper.exiting .announcement-speech-bubble {
-                        transform: scale(0.9);
+                        transform: translateY(-50%) scale(0.9) !important;
                         opacity: 0;
                         transition: transform 0.4s ease, opacity 0.4s ease;
                     }
@@ -236,11 +237,11 @@
                     @keyframes bubblePopIn {
                         0% {
                             opacity: 0;
-                            transform: scale(0.9);
+                            transform: translateY(-50%) scale(0.9);
                         }
                         100% {
                             opacity: 1;
-                            transform: scale(1);
+                            transform: translateY(-50%) scale(1);
                         }
                     }
 
@@ -263,8 +264,19 @@
                         }
 
                         .announcement-speech-bubble {
-                            max-width: 360px !important;
+                            position: relative !important;
+                            right: auto !important;
+                            top: auto !important;
+                            transform: scale(0.9) !important;
                             transform-origin: bottom center !important;
+                            animation: bubblePopInMobile 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards !important;
+                            width: 100% !important;
+                            max-width: 360px !important;
+                        }
+
+                        .announcement-mascot-wrapper.exiting .announcement-speech-bubble {
+                            transform: scale(0.9) !important;
+                            opacity: 0 !important;
                         }
 
                         /* Bubble Arrow pointing down */
@@ -294,6 +306,17 @@
                             }
                             100% {
                                 transform: translateX(50%) rotate(0deg) translateY(0);
+                            }
+                        }
+
+                        @keyframes bubblePopInMobile {
+                            0% {
+                                opacity: 0;
+                                transform: scale(0.9);
+                            }
+                            100% {
+                                opacity: 1;
+                                transform: scale(1);
                             }
                         }
                     }
