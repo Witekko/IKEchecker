@@ -95,7 +95,7 @@
         </div>
 
         <div class="content-wrapper">
-            {% if active_announcement %}
+            {% if active_announcements %}
                 <style>
                     /* --- ANNOUNCEMENT MASCOT HELPER STYLES --- */
                     .announcement-mascot-wrapper {
@@ -321,7 +321,6 @@
                         }
                     }
                 </style>
-            {% if active_announcements %}
                 <!-- Hidden DOM Queue of announcements -->
                 <div id="announcement-queue" style="display: none;">
                     {% for ann in active_announcements %}
