@@ -6,6 +6,7 @@ from datetime import date, timedelta, datetime
 from .calculator import PortfolioCalculator
 from .market import get_cached_price, fetch_historical_data_for_timeline, update_prices_bulk
 from django.core.cache import cache
+from django.utils import timezone
 import logging
 from core.config import BENCHMARKS, CURRENCY_TICKERS, DAILY_INFLATION_RATE
 
@@ -494,7 +495,7 @@ def analyze_history(transactions, currency_rates, portfolio_currency="PLN"):
         'pct_wig': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['pct_wig'].tolist()],
         'pct_acwi': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['pct_acwi'].tolist()],
         'pct_inf': [0.0 if math.isnan(x) or math.isinf(x) else x for x in timeline_df['pct_inf'].tolist()],
-        'last_market_date': datetime.now() if not hist_data.empty else None
+        'last_market_date': timezone.now() if not hist_data.empty else None
     }
 
     cache.set(cache_key, res, 900)

@@ -36,3 +36,12 @@ class PortfolioSettingsForm(forms.ModelForm):
                 ('GBP', 'GBP (British Pound)'),
             ], attrs={'class': 'form-select bg-dark text-white border-secondary'}),
         }
+
+
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['username']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control bg-dark text-white border-secondary', 'required': 'true'}),
+        }

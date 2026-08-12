@@ -12,7 +12,7 @@ from django.core.management import call_command
 from django.contrib.auth.models import User
 # --- MODELE I FORMY ---
 from .models import Portfolio, Transaction, Asset, AssetSector, AssetType
-from .forms import UploadFileForm, CustomUserCreationForm, PortfolioSettingsForm
+from .forms import UploadFileForm, CustomUserCreationForm, PortfolioSettingsForm, UserProfileForm
 
 # --- WARSTWA USŁUG (SERVICES & SELECTORS) ---
 from .services.db_selectors import get_active_portfolio, get_user_portfolios, get_all_assets, get_transactions
@@ -618,3 +618,26 @@ def demo_login_view(request):
 
     except User.DoesNotExist:
         messages.error(request, "Błąd konfiguracji Demo. Użytkownik nie istnieje.")
+
+
+@login_required
+def profile_view(request):
+    user = request.user
+    active_portfolio = get_active_portfolio(request)
+    all_portfolios = get_user_portfolios(user)
+    
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile has been updated successfully.")
+            return redirect('profile')
+    else:
+        form = UserProfileForm(instance=user)
+        
+    context = {
+        'form': form,
+        'active_portfolio': active_portfolio,
+        'all_portfolios': all_portfolios,
+    }
+    return render(request, 'profile.html', context)

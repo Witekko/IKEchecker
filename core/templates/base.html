@@ -80,7 +80,7 @@
                         </div>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg text-small">
                             <li class="dropdown-header text-muted small text-truncate" style="max-width: 150px;">{{ user.username }}</li>
-                            <li><a class="dropdown-item" href="{% url 'account_change_password' %}" style="font-size: 0.85rem;"><i class="fas fa-key me-2"></i>Change Password</a></li>
+                            <li><a class="dropdown-item" href="{% url 'profile' %}" style="font-size: 0.85rem;"><i class="fas fa-user me-2"></i>Profile Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{% url 'logout' %}" method="post" class="m-0">

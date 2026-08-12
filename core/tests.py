@@ -205,15 +205,7 @@ class SecuritySettingsTests(TestCase):
         from allauth.account.models import EmailAddress
         EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
         
-        # Test username login
-        response = self.client.post('/', {'login': 'testloginuser', 'password': 'password123'})
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.endswith('/dashboard/'))
-        
-        # Log out
-        self.client.logout()
-        
-        # Test email login
+        # Test email login (since only email login is enforced now)
         response = self.client.post('/', {'login': 'testlogin@example.com', 'password': 'password123'})
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.endswith('/dashboard/'))

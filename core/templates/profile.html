@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1 text-white">Account Profile</h2>
+        <p class="text-muted mb-0">Manage your personal account settings and security credentials</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Profile Details & Username Editing -->
+    <div class="col-12 col-lg-6">
+        <div class="card h-100 bg-dark border-secondary border-opacity-25 shadow-lg p-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                    <i class="fas fa-user-edit fa-lg text-primary"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-white mb-0">Profile Information</h5>
+                    <p class="text-muted small mb-0">Customize how your name appears in the app</p>
+                </div>
+            </div>
+
+            <form method="post" action="{% url 'profile' %}">
+                {% csrf_token %}
+
+                {% if form.errors or form.non_field_errors %}
+                <div class="alert alert-danger py-2 small border-0 bg-danger bg-opacity-10 text-danger mb-3">
+                    {% if form.non_field_errors %}
+                        {% for error in form.non_field_errors %}
+                            <div class="d-flex align-items-center"><i class="fas fa-exclamation-circle me-2"></i>{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    {% for field in form %}
+                        {% if field.errors %}
+                            {% for error in field.errors %}
+                                <div class="d-flex align-items-center"><i class="fas fa-exclamation-circle me-2"></i>{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Read-only Email Field -->
+                <div class="mb-3">
+                    <label class="form-label text-muted small text-uppercase fw-bold mb-1">Email Address</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-muted"><i class="fas fa-envelope"></i></span>
+                        <input type="text" class="form-control bg-dark text-muted border-secondary" value="{{ user.email }}" readonly disabled style="opacity: 0.65;">
+                    </div>
+                    <div class="form-text text-muted small mt-1">Your registered email address is used for secure logins.</div>
+                </div>
+
+                <!-- Username Editable Field -->
+                <div class="mb-4">
+                    <label class="form-label text-muted small text-uppercase fw-bold mb-1" for="{{ form.username.id_for_label }}">Display Name (Username)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-muted"><i class="fas fa-signature"></i></span>
+                        <input type="text" 
+                               name="username" 
+                               id="{{ form.username.id_for_label }}"
+                               class="form-control bg-dark text-white border-secondary" 
+                               value="{{ form.username.value|default:'' }}" 
+                               required>
+                    </div>
+                    <div class="form-text text-muted small mt-1">This name is visible in dashboards and profile areas.</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary fw-bold px-4 py-2 mt-2">
+                    <i class="fas fa-save me-2"></i>Save Username
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right Column: Security Credentials -->
+    <div class="col-12 col-lg-6">
+        <div class="card h-100 bg-dark border-secondary border-opacity-25 shadow-lg p-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                    <i class="fas fa-shield-alt fa-lg text-success"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-white mb-0">Security & Password</h5>
+                    <p class="text-muted small mb-0">Manage password access for this account</p>
+                </div>
+            </div>
+
+            <!-- Login Method Badge -->
+            <div class="mb-4">
+                <label class="form-label text-muted small text-uppercase fw-bold mb-2">Connected Providers</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-dark border border-secondary text-light px-3 py-2 d-inline-flex align-items-center">
+                        <i class="fas fa-envelope text-warning me-2"></i> Email Address
+                    </span>
+                    {% if user.socialaccount_set.exists %}
+                    <span class="badge bg-dark border border-success text-success px-3 py-2 d-inline-flex align-items-center">
+                        <i class="fab fa-google me-2"></i> Google SSO Connected
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="border-top border-secondary border-opacity-25 pt-4">
+                {% if user.has_usable_password %}
+                    <h6 class="fw-bold text-white mb-2"><i class="fas fa-key text-success me-2"></i>Change Password</h6>
+                    <p class="text-muted small mb-4">You have a password set. Update it regularly to maintain strict account security.</p>
+                    <a href="{% url 'account_change_password' %}" class="btn btn-outline-success fw-bold px-4 py-2">
+                        <i class="fas fa-lock me-2"></i>Change Password
+                    </a>
+                {% else %}
+                    <h6 class="fw-bold text-white mb-2"><i class="fas fa-lock text-warning me-2"></i>Set Password</h6>
+                    <p class="text-muted small mb-4">You are currently logged in via Google SSO and have no password set. Create one here to enable logging in directly with your email and password.</p>
+                    <a href="{% url 'account_set_password' %}" class="btn btn-warning text-dark fw-bold px-4 py-2">
+                        <i class="fas fa-key me-2"></i>Set Local Password
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -19,6 +19,7 @@ urlpatterns = [
     # --- APLIKACJA (CORE) ---
     path('', AllauthLoginView.as_view(template_name='login.html'), name='login'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
+    path('profile/', views.profile_view, name='profile'),
     path('dashboard/api/data/', views.dashboard_data_api, name='dashboard_data_api'),
     path('dashboard/api/force-refresh/', views.dashboard_force_refresh_api, name='dashboard_force_refresh_api'),
     path('assets/', views.assets_list_view, name='assets_list'),
