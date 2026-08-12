@@ -298,73 +298,191 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 }
 .nav-pills .nav-link.active { background-color: var(--accent-green) !important; color: #121212 !important; font-weight: bold; }
 
-/* --- ANNOUNCEMENT MODAL OVERLAY STYLES --- */
-.announcement-modal-overlay {
+/* --- ANNOUNCEMENT MASCOT HELPER STYLES --- */
+.announcement-mascot-wrapper {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
+    bottom: -20px;
+    right: 40px;
     z-index: 9999;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.25s ease;
+    align-items: flex-end;
+    gap: 15px;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: mascotPeepIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-.announcement-modal-card {
+.announcement-mascot-wrapper.exiting {
+    transform: translateY(200px);
+    opacity: 0;
+}
+
+/* Mascot SVG Container */
+.announcement-mascot {
+    width: 90px;
+    height: 90px;
+    filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.5));
+    animation: floatMascot 4s ease-in-out infinite alternate;
+}
+
+.helper-robot {
+    width: 100%;
+    height: 100%;
+}
+
+/* Speech Bubble */
+.announcement-speech-bubble {
     background: rgba(30, 30, 30, 0.95);
     border: 1px solid rgba(245, 158, 11, 0.3);
     border-radius: 16px;
-    padding: 30px;
-    max-width: 500px;
-    width: 90%;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    text-align: center;
-    animation: modalSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 20px;
+    width: 320px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    position: relative;
+    margin-bottom: 50px;
+    transform-origin: bottom right;
+    animation: bubblePopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s forwards;
+    opacity: 0;
+    transform: scale(0);
 }
 
-@keyframes modalSlideIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95) translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
+/* Bubble Arrow pointing to the robot */
+.announcement-speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    right: 35px;
+    border-width: 10px 10px 0;
+    border-style: solid;
+    border-color: rgba(30, 30, 30, 0.95) transparent;
+    display: block;
+    width: 0;
 }
 
-.announcement-modal-header {
-    margin-bottom: 20px;
+/* Bubble Arrow Border */
+.announcement-speech-bubble::before {
+    content: '';
+    position: absolute;
+    bottom: -11px;
+    right: 34px;
+    border-width: 11px 11px 0;
+    border-style: solid;
+    border-color: rgba(245, 158, 11, 0.3) transparent;
+    display: block;
+    width: 0;
+    z-index: -1;
 }
 
-.announcement-modal-title {
-    font-size: 1.3rem;
+.bubble-header {
+    font-size: 0.85rem;
     font-weight: 700;
     color: #fbbf24;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 5px;
 }
 
-.announcement-modal-body {
-    font-size: 1rem;
+.bubble-body {
+    font-size: 0.9rem;
     color: #e0e0e0;
-    line-height: 1.6;
-    margin-bottom: 25px;
+    line-height: 1.5;
+    margin-bottom: 15px;
 }
 
-.announcement-modal-body a {
+.bubble-body a {
     color: #fbbf24;
     text-decoration: underline;
     font-weight: 600;
 }
 
-.announcement-modal-body a:hover {
+.bubble-body a:hover {
     color: #f59e0b;
 }
 
-.announcement-modal-footer {
+.bubble-footer {
     display: flex;
-    justify-content: center;
+    justify-content: flex-end;
+}
+
+/* Keyframe Animations */
+@keyframes mascotPeepIn {
+    0% {
+        transform: translateY(150px);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes bubblePopIn {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes floatMascot {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-8px);
+    }
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 767.98px) {
+    .announcement-mascot-wrapper {
+        right: 50% !important;
+        transform: translateX(50%) !important;
+        bottom: -10px !important;
+        flex-direction: column-reverse !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 90% !important;
+        max-width: 340px !important;
+        animation: mascotPeepInMobile 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+    }
+
+    .announcement-mascot-wrapper.exiting {
+        transform: translate(50%, 200px) !important;
+        opacity: 0 !important;
+    }
+
+    .announcement-speech-bubble {
+        margin-bottom: 0px !important;
+        width: 100% !important;
+        transform-origin: bottom center !important;
+    }
+
+    .announcement-speech-bubble::after {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        right: auto !important;
+    }
+
+    .announcement-speech-bubble::before {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        right: auto !important;
+    }
+
+    .announcement-mascot {
+        width: 75px !important;
+        height: 75px !important;
+    }
+
+    @keyframes mascotPeepInMobile {
+        0% {
+            transform: translate(50%, 150px);
+        }
+        100% {
+            transform: translate(50%, 0);
+        }
+    }
 }

@@ -96,23 +96,48 @@
 
         <div class="content-wrapper">
             {% if active_announcement %}
-                <div id="announcement-modal-overlay" class="announcement-modal-overlay">
-                    <div class="announcement-modal-card">
-                        <div class="announcement-modal-header">
-                            <span class="announcement-modal-title">📢 Komunikat Systemowy</span>
-                        </div>
-                        <div class="announcement-modal-body text-center">
+                <div id="announcement-mascot-wrapper" class="announcement-mascot-wrapper">
+                    <!-- The Speech Bubble -->
+                    <div id="announcement-speech-bubble" class="announcement-speech-bubble">
+                        <div class="bubble-header">📢 Wiadomość od pomocnika:</div>
+                        <div class="bubble-body">
                             {{ active_announcement.message|safe }}
                         </div>
-                        <div class="announcement-modal-footer">
-                            <button class="btn btn-warning px-5 py-2" onclick="dismissModal({{ active_announcement.id }})" style="font-weight: 600; border-radius: 8px;">
+                        <div class="bubble-footer">
+                            <button class="btn btn-warning btn-sm px-3" onclick="dismissMascot({{ active_announcement.id }})" style="font-weight: 600; border-radius: 6px;">
                                 Zrozumiałem
                             </button>
                         </div>
                     </div>
+
+                    <!-- The Mascot -->
+                    <div class="announcement-mascot">
+                        <svg class="helper-robot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Body / Base -->
+                            <rect x="25" y="40" width="50" height="40" rx="15" fill="#1e1e1e" stroke="#2a2a2a" stroke-width="3" />
+                            <!-- Screen Face -->
+                            <rect x="32" y="47" width="36" height="26" rx="8" fill="#121212" stroke="#00ff7f" stroke-width="1.5" />
+                            <!-- Eyes -->
+                            <ellipse cx="43" cy="60" rx="3.5" ry="3.5" fill="#00ff7f">
+                                <animate attributeName="ry" values="3.5;3.5;0.5;3.5;3.5" dur="3s" repeatCount="indefinite" />
+                            </ellipse>
+                            <ellipse cx="57" cy="60" rx="3.5" ry="3.5" fill="#00ff7f">
+                                <animate attributeName="ry" values="3.5;3.5;0.5;3.5;3.5" dur="3s" repeatCount="indefinite" />
+                            </ellipse>
+                            <!-- Antenna -->
+                            <line x1="50" y1="40" x2="50" y2="25" stroke="#2a2a2a" stroke-width="3" />
+                            <circle cx="50" cy="22" r="5" fill="#f59e0b">
+                                <animate attributeName="fill" values="#f59e0b;#00ff7f;#f59e0b" dur="1.5s" repeatCount="indefinite" />
+                            </circle>
+                            <!-- Hand -->
+                            <path d="M 75 55 C 82 50 85 42 82 35" stroke="#2a2a2a" stroke-width="4" stroke-linecap="round" fill="none">
+                                <animateTransform attributeName="transform" type="rotate" values="0 75 55; 15 75 55; 0 75 55" dur="1s" repeatCount="indefinite" />
+                            </path>
+                        </svg>
+                    </div>
                 </div>
                 <script>
-                    function dismissModal(id) {
+                    function dismissMascot(id) {
                         fetch(`/dashboard/api/announcement/${id}/dismiss/`, {
                             method: 'POST',
                             headers: {
@@ -123,10 +148,9 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                const overlay = document.getElementById('announcement-modal-overlay');
-                                overlay.style.opacity = '0';
-                                overlay.style.transition = 'opacity 0.25s ease';
-                                setTimeout(() => overlay.remove(), 250);
+                                const wrapper = document.getElementById('announcement-mascot-wrapper');
+                                wrapper.classList.add('exiting');
+                                setTimeout(() => wrapper.remove(), 500);
                             }
                         });
                     }
