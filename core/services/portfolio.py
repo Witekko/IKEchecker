@@ -297,9 +297,9 @@ def get_asset_details_context(user, symbol, portfolio_id=None):
     if not portfolio or not asset: return {'symbol': symbol, 'error': 'Asset not found.'}
     all_trans = get_transactions(user, portfolio.id)
     asset_trans = all_trans.filter(asset=asset).order_by('date')
-    holdings = PortfolioCalculator(asset_trans).process().get_holdings()
-    asset_data = holdings.get(symbol, {'qty': 0.0, 'cost': 0.0, 'realized': 0.0, 'trades': []})
     rates = get_current_currency_rates()
+    holdings = PortfolioCalculator(asset_trans, portfolio_currency=portfolio.currency, currency_rates=rates).process().get_holdings()
+    asset_data = holdings.get(symbol, {'qty': 0.0, 'cost': 0.0, 'realized': 0.0, 'trades': []})
     # Calculate conversion multiplier to portfolio currency
     asset_to_pln = rates.get(asset.currency, 1.0) if asset.currency != 'PLN' else 1.0
     if asset.currency == 'JPY': asset_to_pln /= 100.0

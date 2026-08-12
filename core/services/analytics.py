@@ -18,7 +18,7 @@ def analyze_holdings(transactions, currency_rates, start_date=None, portfolio_cu
     Analizuje stan posiadania.
     Jeśli podano start_date, oblicza zyski względem tej daty (Period Profit).
     """
-    calc = PortfolioCalculator(transactions).process()
+    calc = PortfolioCalculator(transactions, portfolio_currency=portfolio_currency, currency_rates=currency_rates).process()
     holdings_data = calc.get_holdings()
     cash, total_invested = calc.get_cash_balance()
 

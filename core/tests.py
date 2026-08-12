@@ -93,6 +93,41 @@ class PortfolioCalculatorTests(TestCase):
         self.assertEqual(holdings["TEST.PL"]["realized"], 40.0)
         self.assertEqual(holdings["TEST.PL"]["qty"], 0.0)
 
+    def test_consolidated_currency_calculator(self):
+        # Create USD portfolio
+        usd_portfolio = Portfolio.objects.create(
+            user=self.user,
+            name="USD Portfolio",
+            portfolio_type=PortfolioType.STANDARD,
+            currency="USD"
+        )
+        # Deposit 100 USD
+        Transaction.objects.create(
+            portfolio=usd_portfolio,
+            date=timezone.now(),
+            type=TransactionType.DEPOSIT,
+            amount=Decimal('100.00'),
+            quantity=Decimal('0')
+        )
+        # Deposit 100 PLN in PLN portfolio
+        Transaction.objects.create(
+            portfolio=self.portfolio,
+            date=timezone.now(),
+            type=TransactionType.DEPOSIT,
+            amount=Decimal('100.00'),
+            quantity=Decimal('0')
+        )
+        
+        # Test consolidated cash calculation targeting PLN portfolio currency
+        rates = {'USD': 4.0}
+        all_trans = Transaction.objects.filter(portfolio__in=[self.portfolio, usd_portfolio])
+        calc = PortfolioCalculator(all_trans, portfolio_currency="PLN", currency_rates=rates).process()
+        
+        cash, invested = calc.get_cash_balance()
+        # 100 PLN + (100 USD * 4.0) = 500 PLN
+        self.assertEqual(cash, 500.0)
+        self.assertEqual(invested, 500.0)
+
 
 class XtbParserTests(TestCase):
     def test_transfer_mapping(self):

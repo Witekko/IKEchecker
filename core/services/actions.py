@@ -80,7 +80,7 @@ def add_manual_transaction(portfolio, data):
     # 2. AUTO DEPOSIT LOGIC
     if t_type == 'BUY' and auto_deposit:
         all_trans = Transaction.objects.filter(portfolio=portfolio)
-        calc = PortfolioCalculator(all_trans).process()
+        calc = PortfolioCalculator(all_trans, portfolio_currency=portfolio.currency).process()
         current_cash, _ = calc.get_cash_balance()
 
         cost = abs(amount)
