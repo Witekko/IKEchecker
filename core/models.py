@@ -189,3 +189,14 @@ class Watchlist(models.Model):
 
     def __str__(self):
         return f"{self.user.username} watches {self.asset.symbol}"
+
+
+class Announcement(models.Model):
+    message = models.TextField(help_text="Content of the announcement. Supports safe HTML (e.g. links).")
+    is_active = models.BooleanField(default=True, help_text="Designates whether this announcement should be displayed.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"Announcement #{self.id} ({status}) - {self.message[:30]}..."

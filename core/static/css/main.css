@@ -297,3 +297,63 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
     color: #121212 !important; border-color: var(--accent-green) !important; font-weight: 700;
 }
 .nav-pills .nav-link.active { background-color: var(--accent-green) !important; color: #121212 !important; font-weight: bold; }
+
+/* --- ANNOUNCEMENT BANNER STYLES --- */
+.announcement-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: rgba(245, 158, 11, 0.15); /* Amber Accent */
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 12px;
+    color: #fef08a;
+    font-size: 0.95rem;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.announcement-banner.hidden {
+    display: none !important;
+}
+
+.announcement-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.announcement-icon {
+    font-size: 1.2rem;
+}
+
+.announcement-text {
+    font-weight: 500;
+}
+
+.announcement-text a {
+    color: #fbbf24;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.announcement-text a:hover {
+    color: #f59e0b;
+}
+
+.announcement-dismiss {
+    background: none;
+    border: none;
+    color: rgba(254, 240, 138, 0.7);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.announcement-dismiss:hover {
+    background: rgba(245, 158, 11, 0.2);
+    color: #ffffff;
+}

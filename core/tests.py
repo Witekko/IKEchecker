@@ -278,3 +278,33 @@ class SecuritySettingsTests(TestCase):
         response = self.client.post('/', {'login': 'testlogin@example.com', 'password': 'password123'})
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.endswith('/dashboard/'))
+
+
+from core.models import Announcement
+from core.context_processors import active_announcement
+
+class AnnouncementTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpassword")
+
+    def test_context_processor_no_announcements(self):
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        request = factory.get('/')
+        request.user = self.user
+        
+        context = active_announcement(request)
+        self.assertIsNone(context['active_announcement'])
+
+    def test_context_processor_with_active_announcement(self):
+        Announcement.objects.create(message="First inactive", is_active=False)
+        Announcement.objects.create(message="Latest active", is_active=True)
+        
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        request = factory.get('/')
+        request.user = self.user
+        
+        context = active_announcement(request)
+        self.assertIsNotNone(context['active_announcement'])
+        self.assertEqual(context['active_announcement'].message, "Latest active")

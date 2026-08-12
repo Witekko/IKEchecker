@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
-from .models import Asset, Portfolio, Transaction, PriceHistory, AssetFeedback, Watchlist
+from .models import Asset, Portfolio, Transaction, PriceHistory, AssetFeedback, Watchlist, Announcement
 
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -24,3 +24,13 @@ class AssetFeedbackAdmin(admin.ModelAdmin):
 admin.site.register(Portfolio)
 admin.site.register(PriceHistory)
 admin.site.register(Watchlist)
+
+@admin.register(Announcement)
+class AnnouncementAdmin(admin.ModelAdmin):
+    list_display = ('id', 'message_snippet', 'is_active', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('message',)
+
+    def message_snippet(self, obj):
+        return obj.message[:50]
+    message_snippet.short_description = 'Message'
