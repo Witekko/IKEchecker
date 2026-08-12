@@ -23,10 +23,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-for-dev-
 # Debug: True tylko jeśli w .env jest wpisane 'True'
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# Hosty: Rozdzielamy przecinkami z .env, domyślnie tylko localhost dla bezpieczeństwa
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-if 'ike-tracker.wkinfo.xyz' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append('ike-tracker.wkinfo.xyz')
+# Hosty: Rozdzielamy przecinkami z .env, domyślnie dodajemy domeny lokalne oraz produkcyjne
+ALLOWED_HOSTS = os.environ.get(
+    'ALLOWED_HOSTS', 
+    'localhost,127.0.0.1,ike-tracker.onrender.com,ike-tracker.wkinfo.xyz'
+).split(',')
 
 
 # Application definition
@@ -210,6 +211,7 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     
     # HTTP Strict Transport Security (HSTS)
     SECURE_HSTS_SECONDS = 31536000 # 1 year
