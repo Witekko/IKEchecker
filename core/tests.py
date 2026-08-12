@@ -294,7 +294,7 @@ class AnnouncementTests(TestCase):
         request.user = self.user
         
         context = active_announcement(request)
-        self.assertIsNone(context['active_announcement'])
+        self.assertEqual(len(context['active_announcements']), 0)
 
     def test_context_processor_with_active_announcement(self):
         Announcement.objects.create(message="First inactive", is_active=False)
@@ -306,8 +306,8 @@ class AnnouncementTests(TestCase):
         request.user = self.user
         
         context = active_announcement(request)
-        self.assertIsNotNone(context['active_announcement'])
-        self.assertEqual(context['active_announcement'].message, "Latest active")
+        self.assertEqual(len(context['active_announcements']), 1)
+        self.assertEqual(context['active_announcements'][0].message, "Latest active")
 
     def test_dismiss_announcement_api(self):
         ann = Announcement.objects.create(message="Critical alert", is_active=True)
@@ -332,5 +332,4 @@ class AnnouncementTests(TestCase):
         request.user = self.user
         
         context = active_announcement(request)
-        # Should be None because the user has already read the announcement
-        self.assertIsNone(context['active_announcement'])
+        self.assertEqual(len(context['active_announcements']), 0)

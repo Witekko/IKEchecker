@@ -321,16 +321,25 @@
                         }
                     }
                 </style>
+            {% if active_announcements %}
+                <!-- Hidden DOM Queue of announcements -->
+                <div id="announcement-queue" style="display: none;">
+                    {% for ann in active_announcements %}
+                        <div class="pending-announcement" data-id="{{ ann.id }}">
+                            {{ ann.message|safe }}
+                        </div>
+                    {% endfor %}
+                </div>
 
-                <div id="announcement-mascot-wrapper" class="announcement-mascot-wrapper">
+                <div id="announcement-mascot-wrapper" class="announcement-mascot-wrapper exiting">
                     <!-- The Speech Bubble -->
                     <div id="announcement-speech-bubble" class="announcement-speech-bubble">
                         <div class="bubble-header">📢 Wiadomość od pomocnika:</div>
-                        <div class="bubble-body">
-                            {{ active_announcement.message|safe }}
+                        <div id="announcement-bubble-body" class="bubble-body">
+                            <!-- Loaded dynamically -->
                         </div>
                         <div class="bubble-footer">
-                            <button class="btn btn-warning btn-sm px-4 py-2" onclick="dismissMascot({{ active_announcement.id }})" style="font-weight: 600; border-radius: 8px;">
+                            <button id="announcement-dismiss-btn" class="btn btn-warning btn-sm px-4 py-2" style="font-weight: 600; border-radius: 8px;">
                                 Zrozumiałem
                             </button>
                         </div>
@@ -362,24 +371,60 @@
                         </svg>
                     </div>
                 </div>
+
                 <script>
-                    function dismissMascot(id) {
-                        fetch(`/dashboard/api/announcement/${id}/dismiss/`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRFToken': '{{ csrf_token }}',
-                                'Content-Type': 'application/json'
+                    (function() {
+                        const queue = document.getElementById('announcement-queue');
+                        const wrapper = document.getElementById('announcement-mascot-wrapper');
+                        const bubbleBody = document.getElementById('announcement-bubble-body');
+                        const dismissBtn = document.getElementById('announcement-dismiss-btn');
+
+                        let pending = Array.from(queue.children);
+                        let currentIndex = 0;
+
+                        function showNext() {
+                            if (currentIndex >= pending.length) {
+                                wrapper.remove();
+                                queue.remove();
+                                return;
                             }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                const wrapper = document.getElementById('announcement-mascot-wrapper');
-                                wrapper.classList.add('exiting');
-                                setTimeout(() => wrapper.remove(), 500);
-                            }
-                        });
-                    }
+
+                            const currentDiv = pending[currentIndex];
+                            const id = currentDiv.getAttribute('data-id');
+                            bubbleBody.innerHTML = currentDiv.innerHTML;
+
+                            dismissBtn.onclick = function() {
+                                dismissMascot(id);
+                            };
+
+                            // Trigger peep-in and pop-in by removing 'exiting' class
+                            wrapper.classList.remove('exiting');
+                        }
+
+                        function dismissMascot(id) {
+                            fetch(`/dashboard/api/announcement/${id}/dismiss/`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': '{{ csrf_token }}',
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    wrapper.classList.add('exiting');
+                                    currentIndex++;
+                                    // Wait for exit animation to complete before peeping back in
+                                    setTimeout(showNext, 500);
+                                }
+                            });
+                        }
+
+                        // Initial Load
+                        if (pending.length > 0) {
+                            setTimeout(showNext, 400);
+                        }
+                    })();
                 </script>
             {% endif %}
 
