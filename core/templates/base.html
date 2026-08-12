@@ -74,8 +74,21 @@
                             </li>
                         </ul>
                     </div>
-                    <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px; font-size: 0.9rem; font-weight: 600; color: #fff;">
-                        {{ user.username|slice:":1"|upper }}
+                    <div class="dropdown">
+                        <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0 dropdown-toggle" style="width: 32px; height: 32px; font-size: 0.9rem; font-weight: 600; color: #fff; cursor: pointer;" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ user.username|slice:":1"|upper }}
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg text-small">
+                            <li class="dropdown-header text-muted small text-truncate" style="max-width: 150px;">{{ user.username }}</li>
+                            <li><a class="dropdown-item" href="{% url 'account_change_password' %}" style="font-size: 0.85rem;"><i class="fas fa-key me-2"></i>Change Password</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{% url 'logout' %}" method="post" class="m-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger" style="font-size: 0.85rem;"><i class="fas fa-sign-out-alt me-2"></i>Log out</button>
+                                </form>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             {% endif %}
