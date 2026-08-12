@@ -199,3 +199,21 @@ class SecuritySettingsTests(TestCase):
         self.assertEqual(settings.CSRF_COOKIE_SAMESITE, 'Lax')
         self.assertEqual(settings.X_FRAME_OPTIONS, 'DENY')
         self.assertEqual(settings.SECURE_REFERRER_POLICY, 'same-origin')
+
+    def test_traditional_login_via_allauth_view(self):
+        user = User.objects.create_user(username="testloginuser", password="password123", email="testlogin@example.com")
+        from allauth.account.models import EmailAddress
+        EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
+        
+        # Test username login
+        response = self.client.post('/', {'login': 'testloginuser', 'password': 'password123'})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.endswith('/dashboard/'))
+        
+        # Log out
+        self.client.logout()
+        
+        # Test email login
+        response = self.client.post('/', {'login': 'testlogin@example.com', 'password': 'password123'})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.endswith('/dashboard/'))
