@@ -10,6 +10,23 @@
 <form method="post">
     {% csrf_token %}
 
+    {% if form.errors or form.non_field_errors %}
+    <div class="alert alert-danger py-2 small border-0 bg-danger bg-opacity-10 text-danger mb-3">
+        {% if form.non_field_errors %}
+            {% for error in form.non_field_errors %}
+                <div class="d-flex align-items-center"><i class="fas fa-exclamation-circle me-2"></i>{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+        {% for field in form %}
+            {% if field.errors %}
+                {% for error in field.errors %}
+                    <div class="d-flex align-items-center"><i class="fas fa-exclamation-circle me-2"></i>{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="mb-3">
         <label class="text-muted small text-uppercase fw-bold mb-1">Username or Email</label>
         <input type="text" name="login" class="form-control bg-dark text-white border-secondary" required autofocus>
