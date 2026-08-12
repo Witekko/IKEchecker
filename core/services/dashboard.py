@@ -42,7 +42,7 @@ def get_dashboard_stats_context(active_portfolio, range_mode='all'):
     current_val = stats['total_value']
 
     # 2. Oblicz wskaźniki (Performance)
-    perf = PerformanceCalculator(transactions)
+    perf = PerformanceCalculator(transactions, portfolio_currency=active_portfolio.currency, currency_rates=rates)
     metrics = perf.calculate_metrics(
         timeline_data=full_timeline,
         start_date=start_date,

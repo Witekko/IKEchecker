@@ -308,11 +308,27 @@ def analyze_history(transactions, currency_rates, portfolio_currency="PLN"):
     if not transactions.exists():
         return {'dates': [], 'val_user': [], 'val_inv': [], 'last_date': 'N/A'}
 
-    tx_data = list(transactions.values('date', 'type', 'amount', 'quantity', 'asset__yahoo_ticker'))
+    tx_data = list(transactions.values('date', 'type', 'amount', 'quantity', 'asset__yahoo_ticker', 'portfolio_id'))
+    
+    portfolio_ids = list(set(x['portfolio_id'] for x in tx_data if x.get('portfolio_id')))
+    from core.models import Portfolio
+    p_currencies = {p.id: p.currency for p in Portfolio.objects.filter(id__in=portfolio_ids)}
+
+    for row in tx_data:
+        tx_currency = p_currencies.get(row['portfolio_id'])
+        amt = float(row['amount'])
+        if tx_currency and tx_currency != portfolio_currency:
+            tx_to_pln = 1.0 if tx_currency == 'PLN' else currency_rates.get(tx_currency, 1.0)
+            port_to_pln = 1.0 if portfolio_currency == 'PLN' else currency_rates.get(portfolio_currency, 1.0)
+            if tx_currency == 'JPY': tx_to_pln = float(tx_to_pln) / 100.0
+            if portfolio_currency == 'JPY': port_to_pln = float(port_to_pln) / 100.0
+            multiplier = float(tx_to_pln) / float(port_to_pln) if port_to_pln else 1.0
+            amt = amt * multiplier
+        row['amount'] = amt
+        row['quantity'] = float(row['quantity'])
+
     df_tx = pd.DataFrame(tx_data)
     df_tx['date'] = pd.to_datetime(df_tx['date']).dt.date
-    df_tx['amount'] = df_tx['amount'].astype(float)
-    df_tx['quantity'] = df_tx['quantity'].astype(float)
     df_tx = df_tx.sort_values(by=['date', 'type'])
 
     start_date = df_tx['date'].min()

@@ -7,8 +7,30 @@ except ImportError:
 
 
 class PerformanceCalculator:
-    def __init__(self, transactions):
+    def __init__(self, transactions, portfolio_currency="PLN", currency_rates=None):
         self.transactions = sorted(list(transactions), key=lambda x: x.date)
+        self.portfolio_currency = portfolio_currency
+        self.currency_rates = currency_rates or {}
+        
+        # Pre-cache currencies to avoid database queries during metrics calculation
+        portfolio_ids = list(set(t.portfolio_id for t in self.transactions if hasattr(t, 'portfolio_id') and t.portfolio_id))
+        from core.models import Portfolio
+        self.portfolio_currencies = {p.id: p.currency for p in Portfolio.objects.filter(id__in=portfolio_ids)}
+
+    def _get_converted_amount(self, t):
+        amt = float(t.amount)
+        tx_currency = self.portfolio_currencies.get(t.portfolio_id)
+        if not tx_currency or tx_currency == self.portfolio_currency:
+            return amt
+            
+        tx_to_pln = 1.0 if tx_currency == 'PLN' else self.currency_rates.get(tx_currency, 1.0)
+        port_to_pln = 1.0 if self.portfolio_currency == 'PLN' else self.currency_rates.get(self.portfolio_currency, 1.0)
+        
+        if tx_currency == 'JPY': tx_to_pln = float(tx_to_pln) / 100.0
+        if self.portfolio_currency == 'JPY': port_to_pln = float(port_to_pln) / 100.0
+        
+        multiplier = float(tx_to_pln) / float(port_to_pln) if port_to_pln else 1.0
+        return amt * multiplier
 
     # --- ZMIANA: Dodajemy argument timeline_data ---
     def calculate_metrics(self, timeline_data=None, start_date=None, end_date=None, current_total_value=None):
@@ -46,7 +68,7 @@ class PerformanceCalculator:
             end_val = self._get_accounting_value_at(end_date)  # Fallback (mało precyzyjny dla przeszłości)
 
         # 4. Cash Flow w okresie
-        net_deposits = sum(float(t.amount) for t in transactions_in_period if t.type in ['DEPOSIT', 'WITHDRAWAL'])
+        net_deposits = sum(self._get_converted_amount(t) for t in transactions_in_period if t.type in ['DEPOSIT', 'WITHDRAWAL'])
 
         # --- A. PROFIT ---
         # Profit = (Wartość Końcowa) - (Wartość Początkowa RYNKOWA) - (Wpłaty w trakcie)
@@ -125,7 +147,7 @@ class PerformanceCalculator:
         for t in self.transactions:
             if t.type in ['DEPOSIT', 'WITHDRAWAL']:
                 d_str = t.date.strftime("%Y-%m-%d")
-                daily_flows[d_str] = daily_flows.get(d_str, 0.0) + float(t.amount)
+                daily_flows[d_str] = daily_flows.get(d_str, 0.0) + self._get_converted_amount(t)
 
         twr_accumulated = 1.0
         start_idx = 0
@@ -162,7 +184,7 @@ class PerformanceCalculator:
         # start_val jest teraz RYNKOWE, więc jest to "koszt alternatywny" (gdybyśmy sprzedali)
         if abs(start_val) > 0.01: flows[start_date] = flows.get(start_date, 0.0) - float(start_val)
         for t in transactions:
-            d, amt = t.date.date(), float(t.amount)
+            d, amt = t.date.date(), self._get_converted_amount(t)
             if t.type == 'DEPOSIT':
                 flows[d] = flows.get(d, 0.0) - amt
             elif t.type == 'WITHDRAWAL':
@@ -181,7 +203,7 @@ class PerformanceCalculator:
         val = 0.0
         for t in self.transactions:
             if t.date.date() > target_date: break
-            val += float(t.amount)
+            val += self._get_converted_amount(t)
         return max(0.0, val)
 
     def _empty_result(self, s, e):

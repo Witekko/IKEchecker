@@ -128,6 +128,40 @@ class PortfolioCalculatorTests(TestCase):
         self.assertEqual(cash, 500.0)
         self.assertEqual(invested, 500.0)
 
+    def test_performance_calculator_currency_conversion(self):
+        # Create USD portfolio
+        usd_portfolio = Portfolio.objects.create(
+            user=self.user,
+            name="USD Portfolio",
+            portfolio_type=PortfolioType.STANDARD,
+            currency="USD"
+        )
+        # Deposit 100 USD
+        Transaction.objects.create(
+            portfolio=usd_portfolio,
+            date=timezone.now(),
+            type=TransactionType.DEPOSIT,
+            amount=Decimal('100.00'),
+            quantity=Decimal('0')
+        )
+        # Deposit 100 PLN in PLN portfolio
+        Transaction.objects.create(
+            portfolio=self.portfolio,
+            date=timezone.now(),
+            type=TransactionType.DEPOSIT,
+            amount=Decimal('100.00'),
+            quantity=Decimal('0')
+        )
+        
+        rates = {'USD': 4.0}
+        all_trans = Transaction.objects.filter(portfolio__in=[self.portfolio, usd_portfolio])
+        from core.services.performance import PerformanceCalculator
+        perf = PerformanceCalculator(all_trans, portfolio_currency="PLN", currency_rates=rates)
+        
+        metrics = perf.calculate_metrics(start_date=timezone.now().date(), current_total_value=500.0)
+        # profit should be: current_total_value (500) - start_value (0) - net_deposits (100 PLN + 100 USD * 4.0 = 500 PLN) = 0
+        self.assertEqual(metrics['profit'], 0.0)
+
 
 class XtbParserTests(TestCase):
     def test_transfer_mapping(self):
