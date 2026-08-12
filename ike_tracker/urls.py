@@ -8,6 +8,8 @@ from core import views
 
 # Zmieniony URL admina dla bezpieczeństwa - z możliwością nadpisania zmienną środowiskową w produkcji
 ADMIN_URL = os.environ.get('DJANGO_ADMIN_URL', 'management-portal-secure/')
+if ADMIN_URL and not ADMIN_URL.endswith('/'):
+    ADMIN_URL += '/'
 
 urlpatterns = [
     # --- PANEL ADMINA ---
