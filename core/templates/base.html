@@ -128,6 +128,8 @@
                         height: 200px;
                         filter: drop-shadow(-4px 0 15px rgba(0, 0, 0, 0.5));
                         animation: mascotPeepIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                        pointer-events: none;
+                        z-index: 5;
                     }
 
                     .announcement-mascot-wrapper.exiting .announcement-mascot {
@@ -138,6 +140,7 @@
                     .helper-robot {
                         width: 100%;
                         height: 100%;
+                        pointer-events: none;
                     }
 
                     /* Centered Speech Bubble (Notification) */
@@ -147,6 +150,8 @@
                         border-radius: 20px;
                         padding: 30px;
                         width: 380px;
+                        max-height: 85vh;
+                        overflow-y: auto;
                         box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
                         position: fixed;
                         right: 140px; /* Aligned next to the robot */
@@ -156,6 +161,8 @@
                         animation: bubblePopIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards;
                         opacity: 0;
                         text-align: center;
+                        z-index: 10;
+                        pointer-events: auto;
                     }
 
                     .announcement-mascot-wrapper.exiting .announcement-speech-bubble {
@@ -257,6 +264,8 @@
                             height: 150px !important;
                             transform: translateX(50%) rotate(0deg) !important;
                             animation: mascotPeepInMobile 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+                            pointer-events: none !important;
+                            z-index: 5 !important;
                         }
 
                         .announcement-mascot-wrapper.exiting .announcement-mascot {
@@ -272,6 +281,10 @@
                             animation: bubblePopInMobile 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s forwards !important;
                             width: 100% !important;
                             max-width: 360px !important;
+                            max-height: 80vh !important;
+                            overflow-y: auto !important;
+                            z-index: 10 !important;
+                            pointer-events: auto !important;
                         }
 
                         .announcement-mascot-wrapper.exiting .announcement-speech-bubble {
