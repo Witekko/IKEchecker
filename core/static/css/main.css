@@ -282,7 +282,7 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 
     /* Ticker: large hero text */
     .asset-table td.col-asset .asset-ticker {
-        display: block;
+        display: block !important;
         font-size: 1.15rem;
         font-weight: 800;
         color: var(--accent-green);
@@ -310,7 +310,7 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 
     /* Mobile metrics row: Return% | Profit */
     .asset-mobile-metrics {
-        display: flex;
+        display: flex !important;
         gap: 16px;
         margin-top: 5px;
         align-items: center;
@@ -336,15 +336,22 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
     .asset-ticker, .asset-mobile-metrics { display: none; }
 }
 
-/* --- DESKTOP: Mobile-only elements hidden by default --- */
-/* (They are shown only inside @media max-width 767px block above) */
-.asset-ticker { display: none; }
-.asset-mobile-metrics { display: none; }
-.badge-1d { display: none; } /* Only styled/shown on mobile */
+/* --- DESKTOP/TABLET: Mobile-only elements definitively hidden --- */
+/* These are ONLY shown inside the @media (max-width: 767px) block above */
+.asset-ticker { display: none !important; }
+.asset-mobile-metrics { display: none !important; }
+.badge-1d { display: none !important; }
 
-/* Desktop 1D% cell: plain text, no badge */
+/* Desktop/Tablet 1D% cell: show badge as plain inline text, no pill styling */
 @media (min-width: 768px) {
-    .badge-1d { display: inline; background: none !important; padding: 0 !important; border-radius: 0 !important; font-size: inherit !important; font-weight: inherit !important; }
+    .badge-1d {
+        display: inline !important;
+        background: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+    }
 }
 
 /* Inne */

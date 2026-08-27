@@ -123,10 +123,21 @@
 <script src="{% static 'js/tables.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Handle clickable rows
+        // Handle clickable rows — skip navigation if text was selected
         const rows = document.querySelectorAll('.clickable-row');
         rows.forEach(row => {
-            row.addEventListener('click', function() {
+            let mouseDownX = 0, mouseDownY = 0;
+            row.addEventListener('mousedown', function(e) {
+                mouseDownX = e.clientX;
+                mouseDownY = e.clientY;
+            });
+            row.addEventListener('click', function(e) {
+                // Skip if the click originated on a button, link, or form element
+                if (e.target.closest('a, button, input, select, textarea, form')) return;
+                // Skip if text was selected (drag distance > 4px or selection length > 0)
+                const dragDist = Math.abs(e.clientX - mouseDownX) + Math.abs(e.clientY - mouseDownY);
+                const selectedText = window.getSelection ? window.getSelection().toString() : '';
+                if (dragDist > 4 || selectedText.length > 0) return;
                 window.location.href = this.dataset.href;
             });
         });
