@@ -66,13 +66,63 @@ body {
     transform: translateY(0);
 }
 
-/* Tabela - Nagłówki */
+/* Tabela - Nagłówki i Komórki */
 .table thead th {
     background-color: #1a1a1a !important; color: #adb5bd !important;
     text-transform: uppercase; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;
-    padding: 15px 0; border-bottom: 2px solid rgba(255,255,255,0.1); vertical-align: middle;
+    padding: 14px 10px; border-bottom: 2px solid rgba(255,255,255,0.1); vertical-align: middle;
+    white-space: nowrap;
 }
-.table tbody td { vertical-align: middle; padding: 12px 0; }
+.table tbody td {
+    vertical-align: middle;
+    padding: 12px 10px;
+    white-space: nowrap;
+}
+.table tfoot td {
+    vertical-align: middle;
+    padding: 12px 10px;
+    white-space: nowrap;
+}
+
+.table thead th.ps-4, .table tbody td.ps-4, .table tfoot td.ps-4 {
+    padding-left: 1.25rem !important;
+}
+
+.table thead th.pe-4, .table tbody td.pe-4, .table tfoot td.pe-4 {
+    padding-right: 1.25rem !important;
+}
+
+/* Sorting icon & header alignment */
+.th-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.sort-icon {
+    display: inline-flex;
+    flex-direction: column;
+    font-size: 0.55rem;
+    line-height: 0.6;
+    margin-left: 3px;
+    opacity: 0.35;
+    transition: opacity 0.2s;
+}
+
+th.sortable:hover .sort-icon {
+    opacity: 0.9;
+}
+
+th.sortable.asc .sort-icon .fa-caret-up {
+    color: var(--accent-green);
+    opacity: 1;
+}
+
+th.sortable.desc .sort-icon .fa-caret-down {
+    color: var(--accent-green);
+    opacity: 1;
+}
 
 h1, h2, h3, h4, h5, h6 { color: #fff !important; }
 
@@ -244,113 +294,33 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
         color: #fff;
         background-color: rgba(255,255,255,0.05);
     }
-    /* --- ASSET TABLE: MOBILE CARD STACK --- */
-
-    /* Hide the standard table wrapper chrome on mobile for asset tables */
-    .asset-table-wrapper { overflow: visible !important; margin-bottom: 0 !important; }
-    .asset-table thead { display: none !important; }
-
-    /* Each row becomes an independent card */
-    .asset-table tbody { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
-    .asset-table tbody tr.asset-row {
-        display: block !important;
-        position: relative;
-        padding: 12px 14px 12px 18px;
-        border-radius: 12px;
-        background: #1e1e1e;
-        border: 1px solid rgba(255,255,255,0.06);
-        transition: border-color 0.2s, box-shadow 0.2s;
+    /* --- MOBILE ASSET CARDS (< 768px) --- */
+    .asset-card {
+        background-color: var(--card-bg);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
         cursor: pointer;
     }
-    .asset-table tbody tr.asset-row:hover {
-        border-color: rgba(0, 255, 127, 0.25);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    }
-    /* Left accent border: green for profit, red for loss */
-    .asset-table tbody tr.row-positive { border-left: 3px solid rgba(0, 255, 127, 0.6) !important; }
-    .asset-table tbody tr.row-negative { border-left: 3px solid rgba(239, 83, 80, 0.6) !important; }
 
-    /* Hide ALL td elements by default */
-    .asset-table td { display: none !important; border: none !important; padding: 0 !important; }
-
-    /* Show only the asset column — it contains everything needed */
-    .asset-table td.col-asset { display: block !important; }
-
-    /* Hide desktop name/meta, show mobile ticker + metrics */
-    .asset-table td.col-asset .asset-name { display: none; }
-    .asset-table td.col-asset .asset-meta { display: none; }
-
-    /* Ticker: large hero text */
-    .asset-table td.col-asset .asset-ticker {
-        display: block !important;
-        font-size: 1.15rem;
-        font-weight: 800;
-        color: var(--accent-green);
-        letter-spacing: 0.5px;
-        line-height: 1.2;
-        margin-bottom: 2px;
+    .asset-card:hover, .asset-card:active {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
 
-    /* 1D% badge: absolute top-right */
-    .asset-table td.col-1d-pct {
-        display: block !important;
-        position: absolute !important;
-        top: 12px; right: 14px;
-        text-align: right;
+    .border-success-subtle-left {
+        border-left: 3.5px solid #198754 !important;
     }
-    .badge-1d {
-        display: inline-block;
-        padding: 3px 8px;
-        border-radius: 20px;
-        font-size: 0.72rem;
-        font-weight: 700;
+
+    .border-danger-subtle-left {
+        border-left: 3.5px solid #dc3545 !important;
     }
-    .bg-success-subtle { background-color: rgba(0, 255, 127, 0.12); }
-    .bg-danger-subtle  { background-color: rgba(239, 83, 80, 0.12); }
 
-    /* Mobile metrics row: Return% | Profit */
-    .asset-mobile-metrics {
-        display: flex !important;
-        gap: 16px;
-        margin-top: 5px;
-        align-items: center;
+    .bg-success-subtle {
+        background-color: rgba(25, 135, 84, 0.18) !important;
     }
-    .asset-mobile-return { font-size: 1rem; font-weight: 700; }
-    .asset-mobile-profit { font-size: 0.85rem; font-weight: 600; opacity: 0.85; }
 
-    /* tfoot summary hidden on mobile (not useful in card view) */
-    .asset-table tfoot { display: none !important; }
-}
-
-/* --- TABLET: 768px – 1199px (condensed table) --- */
-@media (min-width: 768px) and (max-width: 1199px) {
-    /* Hide low-value columns on tablet */
-    .asset-table .col-1d-gain,
-    .asset-table .col-units,
-    .asset-table .col-avg-price,
-    .asset-table .col-date,
-    .asset-table .col-days,
-    .asset-table .col-share { display: none !important; }
-
-    /* Mobile-only elements stay hidden on tablet */
-    .asset-ticker, .asset-mobile-metrics { display: none; }
-}
-
-/* --- DESKTOP/TABLET: Mobile-only elements definitively hidden --- */
-/* These are ONLY shown inside the @media (max-width: 767px) block above */
-.asset-ticker { display: none !important; }
-.asset-mobile-metrics { display: none !important; }
-.badge-1d { display: none !important; }
-
-/* Desktop/Tablet 1D% cell: show badge as plain inline text, no pill styling */
-@media (min-width: 768px) {
-    .badge-1d {
-        display: inline !important;
-        background: none !important;
-        padding: 0 !important;
-        border-radius: 0 !important;
-        font-size: inherit !important;
-        font-weight: inherit !important;
+    .bg-danger-subtle {
+        background-color: rgba(220, 53, 69, 0.18) !important;
     }
 }
 
@@ -374,4 +344,5 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
     background-color: var(--accent-green) !important;
     color: #121212 !important; border-color: var(--accent-green) !important; font-weight: 700;
 }
-.nav-pills .nav-link.active { background-color: var(--accent-green) !important; color: #121212 !important; font-weight: bold; }
+.nav-pills .nav-link.active { background-color: var(--accent-green) !important; color: #121212 !important; font-weight: bold; }
+
