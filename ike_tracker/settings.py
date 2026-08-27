@@ -261,3 +261,10 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 SECURE_REFERRER_POLICY = 'same-origin'
 X_FRAME_OPTIONS = 'DENY'
+
+# --- SESSION SETTINGS ---
+# Explicitly set to 14 days (Django default). Was previously implicit.
+SESSION_COOKIE_AGE = 1209600  # 14 days in seconds
+# Always save the session on every request to prevent stale-session 403s.
+# This ensures the session expiry is refreshed on each visit.
+SESSION_SAVE_EVERY_REQUEST = True

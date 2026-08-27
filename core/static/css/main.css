@@ -244,36 +244,107 @@ h1, h2, h3, h4, h5, h6 { color: #fff !important; }
         color: #fff;
         background-color: rgba(255,255,255,0.05);
     }
-    /* --- FIX TABELEK NA MOBILE (Scroll poziomy) --- */
+    /* --- ASSET TABLE: MOBILE CARD STACK --- */
 
-    /* 1. Wymuszamy przewijanie kontenera */
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch; /* Płynne przewijanie na iOS */
-        margin-bottom: 60px; /* Miejsce na scrollbar nad paskiem nawigacji */
+    /* Hide the standard table wrapper chrome on mobile for asset tables */
+    .asset-table-wrapper { overflow: visible !important; margin-bottom: 0 !important; }
+    .asset-table thead { display: none !important; }
+
+    /* Each row becomes an independent card */
+    .asset-table tbody { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+    .asset-table tbody tr.asset-row {
+        display: block !important;
+        position: relative;
+        padding: 12px 14px 12px 18px;
+        border-radius: 12px;
+        background: #1e1e1e;
+        border: 1px solid rgba(255,255,255,0.06);
+        transition: border-color 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .asset-table tbody tr.asset-row:hover {
+        border-color: rgba(0, 255, 127, 0.25);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    /* Left accent border: green for profit, red for loss */
+    .asset-table tbody tr.row-positive { border-left: 3px solid rgba(0, 255, 127, 0.6) !important; }
+    .asset-table tbody tr.row-negative { border-left: 3px solid rgba(239, 83, 80, 0.6) !important; }
+
+    /* Hide ALL td elements by default */
+    .asset-table td { display: none !important; border: none !important; padding: 0 !important; }
+
+    /* Show only the asset column — it contains everything needed */
+    .asset-table td.col-asset { display: block !important; }
+
+    /* Hide desktop name/meta, show mobile ticker + metrics */
+    .asset-table td.col-asset .asset-name { display: none; }
+    .asset-table td.col-asset .asset-meta { display: none; }
+
+    /* Ticker: large hero text */
+    .asset-table td.col-asset .asset-ticker {
+        display: block;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--accent-green);
+        letter-spacing: 0.5px;
+        line-height: 1.2;
+        margin-bottom: 2px;
     }
 
-    /* 2. Blokujemy zawijanie tekstu w komórkach */
-    .table th, .table td {
-        white-space: nowrap; /* KLUCZOWE: To naprawia "zgniatanie" */
-        padding: 10px 8px;   /* Trochę ciaśniej niż na desktopie */
-        font-size: 0.8rem;   /* Mniejsza czcionka dla danych */
+    /* 1D% badge: absolute top-right */
+    .asset-table td.col-1d-pct {
+        display: block !important;
+        position: absolute !important;
+        top: 12px; right: 14px;
+        text-align: right;
     }
+    .badge-1d {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+    .bg-success-subtle { background-color: rgba(0, 255, 127, 0.12); }
+    .bg-danger-subtle  { background-color: rgba(239, 83, 80, 0.12); }
 
-    /* 3. Powiększamy pierwszą kolumnę (Nazwa aktywa), żeby była czytelna */
-    .table td:first-child {
-        min-width: 140px;
-        font-weight: 600;
+    /* Mobile metrics row: Return% | Profit */
+    .asset-mobile-metrics {
+        display: flex;
+        gap: 16px;
+        margin-top: 5px;
+        align-items: center;
     }
+    .asset-mobile-return { font-size: 1rem; font-weight: 700; }
+    .asset-mobile-profit { font-size: 0.85rem; font-weight: 600; opacity: 0.85; }
 
-    /* Ukrywamy scrollbar systemowy (opcjonalnie, dla estetyki), ale zostawiamy funkcję */
-    .table-responsive::-webkit-scrollbar {
-        height: 4px;
-    }
-    .table-responsive::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.2);
-        border-radius: 2px;
-    }
+    /* tfoot summary hidden on mobile (not useful in card view) */
+    .asset-table tfoot { display: none !important; }
+}
+
+/* --- TABLET: 768px – 1199px (condensed table) --- */
+@media (min-width: 768px) and (max-width: 1199px) {
+    /* Hide low-value columns on tablet */
+    .asset-table .col-1d-gain,
+    .asset-table .col-units,
+    .asset-table .col-avg-price,
+    .asset-table .col-date,
+    .asset-table .col-days,
+    .asset-table .col-share { display: none !important; }
+
+    /* Mobile-only elements stay hidden on tablet */
+    .asset-ticker, .asset-mobile-metrics { display: none; }
+}
+
+/* --- DESKTOP: Mobile-only elements hidden by default --- */
+/* (They are shown only inside @media max-width 767px block above) */
+.asset-ticker { display: none; }
+.asset-mobile-metrics { display: none; }
+.badge-1d { display: none; } /* Only styled/shown on mobile */
+
+/* Desktop 1D% cell: plain text, no badge */
+@media (min-width: 768px) {
+    .badge-1d { display: inline; background: none !important; padding: 0 !important; border-radius: 0 !important; font-size: inherit !important; font-weight: inherit !important; }
 }
 
 /* Inne */

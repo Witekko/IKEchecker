@@ -5,57 +5,76 @@
 
 <div class="card border-secondary border-opacity-25 mb-5 shadow-sm">
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="{{ table_id }}">
+        <div class="table-responsive asset-table-wrapper">
+            <table class="table table-hover align-middle mb-0 asset-table" id="{{ table_id }}">
                 <thead class="bg-dark">
                     <tr>
-                        <th class="ps-4 sortable" data-sort-col="0" data-table-id="{{ table_id }}"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="ps-4 col-asset sortable" data-sort-col="0" data-table-id="{{ table_id }}"><div class="th-content">Asset <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
                         {% if not is_closed %}
-                            <th class="text-end sortable" data-sort-col="1" data-table-id="{{ table_id }}"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                            <th class="text-end sortable" data-sort-col="2" data-table-id="{{ table_id }}"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                            <th class="text-end sortable" data-sort-col="3" data-table-id="{{ table_id }}"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                            <th class="text-end sortable" data-sort-col="4" data-table-id="{{ table_id }}"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                            <th class="text-end sortable" data-sort-col="5" data-table-id="{{ table_id }}"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                            <th class="text-end sortable" data-sort-col="6" data-table-id="{{ table_id }}"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                            <th class="text-end sortable" data-sort-col="7" data-table-id="{{ table_id }}"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                            <th class="text-end sortable" data-sort-col="8" data-table-id="{{ table_id }}"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                            <th class="text-end sortable" data-sort-col="9" data-table-id="{{ table_id }}"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-1d-pct sortable" data-sort-col="1" data-table-id="{{ table_id }}"><div class="th-content">1D % <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-1d-gain sortable" data-sort-col="2" data-table-id="{{ table_id }}"><div class="th-content">1D Gain <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-units sortable" data-sort-col="3" data-table-id="{{ table_id }}"><div class="th-content">Units <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-avg-price sortable" data-sort-col="4" data-table-id="{{ table_id }}"><div class="th-content">Avg Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-cur-price sortable" data-sort-col="5" data-table-id="{{ table_id }}"><div class="th-content">Cur. Price <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-date sortable" data-sort-col="6" data-table-id="{{ table_id }}"><div class="th-content">Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-days sortable" data-sort-col="7" data-table-id="{{ table_id }}"><div class="th-content">Days <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-value sortable" data-sort-col="8" data-table-id="{{ table_id }}"><div class="th-content">Value <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-share sortable" data-sort-col="9" data-table-id="{{ table_id }}"><div class="th-content">Share <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
                         {% else %}
-                            <th class="text-end sortable" data-sort-col="1" data-table-id="{{ table_id }}"><div class="th-content">Close Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                            <th class="text-end col-close-date sortable" data-sort-col="1" data-table-id="{{ table_id }}"><div class="th-content">Close Date <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
                         {% endif %}
-                        <th class="text-end sortable" data-sort-col="{% if is_closed %}2{% else %}10{% endif %}" data-table-id="{{ table_id }}"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
-                        <th class="text-end pe-4 sortable" data-sort-col="{% if is_closed %}3{% else %}11{% endif %}" data-table-id="{{ table_id }}"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end col-return sortable" data-sort-col="{% if is_closed %}2{% else %}10{% endif %}" data-table-id="{{ table_id }}"><div class="th-content">Return <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
+                        <th class="text-end pe-4 col-profit sortable" data-sort-col="{% if is_closed %}3{% else %}11{% endif %}" data-table-id="{{ table_id }}"><div class="th-content">Profit <span class="sort-icon"><i class="fas fa-caret-up"></i><i class="fas fa-caret-down"></i></span></div></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for asset in assets %}
-                    <tr style="cursor: pointer;" class="clickable-row" data-href="{% url 'asset_details' asset.symbol %}">
-                        <td class="ps-4" data-value="{{ asset.display_name }}">
-                            <div class="fw-bold text-white">{{ asset.display_name }}</div>
-                            <div class="small text-muted" style="font-size: 0.7rem;">{{ asset.sector }} &bull; {{ asset.asset_type }}</div>
+                    <tr style="cursor: pointer;" class="clickable-row asset-row {% if asset.gain_pln_raw >= 0 %}row-positive{% else %}row-negative{% endif %}" data-href="{% url 'asset_details' asset.symbol %}">
+
+                        {# ASSET COLUMN — contains all info needed by mobile card layout #}
+                        <td class="ps-4 col-asset" data-value="{{ asset.display_name }}">
+                            {# Desktop / Tablet: name + meta #}
+                            <div class="fw-bold text-white asset-name">{{ asset.display_name }}</div>
+                            <div class="small text-muted asset-meta">{{ asset.sector }} &bull; {{ asset.asset_type }}</div>
+                            {# Mobile: ticker badge shown via CSS #}
+                            <div class="asset-ticker">{{ asset.symbol }}</div>
+                            {# Mobile: inline metric row (Return% + Profit) #}
+                            <div class="asset-mobile-metrics">
+                                <span class="asset-mobile-return {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if asset.gain_percent_raw > 0 %}+{% endif %}{{ asset.gain_percent }}%
+                                </span>
+                                <span class="asset-mobile-profit {% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}
+                                </span>
+                            </div>
                         </td>
+
                         {% if not is_closed %}
-                            <td class="text-end fw-bold {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">{{ asset.day_change_pct }}%</td>
-                            <td class="text-end fw-bold {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
-                            <td class="text-end text-white" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
-                            <td class="text-end text-muted" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
-                            <td class="text-end text-white fw-bold" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
-                            <td class="text-end text-muted small" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
-                            <td class="text-end text-muted" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
-                            <td class="text-end text-white fw-bold" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
-                            <td class="text-end" data-value="{{ asset.share_pct_raw }}">
+                            <td class="text-end fw-bold col-1d-pct {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">
+                                <span class="badge-1d {% if asset.day_change_pct_raw >= 0 %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}">
+                                    {% if asset.day_change_pct_raw > 0 %}+{% endif %}{{ asset.day_change_pct }}%
+                                </span>
+                            </td>
+                            <td class="text-end fw-bold col-1d-gain {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
+                            <td class="text-end text-white col-units" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
+                            <td class="text-end text-muted col-avg-price" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
+                            <td class="text-end text-white fw-bold col-cur-price" data-value="{{ asset.cur_price }}">{{ asset.current_price_fmt }}</td>
+                            <td class="text-end text-muted small col-date" data-value="{{ asset.first_buy_date|date:'Ymd' }}">{{ asset.first_buy_date|date:"Y-m-d"|default:"--" }}</td>
+                            <td class="text-end text-muted col-days" data-value="{{ asset.days_held }}">{{ asset.days_held }}</td>
+                            <td class="text-end text-white fw-bold col-value" data-value="{{ asset.value_pln_raw }}">{{ asset.value_pln }}</td>
+                            <td class="text-end col-share" data-value="{{ asset.share_pct_raw }}">
                                 <div class="d-flex align-items-center justify-content-end">
                                     <span class="me-2 text-white small">{{ asset.share_pct }}%</span>
                                     <div class="progress" style="height: 3px; width: 25px; background-color: #333;"><div class="progress-bar bg-success" data-width="{{ asset.share_pct_raw }}"></div></div>
                                 </div>
                             </td>
                         {% else %}
-                            <td class="text-end text-muted small" data-value="{{ asset.close_date|date:'Ymd' }}">
+                            <td class="text-end text-muted small col-close-date" data-value="{{ asset.close_date|date:'Ymd' }}">
                                 {{ asset.close_date|date:"Y-m-d"|default:"--" }}
                             </td>
                         {% endif %}
-                        <td class="text-end fw-bold {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">{{ asset.gain_percent }}%</td>
-                        <td class="text-end pe-4" data-value="{{ asset.gain_pln_raw }}">
+                        <td class="text-end fw-bold col-return {% if asset.gain_percent_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.gain_percent_raw }}">{{ asset.gain_percent }}%</td>
+                        <td class="text-end pe-4 col-profit" data-value="{{ asset.gain_pln_raw }}">
                             <span class="{% if asset.gain_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">{% if asset.gain_pln_raw > 0 %}+{% endif %}{{ asset.gain_pln }}</span>
                         </td>
                     </tr>
