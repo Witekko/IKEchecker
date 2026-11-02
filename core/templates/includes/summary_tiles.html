@@ -87,7 +87,7 @@
         <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center card-hoverable">
             <div class="card-body py-2">
                 <div class="text-muted small text-uppercase mb-1">1D Change</div>
-                <div class="fw-bold fs-5 {% if tile_day_pct_raw is not None %}{% if tile_day_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}{% else %}text-success{% endif %}" id="val-day-pct-container">
+                <div class="fw-bold fs-5 {% if tile_day_pct_raw is not None %}{% if tile_day_pct_raw > 0 %}text-success{% elif tile_day_pct_raw < 0 %}text-danger{% else %}text-muted{% endif %}{% else %}text-muted{% endif %}" id="val-day-pct-container">
                     <span id="cu-day-pct">{% if tile_day_pct_raw is not None %}{% if tile_day_pct_raw > 0 %}+{% endif %}{{ tile_day_pct_str }}{% else %}<div class="skeleton d-inline-block rounded" style="width: 50px; height: 1.4rem;"></div>{% endif %}</span>%
                 </div>
             </div>
@@ -97,7 +97,7 @@
         <div class="card h-100 border-secondary border-opacity-10 bg-transparent text-center card-hoverable">
             <div class="card-body py-2">
                 <div class="text-muted small text-uppercase mb-1">1D Gain</div>
-                <div class="fw-bold fs-5 {% if tile_day_pln_raw is not None %}{% if tile_day_pln_raw >= 0 %}text-success{% else %}text-danger{% endif %}{% else %}text-success{% endif %}" id="val-day-pln-container">
+                <div class="fw-bold fs-5 {% if tile_day_pln_raw is not None %}{% if tile_day_pln_raw > 0 %}text-success{% elif tile_day_pln_raw < 0 %}text-danger{% else %}text-muted{% endif %}{% else %}text-muted{% endif %}" id="val-day-pln-container">
                     <span id="cu-day-pln">{% if tile_day_pln_raw is not None %}{% if tile_day_pln_raw > 0 %}+{% endif %}{{ tile_day_pln_str }}{% else %}<div class="skeleton d-inline-block rounded" style="width: 60px; height: 1.4rem;"></div>{% endif %}</span> <span class="small text-muted">{{ active_portfolio.currency }}</span>
                 </div>
             </div>

@@ -62,10 +62,10 @@
                             <div class="small text-muted" style="font-size: 0.7rem;">{{ asset.sector }} &bull; {{ asset.asset_type }}</div>
                         </td>
                         {% if not is_closed %}
-                            <td class="text-end fw-bold col-1d-pct {% if asset.day_change_pct_raw >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pct_raw }}">
+                            <td class="text-end fw-bold col-1d-pct {% if asset.day_change_pct_raw > 0 %}text-success{% elif asset.day_change_pct_raw < 0 %}text-danger{% else %}text-muted{% endif %}" data-value="{{ asset.day_change_pct_raw }}">
                                 {% if asset.day_change_pct_raw > 0 %}+{% endif %}{{ asset.day_change_pct }}%
                             </td>
-                            <td class="text-end fw-bold col-1d-gain d-none d-xxl-table-cell {% if asset.day_change_pln >= 0 %}text-success{% else %}text-danger{% endif %}" data-value="{{ asset.day_change_pln }}">{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
+                            <td class="text-end fw-bold col-1d-gain d-none d-xxl-table-cell {% if asset.day_change_pln > 0 %}text-success{% elif asset.day_change_pln < 0 %}text-danger{% else %}text-muted{% endif %}" data-value="{{ asset.day_change_pln }}">{% if asset.day_change_pln > 0 %}+{% endif %}{{ asset.day_change_pln|default:0|floatformat:2 }}</td>
                             <td class="text-end text-white col-units d-none d-xl-table-cell" data-value="{{ asset.quantity }}">{{ asset.quantity }}</td>
                             <td class="text-end text-muted col-avg-price d-none d-xl-table-cell" data-value="{{ asset.avg_price_pln }}">{{ asset.avg_price_pln }}</td>
                             <td class="text-end text-white fw-bold col-cur-price d-none d-lg-table-cell" data-value="{{ asset.cur_price }}">{{ asset.cur_price_str }}</td>
@@ -131,7 +131,7 @@
                 <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25" style="font-size: 0.65rem;">{{ asset.asset_type }}</span>
             </div>
             {% if not is_closed %}
-            <span class="badge rounded-pill {% if asset.day_change_pct_raw >= 0 %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %} fw-bold px-2 py-1" style="font-size: 0.75rem;">
+            <span class="badge rounded-pill {% if asset.day_change_pct_raw > 0 %}bg-success-subtle text-success{% elif asset.day_change_pct_raw < 0 %}bg-danger-subtle text-danger{% else %}bg-secondary-subtle text-muted{% endif %} fw-bold px-2 py-1" style="font-size: 0.75rem;">
                 {% if asset.day_change_pct_raw > 0 %}+{% endif %}{{ asset.day_change_pct }}%
             </span>
             {% else %}

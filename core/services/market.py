@@ -15,6 +15,13 @@ logger = logging.getLogger('core')
 from django.core.cache import cache
 from core.config import SUMMARY_INDICES, SUMMARY_CURRENCIES, BENCHMARKS
 
+try:
+    from zoneinfo import ZoneInfo
+    WARSAW_TZ = ZoneInfo('Europe/Warsaw')
+except ImportError:
+    import pytz
+    WARSAW_TZ = pytz.timezone('Europe/Warsaw')
+
 def get_market_summary():
     """
     Pobiera zbiorcze dane rynkowe (Indeksy + Waluty) z 2 dni.
@@ -47,15 +54,20 @@ def get_market_summary():
                 series = data[ticker_sym]['Close'].dropna()
                 if len(series) < 2: return None
                 
-                price_now = float(series.iloc[-1])
-                price_prev = float(series.iloc[-2])
+                last_bar_date = pd.to_datetime(series.index[-1]).date()
+                today = timezone.localdate(timezone=WARSAW_TZ)
+                is_weekend = today.weekday() >= 5
                 
-                change_pct = ((price_now - price_prev) / price_prev) * 100
+                if is_weekend or last_bar_date == today:
+                    price_now = float(series.iloc[-1])
+                    price_prev = float(series.iloc[-2])
+                    change_pct = ((price_now - price_prev) / price_prev) * 100
+                else:
+                    price_now = float(series.iloc[-1])
+                    change_pct = 0.0
                 
                 # Jeśli waluta (np. JPY), to czasem trzeba skalować, ale tu trzymamy raw
                 if is_currency and "JPY" in ticker_sym: 
-                    # JPY w Yahoo to często ~2-3 (za 100 JPY?), ale standardowo dla usera chcemy kurs 1 JPY lub 100 JPY.
-                    # Wcześniejszy kod mnożył przez 100. Utrzymajmy spójność.
                     price_now *= 100
                 
                 return {
@@ -121,9 +133,50 @@ def get_current_currency_rates():
     return data['rates']
 
 
+def is_cache_stale(asset: Asset, now=None) -> bool:
+    """
+    Checks if an asset's price cache is stale.
+    Returns True if:
+      - Asset has never been updated or has no price
+      - More than 15 minutes have passed since last update
+      - The last update was on a previous calendar day
+      - Current time has crossed Warsaw market open (09:00 CET) since the last update
+      - Current time has crossed US market open (15:30 CET) since the last update
+    """
+    if not asset.last_updated or not asset.last_price or asset.last_price <= 0:
+        return True
+    
+    if now is None:
+        now = timezone.now()
+
+    diff = (now - asset.last_updated).total_seconds()
+    if diff > 900:  # 15 minutes
+        return True
+
+    from datetime import time
+    local_now = timezone.localtime(now, WARSAW_TZ)
+    local_updated = timezone.localtime(asset.last_updated, WARSAW_TZ)
+
+    # 1. Update from a previous day is stale on a new day
+    if local_updated.date() < local_now.date():
+        return True
+
+    # 2. Crossed Warsaw market opening bell (09:00) today
+    warsaw_open = time(9, 0)
+    if local_updated.time() < warsaw_open <= local_now.time():
+        return True
+
+    # 3. Crossed US market opening bell (15:30) today
+    us_open = time(15, 30)
+    if local_updated.time() < us_open <= local_now.time():
+        return True
+
+    return False
+
+
 def update_prices_bulk(assets_list, force=False):
     """
-    Sprawdza, które aktywa są 'przestarzałe' (>15 min) i pobiera ich ceny W JEDNYM zapytaniu.
+    Sprawdza, które aktywa są 'przestarzałe' (>15 min lub przekroczone otwarcie giełdy) i pobiera ich ceny W JEDNYM zapytaniu.
     Optymalizacja N+1 zapytań HTTP.
     """
     now = timezone.now()
@@ -132,15 +185,7 @@ def update_prices_bulk(assets_list, force=False):
     # 1. Filtrujemy tylko te, które wymagają aktualizacji
     for asset in assets_list:
         if not asset.yahoo_ticker: continue
-        needs_update = False
-        if force or not asset.last_updated:
-            needs_update = True
-        else:
-            diff = now - asset.last_updated
-            if diff.total_seconds() > 900: # 15 min
-                needs_update = True
-        
-        if needs_update:
+        if force or is_cache_stale(asset, now):
             stale_assets.append(asset)
             
     if not stale_assets:
@@ -154,6 +199,8 @@ def update_prices_bulk(assets_list, force=False):
         data = yf.download(tickers, period="5d", group_by='ticker', progress=False, threads=False)
         
         updated_count = 0
+        today = timezone.localdate(timezone=WARSAW_TZ)
+        is_weekend = today.weekday() >= 5
         
         # 3. Parsowanie wyników
         for asset in stale_assets:
@@ -162,17 +209,13 @@ def update_prices_bulk(assets_list, force=False):
                 
                 # Obsługa MultiIndex (jeśli >1 ticker) lub Flat Index (jeśli 1 ticker)
                 if len(tickers) == 1:
-                     # yfinance zwraca płaski index przy 1 tickerze, wkurzające :)
-                     # Ale group_by='ticker' powinien to ogarnąć? Nie zawsze.
-                     # Spróbujmy uniwersalnie:
-                     if isinstance(data.columns, pd.MultiIndex):
-                         # Raczej nie wejdzie tutaj przy 1 elemencie ale na wszelki wypadek
-                         if tk in data.columns.levels[0]:
-                             df = data[tk]
-                         else:
-                             continue
-                     else:
-                         df = data # Cała ramka to ten ticker
+                    if isinstance(data.columns, pd.MultiIndex):
+                        if tk in data.columns.levels[0]:
+                            df = data[tk]
+                        else:
+                            continue
+                    else:
+                        df = data # Cała ramka to ten ticker
                 else:
                     if tk not in data.columns.levels[0]:
                         continue
@@ -183,8 +226,22 @@ def update_prices_bulk(assets_list, force=False):
                 valid = df['Close'].dropna()
                 if valid.empty: continue
                 
-                price = float(valid.iloc[-1])
-                prev_close = float(valid.iloc[-2]) if len(valid) >= 2 else price
+                last_bar_date = pd.to_datetime(valid.index[-1]).date()
+                
+                if is_weekend:
+                    # Weekend: giełdy zamknięte, pokazujemy zamknięcie z piątku vs czwartek
+                    price = float(valid.iloc[-1])
+                    prev_close = float(valid.iloc[-2]) if len(valid) >= 2 else price
+                elif last_bar_date == today:
+                    # Sesja dzisiejsza aktywna: bieżąca cena vs oficjalne wczorajsze zamknięcie
+                    price = float(valid.iloc[-1])
+                    prev_close = float(valid.iloc[-2]) if len(valid) >= 2 else price
+                else:
+                    # Dzień roboczy, ale sesja dla tego rynku jeszcze się dzisiaj NIE rozpoczęła
+                    # (np. rynek US rano, lub GPW przed 09:00).
+                    # Wycena to ostatnie zamknięcie, a dzisiejsza zmiana sesyjna to 0.00%.
+                    price = float(valid.iloc[-1])
+                    prev_close = price
                 
                 if price > 0:
                     asset.last_price = price
@@ -212,30 +269,41 @@ def get_cached_price(asset: Asset):
     Jeśli nie, zrobi fallback do individual fetch (stara logika).
     """
     now = timezone.now()
-    if asset.last_updated and asset.last_price > 0:
-        diff = now - asset.last_updated
-        if diff.total_seconds() < 900:
-            return float(asset.last_price), float(asset.previous_close)
+    if not is_cache_stale(asset, now):
+        return float(asset.last_price), float(asset.previous_close)
 
     try:
         ticker = yf.Ticker(asset.yahoo_ticker)
         price = 0.0
         prev_close = 0.0
+        today = timezone.localdate(timezone=WARSAW_TZ)
+        is_weekend = today.weekday() >= 5
 
         # 1. Próba z historią
         data = ticker.history(period='5d')
         if not data.empty and 'Close' in data.columns:
             valid = data['Close'].dropna()
             if not valid.empty:
-                price = float(valid.iloc[-1])
-                prev_close = float(valid.iloc[-2]) if len(valid) >= 2 else price
+                last_bar_date = pd.to_datetime(valid.index[-1]).date()
+                if is_weekend or last_bar_date == today:
+                    price = float(valid.iloc[-1])
+                    prev_close = float(valid.iloc[-2]) if len(valid) >= 2 else price
+                else:
+                    price = float(valid.iloc[-1])
+                    prev_close = price
 
-        # 2. Fallback: Jeśli historia pusta, bierzemy aktualną wycenę (Quote)
+        # 2. Fallback: Jeśli historia pusta, bierzemy aktualną wycenę z fast_info / info
         if price <= 0:
-            info = ticker.info
-            # Różne pola, w których Yahoo może ukryć cenę
-            price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('price') or 0.0
-            prev_close = info.get('regularMarketPreviousClose') or price
+            try:
+                fast = ticker.fast_info
+                last_p = float(fast.last_price or 0.0)
+                pc = float(fast.previous_close or last_p)
+                price = last_p
+                prev_close = pc
+            except:
+                info = ticker.info
+                price = float(info.get('currentPrice') or info.get('regularMarketPrice') or info.get('price') or 0.0)
+                prev_close = float(info.get('regularMarketPreviousClose') or price)
 
         if price > 0:
             asset.last_price = price

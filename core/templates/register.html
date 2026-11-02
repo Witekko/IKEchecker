@@ -7,7 +7,7 @@
     <p class="text-muted small">Join us and streamline your portfolio tracking.</p>
 </div>
 
-<form method="post">
+<form method="post" action="{% url 'register' %}">
     {% csrf_token %}
     {{ form.as_p }}
 

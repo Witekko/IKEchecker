@@ -32,10 +32,13 @@ class BaseParser:
 
     def _parse_quantity(self, trans_type, comment):
         if trans_type in ['BUY', 'SELL']:
-            match = re.search(r'(BUY|SELL)\s+([0-9./]+)', comment, re.IGNORECASE)
+            # Supports both formats:
+            # Old format: "OPEN BUY 0.5175 @ 306.40" or "OPEN BUY 1/1.6087 @ 193.80"
+            # New format (XTB Oct 2026+): "OPEN BUY CBF.PL 1/1.3183 @ 194.00"
+            match = re.search(r'(?:BUY|SELL)\s+(?:[A-Za-z0-9_.-]*[A-Za-z][A-Za-z0-9_.-]*\s+)?([0-9.,/]+)', comment, re.IGNORECASE)
             if match:
                 try:
-                    val = match.group(2)
+                    val = match.group(1).replace(',', '.')
                     if '/' in val: val = val.split('/')[0]
                     return float(val)
                 except:
@@ -70,6 +73,11 @@ class XtbParser(BaseParser):
         if trans_type == 'OTHER' and 'transfer' in raw_type.lower():
             trans_type = 'DEPOSIT' if amount > 0 else 'WITHDRAWAL'
 
+        # Extract XTB ID safely
+        xtb_id = None
+        if 'ID' in row and pd.notna(row['ID']):
+            xtb_id = str(int(row['ID'])) if isinstance(row['ID'], (int, float)) else str(row['ID']).strip()
+
         # Extract Position ID
         position_id = None
         if 'Position ID' in row and pd.notna(row['Position ID']):
@@ -80,7 +88,7 @@ class XtbParser(BaseParser):
         if 'Category' in row and pd.notna(row['Category']):
             category = str(row['Category']).strip().upper()
 
-        # Resolve symbol prioritizing Ticker -> Symbol -> Instrument
+        # Resolve symbol prioritizing Ticker -> Symbol -> Instrument -> Comment fallback
         symbol = None
         name_hint = None
         
@@ -95,8 +103,13 @@ class XtbParser(BaseParser):
         elif 'Instrument' in row and pd.notna(row['Instrument']) and str(row['Instrument']).strip() != '':
             symbol = str(row['Instrument']).strip()
 
+        if not symbol and trans_type in ['BUY', 'SELL']:
+            sym_match = re.search(r'(?:BUY|SELL)\s+([A-Za-z0-9_.-]*[A-Za-z][A-Za-z0-9_.-]*)\s+[0-9.,/]+', comment, re.IGNORECASE)
+            if sym_match:
+                symbol = sym_match.group(1).strip()
+
         return {
-            'xtb_id': str(int(row['ID'])) if isinstance(row['ID'], (int, float)) else str(row['ID']),
+            'xtb_id': xtb_id,
             'position_id': position_id,
             'category': category,
             'date': self._parse_date(row.get('Time')),

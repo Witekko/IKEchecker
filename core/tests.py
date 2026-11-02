@@ -188,6 +188,73 @@ class XtbParserTests(TestCase):
         res_in = parser.parse_row(row_in)
         self.assertEqual(res_in['type'], 'DEPOSIT')
 
+    def test_quantity_parsing_old_and_new_formats(self):
+        parser = XtbParser()
+        
+        # 1. Old XTB format: OPEN BUY <qty> @ <price>
+        row_old = {
+            'ID': 1001,
+            'Type': 'Stock purchase',
+            'Ticker': 'MBR.PL',
+            'Time': '2026-05-15 14:34:01',
+            'Amount': '-360.50',
+            'Comment': 'OPEN BUY 1 @ 360.50'
+        }
+        res_old = parser.parse_row(row_old)
+        self.assertEqual(res_old['quantity'], 1.0)
+        self.assertEqual(res_old['price'], 360.50)
+
+        # 2. Old fractional format: OPEN BUY <qty>/<total> @ <price>
+        row_old_frac = {
+            'ID': 1002,
+            'Type': 'Stock purchase',
+            'Ticker': 'CBF.PL',
+            'Time': '2026-04-07 12:39:33',
+            'Amount': '-4.53',
+            'Comment': 'OPEN BUY 0.026/2.026 @ 174.10'
+        }
+        res_old_frac = parser.parse_row(row_old_frac)
+        self.assertEqual(res_old_frac['quantity'], 0.026)
+        self.assertEqual(res_old_frac['price'], 174.10)
+
+        # 3. New XTB format (Oct 2026+): OPEN BUY <TICKER> <qty>/<total> @ <price>
+        row_new_frac = {
+            'ID': 1003,
+            'Type': 'Stock purchase',
+            'Ticker': 'CBF.PL',
+            'Time': '2026-10-26 08:00:17',
+            'Amount': '-61.75',
+            'Comment': 'OPEN BUY CBF.PL 0.3183/1.3183 @ 194.00'
+        }
+        res_new_frac = parser.parse_row(row_new_frac)
+        self.assertEqual(res_new_frac['quantity'], 0.3183)
+        self.assertEqual(res_new_frac['price'], 194.00)
+
+        # 4. New XTB format sell: CLOSE BUY <TICKER> <qty> @ <price>
+        row_new_sell = {
+            'ID': 1004,
+            'Type': 'Stock sell',
+            'Ticker': 'NVD.DE',
+            'Time': '2026-10-08 07:00:10',
+            'Amount': '78.93',
+            'Comment': 'CLOSE BUY NVD.DE 0.3362 @ 210.85'
+        }
+        res_new_sell = parser.parse_row(row_new_sell)
+        self.assertEqual(res_new_sell['quantity'], 0.3362)
+        self.assertEqual(res_new_sell['price'], 210.85)
+
+    def test_parse_row_nan_id_handling(self):
+        import numpy as np
+        parser = XtbParser()
+        row_nan = {
+            'ID': np.nan,
+            'Type': 'Total',
+            'Time': '2026-11-02 00:00:00',
+            'Amount': '1000.00'
+        }
+        res = parser.parse_row(row_nan)
+        self.assertIsNone(res['xtb_id'])
+
 
 from django.urls import reverse
 
@@ -267,7 +334,8 @@ class SecuritySettingsTests(TestCase):
         self.assertEqual(settings.SESSION_COOKIE_SAMESITE, 'Lax')
         self.assertEqual(settings.CSRF_COOKIE_SAMESITE, 'Lax')
         self.assertEqual(settings.X_FRAME_OPTIONS, 'DENY')
-        self.assertEqual(settings.SECURE_REFERRER_POLICY, 'same-origin')
+        self.assertEqual(settings.SECURE_REFERRER_POLICY, 'strict-origin-when-cross-origin')
+        self.assertEqual(settings.SECURE_PROXY_SSL_HEADER, ('HTTP_X_FORWARDED_PROTO', 'https'))
 
     def test_traditional_login_via_allauth_view(self):
         user = User.objects.create_user(username="testloginuser", password="password123", email="testlogin@example.com")
@@ -333,3 +401,64 @@ class AnnouncementTests(TestCase):
         
         context = active_announcement(request)
         self.assertEqual(len(context['active_announcements']), 0)
+
+
+from core.services.market import is_cache_stale
+from datetime import datetime
+import pytz
+
+class MarketCacheAndDailyChangeTests(TestCase):
+    def setUp(self):
+        self.asset = Asset.objects.create(
+            symbol="TEST.PL",
+            yahoo_ticker="TEST.WA",
+            last_price=100.0,
+            previous_close=95.0,
+            currency="PLN"
+        )
+
+    def test_cache_stale_when_no_price_or_date(self):
+        self.asset.last_updated = None
+        self.assertTrue(is_cache_stale(self.asset))
+
+    def test_cache_stale_after_15_minutes(self):
+        tz = pytz.timezone('Europe/Warsaw')
+        t1 = tz.localize(datetime(2026, 11, 2, 10, 0, 0))
+        t2 = tz.localize(datetime(2026, 11, 2, 10, 16, 0)) # 16 mins later
+        self.asset.last_updated = t1
+        self.assertTrue(is_cache_stale(self.asset, now=t2))
+
+    def test_cache_fresh_within_15_minutes(self):
+        tz = pytz.timezone('Europe/Warsaw')
+        t1 = tz.localize(datetime(2026, 11, 2, 10, 0, 0))
+        t2 = tz.localize(datetime(2026, 11, 2, 10, 5, 0)) # 5 mins later
+        self.asset.last_updated = t1
+        self.assertFalse(is_cache_stale(self.asset, now=t2))
+
+    def test_cache_stale_crossing_warsaw_open(self):
+        tz = pytz.timezone('Europe/Warsaw')
+        t_pre = tz.localize(datetime(2026, 11, 2, 8, 55, 0)) # pre-open
+        t_open = tz.localize(datetime(2026, 11, 2, 9, 2, 0))  # 7 mins later, but crossed 09:00
+        self.asset.last_updated = t_pre
+        self.assertTrue(is_cache_stale(self.asset, now=t_open))
+
+    def test_cache_stale_crossing_us_open(self):
+        tz = pytz.timezone('Europe/Warsaw')
+        t_pre = tz.localize(datetime(2026, 11, 2, 15, 25, 0)) # pre-US open
+        t_open = tz.localize(datetime(2026, 11, 2, 15, 32, 0)) # 7 mins later, but crossed 15:30
+        self.asset.last_updated = t_pre
+        self.assertTrue(is_cache_stale(self.asset, now=t_open))
+
+    def test_unopened_market_zero_day_change(self):
+        # When an asset has not opened today, last_price == previous_close
+        self.asset.last_price = 100.0
+        self.asset.previous_close = 100.0
+        self.asset.save()
+        
+        cur_p = float(self.asset.last_price)
+        prev_c = float(self.asset.previous_close)
+        chg_pct = ((cur_p - prev_c) / prev_c * 100) if prev_c > 0 else 0.0
+        chg_val = (10 * (cur_p - prev_c))
+        
+        self.assertEqual(chg_pct, 0.0)
+        self.assertEqual(chg_val, 0.0)

@@ -202,8 +202,28 @@ DEFAULT_CURRENCY_RATES = {
     'AUD': 2.60
 }
 
-# Fix dla CSRF - pozwala na przesyłanie formularzy z domeny onrender.com oraz wkinfo.xyz
-CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com', 'https://*.wkinfo.xyz']
+# Proxy SSL header - Render terminates SSL at reverse proxy level.
+# Setting this unconditionally ensures Django always knows when a request arrived via HTTPS,
+# preventing CSRF 403 origin mismatches between HTTP and HTTPS.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Fix dla CSRF - pozwala na przesyłanie formularzy z domen onrender.com oraz wkinfo.xyz
+csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if csrf_env:
+    CSRF_TRUSTED_ORIGINS = [orig.strip() for orig in csrf_env.split(',') if orig.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://ike-tracker.onrender.com',
+        'http://ike-tracker.onrender.com',
+        'https://*.onrender.com',
+        'http://*.onrender.com',
+        'https://ike-tracker.wkinfo.xyz',
+        'http://ike-tracker.wkinfo.xyz',
+        'https://*.wkinfo.xyz',
+        'https://wkinfo.xyz',
+        'http://localhost',
+        'http://127.0.0.1',
+    ]
 
 # --- SECURITY HEADERS & COOKIES (PRODUCTION) ---
 if not DEBUG:
@@ -212,7 +232,6 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_SSL_REDIRECT = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     
     # HTTP Strict Transport Security (HSTS)
     SECURE_HSTS_SECONDS = 31536000 # 1 year
@@ -259,7 +278,8 @@ SOCIALACCOUNT_ADAPTER = 'core.adapters.MySocialAccountAdapter'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
-SECURE_REFERRER_POLICY = 'same-origin'
+# 'strict-origin-when-cross-origin' preserves Referer within HTTPS, preventing mobile 403 CSRF drops
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 X_FRAME_OPTIONS = 'DENY'
 
 # --- SESSION SETTINGS ---

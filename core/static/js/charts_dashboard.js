@@ -143,20 +143,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const dayPctContainer = document.getElementById('val-day-pct-container');
                 if (dayPctContainer) {
-                    if (valDayPct >= 0) {
+                    if (valDayPct > 0) {
                         dayPctContainer.className = 'fw-bold fs-5 text-success';
                         dayPctContainer.innerHTML = `<i class="fas fa-caret-up text-accent me-1"></i><span id="cu-day-pct">0.00</span>%`;
-                    } else {
+                    } else if (valDayPct < 0) {
                         dayPctContainer.className = 'fw-bold fs-5 text-danger';
                         dayPctContainer.innerHTML = `<i class="fas fa-caret-down text-danger me-1"></i><span id="cu-day-pct">0.00</span>%`;
+                    } else {
+                        dayPctContainer.className = 'fw-bold fs-5 text-muted';
+                        dayPctContainer.innerHTML = `<span id="cu-day-pct">0.00</span>%`;
                     }
                 }
                 const dayPlnContainer = document.getElementById('val-day-pln-container');
                 if (dayPlnContainer) {
-                    if (valDayPln >= 0) {
+                    if (valDayPln > 0) {
                         dayPlnContainer.className = 'fw-bold fs-5 text-success';
-                    } else {
+                    } else if (valDayPln < 0) {
                         dayPlnContainer.className = 'fw-bold fs-5 text-danger';
+                    } else {
+                        dayPlnContainer.className = 'fw-bold fs-5 text-muted';
                     }
                 }
                 
