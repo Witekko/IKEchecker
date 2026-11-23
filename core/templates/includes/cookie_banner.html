@@ -1,0 +1,284 @@
+<style>
+    .cookie-banner {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 32px);
+        max-width: 780px;
+        background: rgba(24, 24, 24, 0.96);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(0, 255, 127, 0.28);
+        border-radius: 14px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.75);
+        padding: 18px 22px;
+        z-index: 1040;
+        color: #e0e0e0;
+        animation: cookieSlideUp 0.35s ease-out;
+    }
+
+    @keyframes cookieSlideUp {
+        from { opacity: 0; transform: translate(-50%, 24px); }
+        to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    @media (max-width: 767.98px) {
+        .cookie-banner.has-bottom-nav {
+            bottom: calc(var(--bottom-nav-height, 70px) + 12px);
+        }
+        .cookie-banner {
+            padding: 16px;
+        }
+    }
+
+    .cookie-modal-content {
+        background-color: #181818;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+    }
+
+    .cookie-category-box {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+
+    .cookie-category-box .form-check-input:checked {
+        background-color: #198754;
+        border-color: #198754;
+    }
+
+    .cookie-btn-reject {
+        color: #adb5bd;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background-color: rgba(255, 255, 255, 0.03);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .cookie-btn-reject:hover,
+    .cookie-btn-reject:focus {
+        color: #dee2e6;
+        border-color: rgba(255, 255, 255, 0.38);
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+</style>
+
+<!-- Cookie Consent Banner -->
+<div id="cookie-consent-banner"
+     class="cookie-banner d-none{% if has_bottom_nav %} has-bottom-nav{% endif %}"
+     role="dialog"
+     aria-live="polite"
+     aria-label="Cookie preferences">
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="fas fa-cookie-bite text-warning"></i>
+                <strong class="text-white">We value your privacy</strong>
+            </div>
+            <p class="small text-secondary mb-0" style="line-height: 1.45;">
+                We use essential cookies to keep you signed in and secure, plus optional analytics cookies (Google Analytics) to understand traffic and improve IKE Tracker. You can change your choice anytime in <em>Cookie Settings</em>.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2 flex-shrink-0 w-100 w-md-auto justify-content-end" style="max-width: fit-content;">
+            <button type="button" id="cookie-btn-customize" class="btn btn-sm btn-outline-secondary px-3">
+                Customize
+            </button>
+            <button type="button" id="cookie-btn-reject" class="btn btn-sm cookie-btn-reject px-3">
+                Reject non-essential
+            </button>
+            <button type="button" id="cookie-btn-accept" class="btn btn-sm btn-success fw-bold px-3">
+                Accept all
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Cookie Settings Modal -->
+<div class="modal fade" id="cookieSettingsModal" tabindex="-1" aria-labelledby="cookieSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cookie-modal-content text-light shadow-lg">
+            <div class="modal-header border-bottom border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="cookieSettingsModalLabel">
+                    <i class="fas fa-cookie-bite text-warning"></i>
+                    Cookie Settings
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary mb-3">
+                    Manage your privacy preferences for IKE Tracker. Essential cookies cannot be disabled because the application relies on them to function safely.
+                </p>
+
+                <div class="cookie-category-box mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-white small">Essential Cookies</span>
+                        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">Always active</span>
+                    </div>
+                    <p class="small text-secondary mb-0">
+                        Required for login sessions, CSRF security protection, active portfolio state, and storing your cookie consent choice.
+                    </p>
+                </div>
+
+                <div class="cookie-category-box">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="fw-bold text-white small mb-0 cursor-pointer" for="cookieAnalyticsToggle">
+                            Analytics Cookies (Google Analytics / GTM)
+                        </label>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input cursor-pointer" type="checkbox" role="switch" id="cookieAnalyticsToggle">
+                        </div>
+                    </div>
+                    <p class="small text-secondary mb-0">
+                        Helps us measure anonymous page views and feature usage via Google Tag Manager so we can improve the app. Your portfolio amounts and transactions are never sent to analytics.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer border-top border-secondary border-opacity-25 d-flex justify-content-between flex-wrap gap-2">
+                <button type="button" id="cookie-modal-reject" class="btn btn-sm cookie-btn-reject">
+                    Reject all
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" id="cookie-modal-save" class="btn btn-sm btn-outline-success">
+                        Save preferences
+                    </button>
+                    <button type="button" id="cookie-modal-accept" class="btn btn-sm btn-success fw-bold">
+                        Accept all
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        var STORAGE_KEY = 'ike_cookie_consent_v1';
+
+        function readConsent() {
+            try {
+                var raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) return JSON.parse(raw);
+            } catch (e) {}
+            try {
+                var match = document.cookie.match(/(?:^|; )ike_cookie_consent_v1=([^;]*)/);
+                if (match) return JSON.parse(decodeURIComponent(match[1]));
+            } catch (e) {}
+            return null;
+        }
+
+        function writeConsent(prefs) {
+            var serialized = JSON.stringify(prefs);
+            try {
+                localStorage.setItem(STORAGE_KEY, serialized);
+            } catch (e) {}
+            try {
+                var maxAge = 60 * 60 * 24 * 180; // 180 days
+                var secureAttr = window.location.protocol === 'https:' ? '; Secure' : '';
+                document.cookie = STORAGE_KEY + '=' + encodeURIComponent(serialized) + '; Path=/; Max-Age=' + maxAge + '; SameSite=Lax' + secureAttr;
+            } catch (e) {}
+        }
+
+        function clearAnalyticsCookies() {
+            var cookies = document.cookie ? document.cookie.split(';') : [];
+            var hostParts = window.location.hostname.split('.');
+            var domains = [window.location.hostname];
+            if (hostParts.length >= 2) {
+                domains.push('.' + hostParts.slice(-2).join('.'));
+            }
+            if (hostParts.length >= 3) {
+                domains.push('.' + hostParts.join('.'));
+            }
+            cookies.forEach(function(cookie) {
+                var eqPos = cookie.indexOf('=');
+                var name = (eqPos > -1 ? cookie.substr(0, eqPos) : cookie).trim();
+                if (/^(_ga|_gid|_gat|_gcl_)/.test(name)) {
+                    document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                    domains.forEach(function(domain) {
+                        document.cookie = name + '=; Path=/; Domain=' + domain + '; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                    });
+                }
+            });
+        }
+
+        function applyConsent(analyticsGranted) {
+            var prefs = {
+                version: 1,
+                necessary: true,
+                analytics: !!analyticsGranted,
+                updatedAt: new Date().toISOString()
+            };
+            writeConsent(prefs);
+
+            window.dataLayer = window.dataLayer || [];
+            if (typeof window.gtag !== 'function') {
+                window.gtag = function() { window.dataLayer.push(arguments); };
+            }
+            window.gtag('consent', 'update', {
+                'ad_storage': 'denied',
+                'ad_user_data': 'denied',
+                'ad_personalization': 'denied',
+                'analytics_storage': prefs.analytics ? 'granted' : 'denied',
+                'functionality_storage': 'granted',
+                'security_storage': 'granted'
+            });
+            window.dataLayer.push({
+                'event': 'cookie_consent_update',
+                'consent_analytics': prefs.analytics
+            });
+
+            if (!prefs.analytics) {
+                clearAnalyticsCookies();
+            }
+
+            var banner = document.getElementById('cookie-consent-banner');
+            if (banner) banner.classList.add('d-none');
+
+            var modalEl = document.getElementById('cookieSettingsModal');
+            if (modalEl && window.bootstrap) {
+                var modalInst = window.bootstrap.Modal.getInstance(modalEl);
+                if (modalInst) modalInst.hide();
+            }
+        }
+
+        window.openCookieSettings = function() {
+            var current = readConsent();
+            var toggle = document.getElementById('cookieAnalyticsToggle');
+            if (toggle) {
+                toggle.checked = !!(current && current.analytics === true);
+            }
+            var modalEl = document.getElementById('cookieSettingsModal');
+            if (modalEl && window.bootstrap) {
+                var modalInst = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                modalInst.show();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var saved = readConsent();
+            var banner = document.getElementById('cookie-consent-banner');
+            if (!saved && banner) {
+                banner.classList.remove('d-none');
+            }
+
+            var btnAccept = document.getElementById('cookie-btn-accept');
+            var btnReject = document.getElementById('cookie-btn-reject');
+            var btnCustomize = document.getElementById('cookie-btn-customize');
+            var modalAccept = document.getElementById('cookie-modal-accept');
+            var modalReject = document.getElementById('cookie-modal-reject');
+            var modalSave = document.getElementById('cookie-modal-save');
+
+            if (btnAccept) btnAccept.addEventListener('click', function() { applyConsent(true); });
+            if (btnReject) btnReject.addEventListener('click', function() { applyConsent(false); });
+            if (btnCustomize) btnCustomize.addEventListener('click', function() { window.openCookieSettings(); });
+            if (modalAccept) modalAccept.addEventListener('click', function() { applyConsent(true); });
+            if (modalReject) modalReject.addEventListener('click', function() { applyConsent(false); });
+            if (modalSave) {
+                modalSave.addEventListener('click', function() {
+                    var toggle = document.getElementById('cookieAnalyticsToggle');
+                    applyConsent(!!(toggle && toggle.checked));
+                });
+            }
+        });
+    })();
+</script>
