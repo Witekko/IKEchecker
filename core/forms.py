@@ -3,8 +3,18 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Portfolio, Transaction, Asset
 
+MAX_UPLOAD_SIZE_MB = 5  # XTB exports are usually well under 1 MB
+
+
 class UploadFileForm(forms.Form):
-    file = forms.FileField(label="Wybierz raport XTB (.xlsx)")
+    file = forms.FileField(label="Choose an XTB report (.xlsx or .csv)")
+
+    def clean_file(self):
+        # Checked before pandas loads the file into memory
+        f = self.cleaned_data['file']
+        if f.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+            raise forms.ValidationError(f"The file is too large (max {MAX_UPLOAD_SIZE_MB} MB).")
+        return f
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(required=True)
 

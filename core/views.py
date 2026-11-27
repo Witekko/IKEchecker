@@ -205,6 +205,10 @@ def upload_view(request):
             except Exception:
                 logger.exception("XTB import failed for portfolio %s", active_portfolio.id)
                 messages.error(request, "Import failed due to an unexpected error. Please check the file and try again.")
+        else:
+            # upload.html renders the input by hand, so form errors go through messages
+            for error in form.errors.get('file', []):
+                messages.error(request, error)
     else:
         form = UploadFileForm()
 

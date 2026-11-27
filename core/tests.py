@@ -620,3 +620,54 @@ class CsrfTrustedOriginsTests(TestCase):
         for origin in settings.CSRF_TRUSTED_ORIGINS:
             self.assertTrue(origin.startswith('https://'), origin)
             self.assertNotIn('*', origin)
+
+
+class UploadSizeLimitTests(TestCase):
+    def setUp(self):
+        User.objects.create_user(username="sizeuser", password="sizepassword")
+        self.client.login(username="sizeuser", password="sizepassword")
+
+    @patch('core.views.process_xtb_file')
+    def test_too_large_file_is_rejected_before_import(self, mock_process):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from core.forms import MAX_UPLOAD_SIZE_MB
+        big = SimpleUploadedFile("report.csv", b"x" * (MAX_UPLOAD_SIZE_MB * 1024 * 1024 + 1), content_type="text/csv")
+        response = self.client.post(reverse('upload'), {'file': big})
+        self.assertEqual(response.status_code, 200)
+        mock_process.assert_not_called()
+        shown = " ".join(str(m) for m in response.context['messages'])
+        self.assertIn("too large", shown)
+
+    @patch('core.views.process_xtb_file', return_value={'added': 1})
+    def test_normal_file_is_imported(self, mock_process):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        small = SimpleUploadedFile("report.csv", b"ID;Type\n1;x\n", content_type="text/csv")
+        response = self.client.post(reverse('upload'), {'file': small})
+        self.assertEqual(response.status_code, 302)
+        mock_process.assert_called_once()
+
+
+class LowercaseEmailsMigrationTests(TestCase):
+    def run_migration(self):
+        import importlib
+        from django.apps import apps
+        module = importlib.import_module('core.migrations.0015_lowercase_emails')
+        module.lowercase_emails(apps, None)
+
+    def test_lowercases_unique_emails_and_skips_case_only_duplicates(self):
+        from allauth.account.models import EmailAddress
+        mixed = User.objects.create_user(username="mixed", email="Jan.Kowalski@Example.COM")
+        EmailAddress.objects.create(user=mixed, email="Jan.Kowalski@Example.COM", verified=False, primary=True)
+        dup_a = User.objects.create_user(username="dup_a", email="dup@example.com")
+        dup_b = User.objects.create_user(username="dup_b", email="DUP@example.com")
+        no_email = User.objects.create_user(username="no_email", email="")
+
+        self.run_migration()
+
+        for u in (mixed, dup_a, dup_b, no_email):
+            u.refresh_from_db()
+        self.assertEqual(mixed.email, "jan.kowalski@example.com")
+        self.assertEqual(EmailAddress.objects.get(user=mixed).email, "jan.kowalski@example.com")
+        self.assertEqual(dup_a.email, "dup@example.com")   # left for manual review
+        self.assertEqual(dup_b.email, "DUP@example.com")
+        self.assertEqual(no_email.email, "")
