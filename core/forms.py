@@ -6,9 +6,18 @@ from .models import Portfolio, Transaction, Asset
 class UploadFileForm(forms.Form):
     file = forms.FileField(label="Wybierz raport XTB (.xlsx)")
 class CustomUserCreationForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+
     class Meta:
         model = User
         fields = ['username', 'email']
+
+    def clean_email(self):
+        # Unique, case-insensitive: one e-mail = one account (Google login links by e-mail)
+        email = self.cleaned_data['email'].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this e-mail already exists.")
+        return email
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

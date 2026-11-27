@@ -26,19 +26,23 @@
                 <li class="px-3 py-2 text-muted small text-uppercase fw-bold">Switch Portfolio</li>
                 {% for p in all_portfolios %}
                 <li>
-                    <a class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}"
-                        href="{% url 'switch_portfolio' p.id %}">
+                    <form method="post" action="{% url 'switch_portfolio' p.id %}" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}">
                         <span class="text-truncate me-2">{{ p.name }}</span>
                         <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.6rem;">{{ p.portfolio_type }}</span>
-                    </a>
+                        </button>
+                    </form>
                 </li>
                 {% endfor %}
                 <li>
-                    <a class="dropdown-item d-flex justify-content-between align-items-center {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}active{% endif %}"
-                        href="{% url 'switch_portfolio' 0 %}">
-                        <span class="text-truncate me-2">Wszystkie portfele</span>
+                    <form method="post" action="{% url 'switch_portfolio' 0 %}" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item d-flex justify-content-between align-items-center {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}active{% endif %}">
+                        <span class="text-truncate me-2">All portfolios</span>
                         <span class="badge bg-info bg-opacity-25 text-info" style="font-size: 0.6rem;">ALL</span>
-                    </a>
+                        </button>
+                    </form>
                 </li>
                 <li>
                     <hr class="dropdown-divider">

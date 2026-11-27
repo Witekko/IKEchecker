@@ -26,7 +26,7 @@ def process_import(uploaded_file, portfolio_obj, overwrite_manual=False):
     elif filename.endswith('.csv'):
         importer = XtbCsvImporter(uploaded_file, portfolio_obj)
     else:
-        raise ValueError("Nieobsługiwany format pliku. Użyj .xlsx lub .csv")
+        raise ValueError("Unsupported file format. Please use .xlsx or .csv")
 
     # --- LOGIKA NADPISYWANIA I CZYSZCZENIA ŚMIECI ---
     if overwrite_manual:

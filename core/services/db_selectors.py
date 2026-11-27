@@ -34,7 +34,7 @@ def get_active_portfolio(request):
             selected_ids = list(user_portfolios.values_list('id', flat=True))
             request.session['consolidated_portfolio_ids'] = selected_ids
             request.session.modified = True
-        return VirtualPortfolio("Wszystkie portfele", selected_ids)
+        return VirtualPortfolio("All portfolios", selected_ids)
 
     if active_id:
         p = user_portfolios.filter(id=active_id).first()
@@ -57,7 +57,7 @@ def get_portfolio_by_id(user, portfolio_id) -> Portfolio:
         return None
     if isinstance(portfolio_id, (list, tuple)):
         # Virtual portfolio has list ID, so return VirtualPortfolio representation
-        return VirtualPortfolio("Wszystkie portfele", portfolio_id)
+        return VirtualPortfolio("All portfolios", portfolio_id)
     return Portfolio.objects.filter(id=portfolio_id, user=user).first()
 
 

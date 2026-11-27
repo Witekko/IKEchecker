@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (gainersCard && data.tile_gainers_list && data.tile_gainers_list.length > 0) {
                 let title = `<div class='text-start small fw-bold mb-1 border-bottom border-light border-opacity-25 pb-1'>Top Gainers</div><ul class='text-start small mb-0 ps-3'>`;
                 data.tile_gainers_list.forEach(g => {
-                    title += `<li>${g.symbol}: <span class='text-success'>+${parseFloat(g.pct).toFixed(2)}%</span></li>`;
+                    title += `<li>${escapeHtml(g.symbol)}: <span class='text-success'>+${parseFloat(g.pct).toFixed(2)}%</span></li>`;
                 });
                 title += `</ul>`;
                 gainersCard.setAttribute('data-bs-title', title);
@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (losersCard && data.tile_losers_list && data.tile_losers_list.length > 0) {
                 let title = `<div class='text-start small fw-bold mb-1 border-bottom border-light border-opacity-25 pb-1'>Top Losers</div><ul class='text-start small mb-0 ps-3'>`;
                 data.tile_losers_list.forEach(l => {
-                    title += `<li>${l.symbol}: <span class='text-danger'>${parseFloat(l.pct).toFixed(2)}%</span></li>`;
+                    title += `<li>${escapeHtml(l.symbol)}: <span class='text-danger'>${parseFloat(l.pct).toFixed(2)}%</span></li>`;
                 });
                 title += `</ul>`;
                 losersCard.setAttribute('data-bs-title', title);
@@ -274,12 +274,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         const formattedDate = new Date(t.date).toISOString().replace('T', ' ').substring(0, 19);
                         const amountClass = t.amount > 0 ? 'text-success' : 'text-danger';
                         
-                        tr.innerHTML = `
-                            <td class="ps-4 text-white-50">${formattedDate}</td>
-                            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-                            <td class="text-white small">${t.asset_display_name}</td>
-                            <td class="text-end pe-4 fw-bold ${amountClass}">${t.amount.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        `;
+                        // Built with textContent (not innerHTML): asset names come from user input / imports.
+                        const addCell = (className, text) => {
+                            const td = document.createElement('td');
+                            td.className = className;
+                            td.textContent = text;
+                            tr.appendChild(td);
+                            return td;
+                        };
+                        addCell('ps-4 text-white-50', formattedDate);
+                        const badgeCell = addCell('', '');
+                        const badge = document.createElement('span');
+                        badge.className = `badge ${badgeClass}`;
+                        badge.textContent = badgeText;
+                        badgeCell.appendChild(badge);
+                        addCell('text-white small', t.asset_display_name);
+                        addCell(`text-end pe-4 fw-bold ${amountClass}`,
+                            t.amount.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
                         tbody.appendChild(tr);
                     });
                 } else {
@@ -655,6 +666,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     };
+
+    // Escapes text before it is placed in an HTML string (e.g. Bootstrap tooltips with html: true)
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[ch]);
+    }
 
     // Helper function to get CSRF token
     function getCookie(name) {

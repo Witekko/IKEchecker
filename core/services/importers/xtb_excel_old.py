@@ -1,5 +1,8 @@
+import logging
 import pandas as pd
 from .base_importer import BaseImporter
+
+logger = logging.getLogger('core')
 
 class XtbExcelOldImporter(BaseImporter):
     """Importer for the OLD XTB Excel format (Symbol column)."""
@@ -8,7 +11,8 @@ class XtbExcelOldImporter(BaseImporter):
         try:
             xls = pd.ExcelFile(self.file)
         except Exception as e:
-            raise ValueError(f"Excel Error: {e}")
+            logger.warning("Could not open Excel file: %s", e)
+            raise ValueError("Could not read the Excel file. Please upload an unmodified XTB export.")
 
         target_sheet = None
         for sheet in xls.sheet_names:

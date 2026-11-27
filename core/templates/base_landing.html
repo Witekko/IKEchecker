@@ -204,7 +204,7 @@
                         <h4 class="text-accent fw-bold">General Overview</h4>
                         <p class="text-light">Watch your portfolio compound. Instant P&amp;L calculations and live asset valuations bring your static numbers directly to life.</p>
                     </div>
-                    <canvas id="canvas-general" class="inline-scrub-canvas" data-frames="105" data-folder="frames_general"></canvas>
+                    <canvas id="canvas-general" class="inline-scrub-canvas" data-frames="53" data-folder="frames_general_webp"></canvas>
                 </div>
             </div>
 
@@ -215,7 +215,7 @@
                         <h4 class="text-warning fw-bold">1-Click Synchronization</h4>
                         <p class="text-light">Upload your broker statement. In under one second, we parse thousands of rows and reconstruct your entire trading history flawlessly.</p>
                     </div>
-                    <canvas id="canvas-import" class="inline-scrub-canvas" data-frames="150" data-folder="frames_import"></canvas>
+                    <canvas id="canvas-import" class="inline-scrub-canvas" data-frames="75" data-folder="frames_import_webp"></canvas>
                 </div>
             </div>
 
@@ -226,7 +226,7 @@
                         <h4 class="text-primary fw-bold">Granular Execution Metrics</h4>
                         <p class="text-light">Examine any asset down to the exact average execution price, unrealized gains, and dynamic contextual market news.</p>
                     </div>
-                    <canvas id="canvas-details" class="inline-scrub-canvas" data-frames="225" data-folder="frames_details"></canvas>
+                    <canvas id="canvas-details" class="inline-scrub-canvas" data-frames="113" data-folder="frames_details_webp"></canvas>
                 </div>
             </div>
 
@@ -237,7 +237,7 @@
                         <h4 class="text-info fw-bold">Absolute Position Control</h4>
                         <p class="text-light">Never lose track. View your open positions alongside instantly calculating sector breakdowns and macro allocation charts.</p>
                     </div>
-                    <canvas id="canvas-assets" class="inline-scrub-canvas" data-frames="125" data-folder="frames_assets"></canvas>
+                    <canvas id="canvas-assets" class="inline-scrub-canvas" data-frames="63" data-folder="frames_assets_webp"></canvas>
                 </div>
             </div>
 
@@ -248,7 +248,7 @@
                         <h4 class="text-white fw-bold">Compounding Visualized</h4>
                         <p class="text-light">Analyze exact Time-Weighted and Money-Weighted returns through an immersive, interactive graphing engine.</p>
                     </div>
-                    <canvas id="canvas-summary" class="inline-scrub-canvas" data-frames="225" data-folder="frames_summary"></canvas>
+                    <canvas id="canvas-summary" class="inline-scrub-canvas" data-frames="113" data-folder="frames_summary_webp"></canvas>
                 </div>
             </div>
 
@@ -259,7 +259,7 @@
                         <h4 class="text-secondary fw-bold">The Unified Ledger</h4>
                         <p class="text-light">Every deposit, dividend, and trade is cataloged into an interactive, beautifully formatted historical ledger.</p>
                     </div>
-                    <canvas id="canvas-historia" class="inline-scrub-canvas" data-frames="75" data-folder="frames_historia"></canvas>
+                    <canvas id="canvas-historia" class="inline-scrub-canvas" data-frames="38" data-folder="frames_historia_webp"></canvas>
                 </div>
             </div>
 
@@ -270,7 +270,7 @@
                         <h4 class="text-primary fw-bold">Infinite Portfolios</h4>
                         <p class="text-light">Keep your strategies entirely sequestered. Run a Dividend Portfolio entirely separate from your Growth Portfolio.</p>
                     </div>
-                    <canvas id="canvas-portfolio" class="inline-scrub-canvas" data-frames="275" data-folder="frames_portfolio"></canvas>
+                    <canvas id="canvas-portfolio" class="inline-scrub-canvas" data-frames="138" data-folder="frames_portfolio_webp"></canvas>
                 </div>
             </div>
 
@@ -303,7 +303,7 @@
                         <h4 class="text-white fw-bold">Perfectly Portable</h4>
                         <p class="text-light">Everything works flawlessly on your phone. Stalk your portfolio anywhere, entirely on your own terms.</p>
                     </div>
-                    <canvas id="canvas-mobile" class="inline-scrub-canvas mobile-sized" data-frames="163" data-folder="frames_mobile"></canvas>
+                    <canvas id="canvas-mobile" class="inline-scrub-canvas mobile-sized" data-frames="82" data-folder="frames_mobile_webp"></canvas>
                 </div>
             </div>
 
@@ -365,7 +365,7 @@
 
                 // Preload just the first frame to establish dimensions
                 const img = new Image();
-                img.src = `/static/img/story/${folder}/frame_0000.jpg`;
+                img.src = `/static/img/story/${folder}/frame_0000.webp`;
                 img.onload = () => {
                     canvas.width = img.width;
                     canvas.height = img.height;
@@ -401,11 +401,11 @@
                                 let batchLimit = Math.min(i + 15, frames);
                                 for(; i < batchLimit; i++) {
                                     let preImg = new Image();
-                                    preImg.src = `/static/img/story/${folder}/frame_${i.toString().padStart(4, '0')}.jpg`;
+                                    preImg.src = `/static/img/story/${folder}/frame_${i.toString().padStart(4, '0')}.webp`;
                                     scrubData[canvas.id].images[i] = preImg;
                                 }
                                 if(i < frames) {
-                                    requestIdleCallback ? requestIdleCallback(loadBatch) : setTimeout(loadBatch, 10);
+                                    window.requestIdleCallback ? window.requestIdleCallback(loadBatch) : setTimeout(loadBatch, 10);
                                 }
                             };
                             loadBatch();

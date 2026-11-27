@@ -444,7 +444,7 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
             continue
 
     if not found_ticker or best_df is None:
-        return False, f"Nie znaleziono notowań dla '{symbol}'. Sprawdzono: {', '.join(candidates)}."
+        return False, f"No quotes found for '{symbol}'. Tried: {', '.join(candidates)}."
 
     # KROK 2: Walidacja Ceny
     try:
@@ -473,7 +473,7 @@ def validate_ticker_and_price(symbol, date_obj, price_pln):
         price_val = float(price_pln)
 
         if not (safe_low <= price_val <= safe_high):
-            return False, f"Cena podejrzana! Dla {found_ticker} zakres to {min_price:.2f}-{max_price:.2f}. Ty wpisałeś {price_val:.2f}."
+            return False, f"Suspicious price! The range for {found_ticker} was {min_price:.2f}-{max_price:.2f}, you entered {price_val:.2f}."
 
         return True, found_ticker
 

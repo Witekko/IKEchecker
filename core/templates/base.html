@@ -52,19 +52,23 @@
                             <li class="px-3 py-2 text-muted small text-uppercase fw-bold" style="font-size: 0.65rem;">Switch Portfolio</li>
                             {% for p in all_portfolios %}
                             <li>
-                                <a class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}"
-                                    href="{% url 'switch_portfolio' p.id %}" style="font-size: 0.85rem;">
+                                <form method="post" action="{% url 'switch_portfolio' p.id %}" class="m-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item d-flex justify-content-between align-items-center {% if p.id == active_portfolio.id %}active{% endif %}" style="font-size: 0.85rem;">
                                     <span class="text-truncate me-2">{{ p.name }}</span>
                                     <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size: 0.55rem;">{{ p.portfolio_type }}</span>
-                                </a>
+                                    </button>
+                                </form>
                             </li>
                             {% endfor %}
                             <li>
-                                <a class="dropdown-item d-flex justify-content-between align-items-center {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}active{% endif %}"
-                                    href="{% url 'switch_portfolio' 0 %}" style="font-size: 0.85rem;">
-                                    <span class="text-truncate me-2">Wszystkie portfele</span>
+                                <form method="post" action="{% url 'switch_portfolio' 0 %}" class="m-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item d-flex justify-content-between align-items-center {% if active_portfolio.portfolio_type == 'CONSOLIDATED' %}active{% endif %}" style="font-size: 0.85rem;">
+                                    <span class="text-truncate me-2">All portfolios</span>
                                     <span class="badge bg-info bg-opacity-25 text-info" style="font-size: 0.55rem;">ALL</span>
-                                </a>
+                                    </button>
+                                </form>
                             </li>
                             <li>
                                 <hr class="dropdown-divider">
@@ -348,13 +352,13 @@
                 <div id="announcement-mascot-wrapper" class="announcement-mascot-wrapper exiting">
                     <!-- The Speech Bubble -->
                     <div id="announcement-speech-bubble" class="announcement-speech-bubble">
-                        <div class="bubble-header">📢 Wiadomość od pomocnika:</div>
+                        <div class="bubble-header">📢 Message from your assistant:</div>
                         <div id="announcement-bubble-body" class="bubble-body">
                             <!-- Loaded dynamically -->
                         </div>
                         <div class="bubble-footer">
                             <button id="announcement-dismiss-btn" class="btn btn-warning btn-sm px-4 py-2" style="font-weight: 600; border-radius: 8px;">
-                                Zrozumiałem
+                                Got it
                             </button>
                         </div>
                     </div>

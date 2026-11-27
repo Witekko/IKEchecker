@@ -56,7 +56,7 @@ def add_manual_transaction(portfolio, data):
         is_valid, result_or_msg = validate_ticker_and_price(yahoo_ticker_to_validate, date_obj, check_price)
 
         if not is_valid:
-            raise ValueError(f"Błąd walidacji: {result_or_msg}")
+            raise ValueError(f"Validation error: {result_or_msg}")
 
         # Jeśli walidacja przeszła, result_or_msg to ticker, który ZADZIAŁAŁ (np. "PKN.PL")
         # Aktualizujemy naszą zmienną, żeby zapisać w bazie działający ticker!

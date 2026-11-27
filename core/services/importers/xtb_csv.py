@@ -24,7 +24,7 @@ class XtbCsvImporter(BaseImporter):
                 continue
 
         if df_raw is None:
-            raise ValueError("Nie udało się odczytać pliku CSV (błąd kodowania).")
+            raise ValueError("Could not read the CSV file (encoding error).")
 
         header_idx = self._find_header_row(df_raw.head(40))
 
@@ -33,7 +33,7 @@ class XtbCsvImporter(BaseImporter):
             if "ID" in s and "Type" in s:
                 return df_raw
             else:
-                raise ValueError("Nie znaleziono nagłówka w pliku CSV.")
+                raise ValueError("Could not find the header row in the CSV file.")
 
         new_header = df_raw.iloc[header_idx]
         df = df_raw[header_idx + 1:].copy()

@@ -1,5 +1,6 @@
 # core/views.py
 
+import logging
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
@@ -10,6 +11,7 @@ from django.utils import timezone
 from django.contrib.auth import login, authenticate
 from django.core.management import call_command
 from django.contrib.auth.models import User
+from django.views.decorators.http import require_POST
 # --- MODELE I FORMY ---
 from .models import Portfolio, Transaction, Asset, AssetSector, AssetType
 from .forms import UploadFileForm, CustomUserCreationForm, PortfolioSettingsForm, UserProfileForm
@@ -25,6 +27,8 @@ from .services import (
 # Importujemy nowe akcje bulkowe
 from .services.actions import update_assets_bulk, sync_all_assets_metadata
 from .services.dashboard import get_dashboard_stats_context, get_holdings_view_context
+
+logger = logging.getLogger('core')
 
 
 # --- WIDOKI ---
@@ -113,6 +117,7 @@ def dashboard_data_api(request):
 
 
 @login_required
+@require_POST
 def dashboard_force_refresh_api(request):
     """API dla admina do wymuszenia odświeżenia cen i czyszczenia cache."""
     if not request.user.is_staff:
@@ -194,8 +199,12 @@ def upload_view(request):
                 if overwrite: msg += " (Cleaned manual entries)."
                 messages.success(request, msg)
                 return redirect('dashboard')
-            except Exception as e:
-                messages.error(request, f"Error: {e}")
+            except ValueError as e:
+                # Importers raise ValueError with messages meant for the user
+                messages.error(request, str(e))
+            except Exception:
+                logger.exception("XTB import failed for portfolio %s", active_portfolio.id)
+                messages.error(request, "Import failed due to an unexpected error. Please check the file and try again.")
     else:
         form = UploadFileForm()
 
@@ -207,13 +216,14 @@ def upload_view(request):
 
 
 @login_required
+@require_POST
 def switch_portfolio_view(request, portfolio_id):
     if portfolio_id == 0:
         request.session['active_portfolio_id'] = 'consolidated'
         all_p_ids = list(Portfolio.objects.filter(user=request.user).values_list('id', flat=True))
         request.session['consolidated_portfolio_ids'] = all_p_ids
         request.session.modified = True
-        messages.success(request, "Przełączono na widok skonsolidowany.")
+        messages.success(request, "Switched to the consolidated view.")
         return redirect('dashboard')
 
     portfolio = get_object_or_404(Portfolio, id=portfolio_id, user=request.user)
@@ -228,12 +238,12 @@ def toggle_consolidated_portfolios_view(request):
     if request.method == 'POST':
         selected_ids = request.POST.getlist('portfolio_ids')
         user_p_ids = set(Portfolio.objects.filter(user=request.user).values_list('id', flat=True))
-        validated_ids = [int(pid) for pid in selected_ids if int(pid) in user_p_ids]
-        
+        validated_ids = [int(pid) for pid in selected_ids if pid.isdigit() and int(pid) in user_p_ids]
+
         request.session['consolidated_portfolio_ids'] = validated_ids
         request.session['active_portfolio_id'] = 'consolidated'
         request.session.modified = True
-        messages.success(request, "Zaktualizowano wybrane portfele do sumowania.")
+        messages.success(request, "Updated the portfolios included in the consolidated view.")
     return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
 
 
@@ -268,10 +278,11 @@ def register_view(request):
     return render(request, 'register.html', {'form': form})
 
 
+@login_required
 def taxes_view(request):
     active_portfolio = get_active_portfolio(request)
     if active_portfolio.portfolio_type == 'CONSOLIDATED':
-        messages.warning(request, "Centrum Podatkowe nie jest dostępne w widoku skonsolidowanym. Wybierz konkretny portfel.")
+        messages.warning(request, "The Tax Center is not available in the consolidated view. Please select a specific portfolio.")
         return redirect('dashboard')
     context = get_taxes_context(request.user, portfolio_id=active_portfolio.id)
     context['all_portfolios'] = get_user_portfolios(request.user)
@@ -291,7 +302,7 @@ def delete_transaction_view(request, transaction_id):
 def portfolio_settings_view(request):
     active_portfolio = get_active_portfolio(request)
     if active_portfolio.portfolio_type == 'CONSOLIDATED':
-        messages.warning(request, "Ustawienia nie są dostępne w widoku skonsolidowanym. Wybierz konkretny portfel.")
+        messages.warning(request, "Settings are not available in the consolidated view. Please select a specific portfolio.")
         return redirect('dashboard')
 
     if request.method == 'POST':
@@ -317,8 +328,9 @@ def portfolio_settings_view(request):
             except ValueError as e:
                 messages.error(request, str(e))
                 return redirect('portfolio_settings')
-            except Exception as e:
-                messages.error(request, f"System error: {e}")
+            except Exception:
+                logger.exception("Manual transaction failed for portfolio %s", active_portfolio.id)
+                messages.error(request, "Could not add the transaction due to an unexpected error. Please try again.")
                 return redirect('portfolio_settings')
 
         elif 'save_settings' in request.POST:
@@ -374,12 +386,12 @@ def corporate_action_spinoff_view(request):
         move_basis_pct = float(request.POST.get('move_basis', 0.0))
         cutoff_date_str = request.POST.get('cutoff_date')
         cutoff_date = datetime.strptime(cutoff_date_str, "%Y-%m-%d")
-    except (ValueError, TypeError) as e:
-        messages.error(request, f"Błędne dane wejściowe: {e}")
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid input: check the ratio, cost split and cutoff date.")
         return redirect('portfolio_settings')
         
     if abs(retain_basis_pct + move_basis_pct - 100.0) > 0.01:
-        messages.error(request, "Suma podziału kosztów musi wynosić dokładnie 100% (np. 92.27% i 7.73%).")
+        messages.error(request, "The cost basis split must add up to exactly 100% (e.g. 92.27% and 7.73%).")
         return redirect('portfolio_settings')
         
     original_asset = get_object_or_404(Asset, symbol=original_symbol)
@@ -408,7 +420,7 @@ def corporate_action_spinoff_view(request):
         )
         
         if not orig_txs.exists():
-            messages.warning(request, f"Brak transakcji zakupu {original_symbol} do dnia {cutoff_date_str}.")
+            messages.warning(request, f"No buy transactions of {original_symbol} up to {cutoff_date_str}.")
             return redirect('portfolio_settings')
             
         from decimal import Decimal
@@ -454,11 +466,11 @@ def corporate_action_spinoff_view(request):
         if modified_count > 0:
             messages.success(
                 request,
-                f"Pomyślnie przeprowadzono wydzielenie! Zaktualizowano {modified_count} transakcji {original_symbol} "
-                f"oraz utworzono {created_count} transakcji dla {new_symbol}."
+                f"Spin-off completed! Updated {modified_count} {original_symbol} transactions "
+                f"and created {created_count} transactions for {new_symbol}."
             )
         else:
-            messages.info(request, "Wszystkie kwalifikujące się transakcje zostały już wcześniej rozdzielone.")
+            messages.info(request, "All eligible transactions have already been split.")
             
     return redirect('portfolio_settings')
 
@@ -520,9 +532,9 @@ def submit_asset_feedback_view(request, symbol):
             asset = get_object_or_404(Asset, symbol=symbol)
             from .models import AssetFeedback
             AssetFeedback.objects.create(user=request.user, asset=asset, message=message)
-            messages.success(request, "Dziękujemy! Zgłoszenie błędu wyceny zostało wysłane. Administratorzy wkrótce je zweryfikują.")
+            messages.success(request, "Thank you! Your pricing issue report has been sent. An administrator will review it soon.")
         else:
-            messages.error(request, "Wiadomość z błędem nie może być pusta.")
+            messages.error(request, "The report message cannot be empty.")
     return redirect('asset_details', symbol=symbol)
 
 
@@ -613,11 +625,12 @@ def demo_login_view(request):
         # Backend 'ModelBackend' jest standardem w Django
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
-        messages.success(request, "Zalogowano do trybu DEMO. Dane zostały przywrócone do stanu wzorcowego.")
+        messages.success(request, "Logged in to DEMO mode. Sample data has been restored.")
         return redirect('dashboard')
 
     except User.DoesNotExist:
-        messages.error(request, "Błąd konfiguracji Demo. Użytkownik nie istnieje.")
+        messages.error(request, "Demo is misconfigured: the demo user does not exist.")
+        return redirect('login')
 
 
 @login_required
@@ -642,8 +655,6 @@ def profile_view(request):
     }
     return render(request, 'profile.html', context)
 
-
-from django.views.decorators.http import require_POST
 
 @login_required
 @require_POST

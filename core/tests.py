@@ -462,3 +462,161 @@ class MarketCacheAndDailyChangeTests(TestCase):
         
         self.assertEqual(chg_pct, 0.0)
         self.assertEqual(chg_val, 0.0)
+
+
+from unittest.mock import patch
+
+
+class DemoLoginTests(TestCase):
+    @patch('core.views.call_command')
+    def test_demo_login_without_demo_user_redirects_to_login(self, mock_call_command):
+        # reset_demo is mocked, so demo_user is never created
+        response = self.client.get(reverse('demo_login'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('login'))
+
+
+class ToggleConsolidatedPortfoliosTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="toggleuser", password="togglepassword")
+        self.portfolio = Portfolio.objects.create(
+            user=self.user, name="Mine", portfolio_type=PortfolioType.STANDARD, currency="PLN"
+        )
+        other = User.objects.create_user(username="otheruser", password="otherpassword")
+        self.foreign_portfolio = Portfolio.objects.create(
+            user=other, name="Not mine", portfolio_type=PortfolioType.STANDARD, currency="PLN"
+        )
+        self.client.login(username="toggleuser", password="togglepassword")
+
+    def test_invalid_and_foreign_ids_are_ignored(self):
+        response = self.client.post(reverse('toggle_consolidated_portfolios'), {
+            'portfolio_ids': ['abc', '', '-1', str(self.foreign_portfolio.id), str(self.portfolio.id)],
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session['consolidated_portfolio_ids'], [self.portfolio.id])
+        self.assertEqual(self.client.session['active_portfolio_id'], 'consolidated')
+
+
+class StateChangingViewsRequirePostTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="postuser", password="postpassword")
+        self.portfolio = Portfolio.objects.create(
+            user=self.user, name="Main", portfolio_type=PortfolioType.STANDARD, currency="PLN"
+        )
+        self.client.login(username="postuser", password="postpassword")
+
+    def test_switch_portfolio_get_not_allowed(self):
+        response = self.client.get(reverse('switch_portfolio', args=[self.portfolio.id]))
+        self.assertEqual(response.status_code, 405)
+
+    def test_switch_portfolio_post_switches(self):
+        response = self.client.post(reverse('switch_portfolio', args=[0]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session['active_portfolio_id'], 'consolidated')
+
+    def test_force_refresh_get_not_allowed_for_staff(self):
+        User.objects.create_user(username="staff2", password="staffpassword", is_staff=True)
+        self.client.login(username="staff2", password="staffpassword")
+        response = self.client.get(reverse('dashboard_force_refresh_api'))
+        self.assertEqual(response.status_code, 405)
+
+    def test_taxes_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('taxes'))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith(reverse('login')))
+
+
+class UploadErrorMessageTests(TestCase):
+    def setUp(self):
+        User.objects.create_user(username="uploaduser", password="uploadpassword")
+        self.client.login(username="uploaduser", password="uploadpassword")
+
+    @patch('core.views.process_xtb_file', side_effect=RuntimeError("db password=hunter2"))
+    def test_unexpected_error_details_are_not_shown(self, _mock):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        upload = SimpleUploadedFile("report.csv", b"ID;Type\n1;x\n", content_type="text/csv")
+        with self.assertLogs('core', level='ERROR'):
+            response = self.client.post(reverse('upload'), {'file': upload}, follow=True)
+        shown = " ".join(str(m) for m in response.context['messages'])
+        self.assertNotIn("hunter2", shown)
+        self.assertIn("unexpected error", shown)
+
+
+class AccountTakeoverProtectionTests(TestCase):
+    def test_register_rejects_existing_email_case_insensitive(self):
+        User.objects.create_user(username="first", password="x-Strong-pass-123", email="owner@example.com")
+        response = self.client.post(reverse('register'), {
+            'username': 'second', 'email': 'Owner@Example.com',
+            'password1': 'x-Strong-pass-123', 'password2': 'x-Strong-pass-123',
+        })
+        self.assertEqual(response.status_code, 200)  # form re-rendered with an error
+        self.assertFalse(User.objects.filter(username='second').exists())
+
+    def test_google_login_locks_out_account_with_unverified_email(self):
+        """Someone registered with the victim's e-mail and their own password.
+        When the victim logs in with Google, allauth logs them into that account
+        and removes the password, so the account's creator loses access."""
+        from django.contrib.auth.models import AnonymousUser
+        from django.contrib.sessions.backends.db import SessionStore
+        from django.test import RequestFactory
+        from allauth.account.models import EmailAddress
+        from allauth.core import context
+        from allauth.socialaccount.internal.flows.login import pre_social_login
+        from allauth.socialaccount.models import SocialAccount, SocialLogin
+
+        squatter = User.objects.create_user(username="squatter", password="squatter-pass-123", email="victim@example.com")
+
+        request = RequestFactory().get('/')
+        request.session = SessionStore()
+        request.user = AnonymousUser()
+        from allauth.socialaccount.adapter import get_adapter as get_social_adapter
+        sociallogin = SocialLogin(
+            provider=get_social_adapter().get_provider(request, 'google'),
+            account=SocialAccount(provider='google', uid='google-uid-1', extra_data={'email': 'victim@example.com'}),
+            user=User(email='victim@example.com'),
+            email_addresses=[EmailAddress(email='victim@example.com', verified=True, primary=True)],
+        )
+        with context.request_context(request):
+            pre_social_login(request, sociallogin)
+            self.assertEqual(sociallogin.user.pk, squatter.pk)
+            sociallogin._accept_login(request)
+
+        squatter.refresh_from_db()
+        self.assertFalse(squatter.has_usable_password())
+        self.assertTrue(SocialAccount.objects.filter(user=squatter, uid='google-uid-1').exists())
+
+
+    def test_google_login_does_not_silently_link_mixed_case_email(self):
+        """The removed custom adapter matched e-mails with iexact and linked the account
+        without allauth's password wipe. Now such an account must not be linked."""
+        from django.contrib.auth.models import AnonymousUser
+        from django.contrib.sessions.backends.db import SessionStore
+        from django.test import RequestFactory
+        from allauth.account.models import EmailAddress
+        from allauth.core import context
+        from allauth.socialaccount.adapter import get_adapter as get_social_adapter
+        from allauth.socialaccount.internal.flows.login import pre_social_login
+        from allauth.socialaccount.models import SocialAccount, SocialLogin
+
+        squatter = User.objects.create_user(username="squatter2", password="squatter-pass-123", email="Victim2@Example.com")
+        request = RequestFactory().get('/')
+        request.session = SessionStore()
+        request.user = AnonymousUser()
+        sociallogin = SocialLogin(
+            provider=get_social_adapter().get_provider(request, 'google'),
+            account=SocialAccount(provider='google', uid='google-uid-2', extra_data={'email': 'victim2@example.com'}),
+            user=User(email='victim2@example.com'),
+            email_addresses=[EmailAddress(email='victim2@example.com', verified=True, primary=True)],
+        )
+        with context.request_context(request):
+            pre_social_login(request, sociallogin)
+
+        self.assertNotEqual(sociallogin.user.pk, squatter.pk)
+        self.assertFalse(SocialAccount.objects.filter(user=squatter).exists())
+
+class CsrfTrustedOriginsTests(TestCase):
+    def test_only_https_without_wildcards(self):
+        for origin in settings.CSRF_TRUSTED_ORIGINS:
+            self.assertTrue(origin.startswith('https://'), origin)
+            self.assertNotIn('*', origin)

@@ -7,6 +7,8 @@ from pathlib import Path
 import os
 import dj_database_url
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.utils import get_random_secret_key
 
 # Wczytaj zmienne z pliku .env
 load_dotenv()
@@ -17,11 +19,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- SECURITY CONFIGURATION ---
 
-# Klucz pobieramy z .env. Jeśli go nie ma, rzucamy błąd (na produkcji) lub dajemy fallback (lokalnie)
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-for-dev-only')
-
 # Debug: True tylko jeśli w .env jest wpisane 'True'
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+# Klucz pobieramy z .env. Bez niego produkcja (DEBUG=False) się nie uruchomi;
+# lokalnie (DEBUG=True) generujemy losowy klucz deweloperski na czas działania procesu.
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("SECRET_KEY environment variable is required when DEBUG is False.")
+    SECRET_KEY = get_random_secret_key()
 
 # Hosty: Rozdzielamy przecinkami z .env, domyślnie dodajemy domeny lokalne oraz produkcyjne
 ALLOWED_HOSTS = os.environ.get(
@@ -212,17 +219,11 @@ csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 if csrf_env:
     CSRF_TRUSTED_ORIGINS = [orig.strip() for orig in csrf_env.split(',') if orig.strip()]
 else:
+    # Tylko własne domeny i tylko HTTPS. Bez wildcardów: '*.onrender.com' obejmowałby
+    # aplikacje innych osób na Renderze. Localhost nie jest potrzebny (same-origin działa bez wpisu).
     CSRF_TRUSTED_ORIGINS = [
         'https://ike-tracker.onrender.com',
-        'http://ike-tracker.onrender.com',
-        'https://*.onrender.com',
-        'http://*.onrender.com',
         'https://ike-tracker.wkinfo.xyz',
-        'http://ike-tracker.wkinfo.xyz',
-        'https://*.wkinfo.xyz',
-        'https://wkinfo.xyz',
-        'http://localhost',
-        'http://127.0.0.1',
     ]
 
 # --- SECURITY HEADERS & COOKIES (PRODUCTION) ---
@@ -272,7 +273,10 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
-SOCIALACCOUNT_ADAPTER = 'core.adapters.MySocialAccountAdapter'
+# Łączenie konta Google z istniejącym kontem o tym samym e-mailu robi allauth (EMAIL_AUTHENTICATION).
+# Jeśli e-mail lokalnego konta nie był zweryfikowany, allauth usuwa jego hasło (wipe_password),
+# więc ktoś, kto założył konto na cudzy e-mail, traci do niego dostęp.
+# Nie nadpisywać tego własnym pre_social_login, bo omija się to zabezpieczenie.
 
 # --- SECURITY HARDENING (ALL ENVIRONMENTS) ---
 SESSION_COOKIE_HTTPONLY = True
